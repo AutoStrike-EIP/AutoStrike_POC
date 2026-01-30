@@ -1,0 +1,123 @@
+site_name: AutoStrike Documentation
+site_description: "Plateforme BAS (Breach and Attack Simulation) basée sur MITRE ATT&CK"
+site_url: https://nl1x.github.io/AutoStrike
+repo_url: https://github.com/nl1x/AutoStrike
+repo_name: AutoStrike
+
+theme:
+  name: material
+  language: fr
+
+  palette:
+    # Mode sombre (défaut)
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: red
+      accent: orange
+      toggle:
+        icon: material/weather-sunny
+        name: Passer en mode clair
+    # Mode clair
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: red
+      accent: orange
+      toggle:
+        icon: material/weather-night
+        name: Passer en mode sombre
+
+  font:
+    text: Inter
+    code: JetBrains Mono
+
+  features:
+    # Navigation
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+
+    # Table des matières
+    - toc.follow
+
+    # Recherche
+    - search.suggest
+    - search.highlight
+
+    # Contenu
+    - content.code.copy
+    - content.code.annotate
+
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search:
+      lang: fr
+
+markdown_extensions:
+  # Base
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
+
+  # PyMdown Extensions
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/nl1x/AutoStrike
+      name: GitHub
+
+nav:
+  - Accueil: index.md
+  - Guide:
+      - guide/index.md
+      - Installation: guide/installation.md
+      - Démarrage rapide: guide/quickstart.md
+  - Architecture:
+      - architecture/index.md
+      - Backend (Go): architecture/backend.md
+      - Agent (Rust): architecture/agent.md
+      - Dashboard (React): architecture/dashboard.md
+  - API:
+      - api/index.md
+      - Référence: api/reference.md
+  - MITRE ATT&CK:
+      - mitre/index.md
+      - Techniques: mitre/techniques.md
