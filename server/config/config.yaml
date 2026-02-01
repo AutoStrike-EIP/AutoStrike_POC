@@ -1,0 +1,34 @@
+# AutoStrike Server Configuration
+
+server:
+  host: "0.0.0.0"
+  port: 8443
+  mode: "release"  # debug, release, test
+
+database:
+  driver: "sqlite3"
+  path: "./data/autostrike.db"
+
+security:
+  jwt_secret: "${JWT_SECRET}"
+  agent_secret: "${AGENT_SECRET}"
+  tls:
+    enabled: true
+    cert_file: "./certs/server.crt"
+    key_file: "./certs/server.key"
+    ca_file: "./certs/ca.crt"
+    mtls: true
+
+logging:
+  level: "info"  # debug, info, warn, error
+  format: "json"
+  output: "stdout"
+
+agent:
+  heartbeat_interval: 30  # seconds
+  stale_timeout: 120      # seconds
+
+execution:
+  default_timeout: 300    # seconds
+  max_concurrent: 10
+  safe_mode_default: true

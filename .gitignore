@@ -37,7 +37,6 @@ yarn-error.log*
 # ===== Rust =====
 agent/target/
 agent/**/*.rs.bk
-agent/Cargo.lock
 
 # ===== Build =====
 build/
