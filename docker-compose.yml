@@ -1,0 +1,38 @@
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: autostrike-server
+    ports:
+      - "8443:8443"
+    volumes:
+      - ./server/config:/app/config
+      - ./certs:/app/certs
+      - server-data:/app/data
+    environment:
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in .env file}
+      - AGENT_SECRET=${AGENT_SECRET:?AGENT_SECRET must be set in .env file}
+    networks:
+      - autostrike-net
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: autostrike-dashboard
+    ports:
+      - "3000:80"
+    depends_on:
+      - server
+    networks:
+      - autostrike-net
+    restart: unless-stopped
+
+volumes:
+  server-data:
+
+networks:
+  autostrike-net:
+    driver: bridge

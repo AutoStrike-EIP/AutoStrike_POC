@@ -1,0 +1,54 @@
+[package]
+name = "autostrike-agent"
+version = "0.1.0"
+edition = "2021"
+authors = ["AutoStrike Team"]
+description = "AutoStrike BAS Agent - Executes MITRE ATT&CK techniques for security testing"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+
+# WebSocket client
+tokio-tungstenite = { version = "0.21", features = ["rustls-tls-webpki-roots"] }
+futures-util = "0.3"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# System information
+sysinfo = "0.30"
+whoami = "1.4"
+
+# Process execution
+which = "6.0"
+
+# Configuration
+config = "0.14"
+clap = { version = "4.4", features = ["derive"] }
+
+# Error handling
+anyhow = "1.0"
+
+# Pin home to avoid edition2024 requirement
+home = "=0.5.9"
+
+# UUID
+uuid = { version = "1.6", features = ["v4"] }
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["processthreadsapi", "handleapi", "winbase"] }
+
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.27", features = ["process", "signal"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = "z"
+strip = true
