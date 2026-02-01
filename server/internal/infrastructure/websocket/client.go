@@ -32,6 +32,9 @@ type Message struct {
 
 // NewClient creates a new WebSocket client
 func NewClient(hub *Hub, conn *websocket.Conn, agentPaw string, logger *zap.Logger) *Client {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
 	return &Client{
 		hub:      hub,
 		conn:     conn,
