@@ -90,13 +90,13 @@ func (r *TechniqueRepository) FindByID(ctx context.Context, id string) (*entity.
 	}
 
 	// Parse JSON fields, default to empty on error
-	if err := json.Unmarshal([]byte(platforms), &technique.Platforms); err != nil {
+	if json.Unmarshal([]byte(platforms), &technique.Platforms) != nil {
 		technique.Platforms = []string{}
 	}
-	if err := json.Unmarshal([]byte(executors), &technique.Executors); err != nil {
+	if json.Unmarshal([]byte(executors), &technique.Executors) != nil {
 		technique.Executors = []entity.Executor{}
 	}
-	if err := json.Unmarshal([]byte(detection), &technique.Detection); err != nil {
+	if json.Unmarshal([]byte(detection), &technique.Detection) != nil {
 		technique.Detection = []entity.Detection{}
 	}
 
@@ -179,13 +179,13 @@ func (r *TechniqueRepository) scanTechniques(rows *sql.Rows) ([]*entity.Techniqu
 		}
 
 		// Parse JSON fields, default to empty on error
-		if err := json.Unmarshal([]byte(platforms), &technique.Platforms); err != nil {
+		if json.Unmarshal([]byte(platforms), &technique.Platforms) != nil {
 			technique.Platforms = []string{}
 		}
-		if err := json.Unmarshal([]byte(executors), &technique.Executors); err != nil {
+		if json.Unmarshal([]byte(executors), &technique.Executors) != nil {
 			technique.Executors = []entity.Executor{}
 		}
-		if err := json.Unmarshal([]byte(detection), &technique.Detection); err != nil {
+		if json.Unmarshal([]byte(detection), &technique.Detection) != nil {
 			technique.Detection = []entity.Detection{}
 		}
 

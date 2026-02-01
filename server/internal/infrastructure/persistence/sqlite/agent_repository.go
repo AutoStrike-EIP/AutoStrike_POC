@@ -70,7 +70,7 @@ func (r *AgentRepository) FindByPaw(ctx context.Context, paw string) (*entity.Ag
 		return nil, err
 	}
 
-	if err := json.Unmarshal([]byte(executors), &agent.Executors); err != nil {
+	if json.Unmarshal([]byte(executors), &agent.Executors) != nil {
 		agent.Executors = []string{} // Default to empty on parse error
 	}
 	return agent, nil
@@ -138,7 +138,7 @@ func (r *AgentRepository) scanAgents(rows *sql.Rows) ([]*entity.Agent, error) {
 			return nil, err
 		}
 
-		if err := json.Unmarshal([]byte(executors), &agent.Executors); err != nil {
+		if json.Unmarshal([]byte(executors), &agent.Executors) != nil {
 			agent.Executors = []string{} // Default to empty on parse error
 		}
 		agents = append(agents, agent)

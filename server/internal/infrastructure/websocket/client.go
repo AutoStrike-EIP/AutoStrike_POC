@@ -103,7 +103,7 @@ func (c *Client) WritePump() {
 
 // handleOutgoingMessage processes a message from the send channel
 func (c *Client) handleOutgoingMessage(message []byte, ok bool) bool {
-	if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+	if c.conn.SetWriteDeadline(time.Now().Add(writeWait)) != nil {
 		return false
 	}
 
@@ -149,7 +149,7 @@ func (c *Client) writeQueuedMessages(w interface{ Write([]byte) (int, error) }) 
 
 // sendPing sends a ping message to keep the connection alive
 func (c *Client) sendPing() bool {
-	if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+	if c.conn.SetWriteDeadline(time.Now().Add(writeWait)) != nil {
 		return false
 	}
 	return c.conn.WriteMessage(websocket.PingMessage, nil) == nil

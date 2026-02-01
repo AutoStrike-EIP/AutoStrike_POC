@@ -79,10 +79,10 @@ func (r *ScenarioRepository) FindByID(ctx context.Context, id string) (*entity.S
 	}
 
 	// Parse JSON fields, default to empty on error
-	if err := json.Unmarshal([]byte(phases), &scenario.Phases); err != nil {
+	if json.Unmarshal([]byte(phases), &scenario.Phases) != nil {
 		scenario.Phases = []entity.Phase{}
 	}
-	if err := json.Unmarshal([]byte(tags), &scenario.Tags); err != nil {
+	if json.Unmarshal([]byte(tags), &scenario.Tags) != nil {
 		scenario.Tags = []string{}
 	}
 
@@ -130,10 +130,10 @@ func (r *ScenarioRepository) scanScenarios(rows *sql.Rows) ([]*entity.Scenario, 
 		}
 
 		// Parse JSON fields, default to empty on error
-		if err := json.Unmarshal([]byte(phases), &scenario.Phases); err != nil {
+		if json.Unmarshal([]byte(phases), &scenario.Phases) != nil {
 			scenario.Phases = []entity.Phase{}
 		}
-		if err := json.Unmarshal([]byte(tags), &scenario.Tags); err != nil {
+		if json.Unmarshal([]byte(tags), &scenario.Tags) != nil {
 			scenario.Tags = []string{}
 		}
 
