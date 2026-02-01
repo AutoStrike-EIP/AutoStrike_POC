@@ -67,46 +67,10 @@ func (o *AttackOrchestrator) PlanExecution(
 	}
 
 	taskOrder := 0
-
 	for _, phase := range scenario.Phases {
-		for _, techID := range phase.Techniques {
-			technique, err := o.techniqueRepo.FindByID(ctx, techID)
-			if err != nil {
-				o.logger.Warn("Skipping technique: not found in repository", zap.String("technique_id", techID))
-				continue
-			}
-
-			// Skip unsafe techniques in safe mode
-			if safeMode && !technique.IsSafe {
-				o.logger.Info("Skipping unsafe technique in safe mode", zap.String("technique_id", techID))
-				continue
-			}
-
-			// Find compatible agents
-			for _, agent := range targetAgents {
-				if !agent.IsCompatible(technique) {
-					continue
-				}
-
-				// Get the appropriate executor
-				executor := technique.GetExecutorForPlatform(agent.Platform, agent.Executors)
-				if executor == nil {
-					continue
-				}
-
-				plan.Tasks = append(plan.Tasks, PlannedTask{
-					TechniqueID: techID,
-					AgentPaw:    agent.Paw,
-					Phase:       phase.Name,
-					Order:       taskOrder,
-					Command:     executor.Command,
-					Cleanup:     executor.Cleanup,
-					Timeout:     executor.Timeout,
-				})
-
-				taskOrder++
-			}
-		}
+		tasks := o.planPhase(ctx, phase, targetAgents, safeMode, taskOrder)
+		plan.Tasks = append(plan.Tasks, tasks...)
+		taskOrder += len(tasks)
 	}
 
 	if len(plan.Tasks) == 0 {
@@ -114,6 +78,78 @@ func (o *AttackOrchestrator) PlanExecution(
 	}
 
 	return plan, nil
+}
+
+// planPhase creates tasks for a single phase
+func (o *AttackOrchestrator) planPhase(
+	ctx context.Context,
+	phase entity.Phase,
+	targetAgents []*entity.Agent,
+	safeMode bool,
+	startOrder int,
+) []PlannedTask {
+	var tasks []PlannedTask
+	taskOrder := startOrder
+
+	for _, techID := range phase.Techniques {
+		technique := o.getTechnique(ctx, techID, safeMode)
+		if technique == nil {
+			continue
+		}
+
+		for _, agent := range targetAgents {
+			task := o.createTaskForAgent(agent, technique, phase.Name, taskOrder)
+			if task != nil {
+				tasks = append(tasks, *task)
+				taskOrder++
+			}
+		}
+	}
+
+	return tasks
+}
+
+// getTechnique retrieves and validates a technique
+func (o *AttackOrchestrator) getTechnique(ctx context.Context, techID string, safeMode bool) *entity.Technique {
+	technique, err := o.techniqueRepo.FindByID(ctx, techID)
+	if err != nil {
+		o.logger.Warn("Skipping technique: not found in repository", zap.String("technique_id", techID))
+		return nil
+	}
+
+	if safeMode && !technique.IsSafe {
+		o.logger.Info("Skipping unsafe technique in safe mode", zap.String("technique_id", techID))
+		return nil
+	}
+
+	return technique
+}
+
+// createTaskForAgent creates a task if the agent is compatible
+func (o *AttackOrchestrator) createTaskForAgent(
+	agent *entity.Agent,
+	technique *entity.Technique,
+	phaseName string,
+	order int,
+) *PlannedTask {
+	if !agent.IsCompatible(technique) {
+		return nil
+	}
+
+	executor := technique.GetExecutorForPlatform(agent.Platform, agent.Executors)
+	if executor == nil {
+		return nil
+	}
+
+	return &PlannedTask{
+		TechniqueID: technique.ID,
+		AgentPaw:    agent.Paw,
+		Phase:       phaseName,
+		Order:       order,
+		Command:     executor.Command,
+		Cleanup:     executor.Cleanup,
+		Timeout:     executor.Timeout,
+	}
 }
 
 // ValidatePlan validates an execution plan

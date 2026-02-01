@@ -90,46 +90,69 @@ func (c *Client) WritePump() {
 	for {
 		select {
 		case message, ok := <-c.send:
-			if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+			if !c.handleOutgoingMessage(message, ok) {
 				return
 			}
-			if !ok {
-				_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
-
-			w, err := c.conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return
-			}
-			if _, err := w.Write(message); err != nil {
-				return
-			}
-
-			// Add queued messages to the current websocket message
-			n := len(c.send)
-			for i := 0; i < n; i++ {
-				if _, err := w.Write([]byte{'\n'}); err != nil {
-					return
-				}
-				if _, err := w.Write(<-c.send); err != nil {
-					return
-				}
-			}
-
-			if err := w.Close(); err != nil {
-				return
-			}
-
 		case <-ticker.C:
-			if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
-				return
-			}
-			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			if !c.sendPing() {
 				return
 			}
 		}
 	}
+}
+
+// handleOutgoingMessage processes a message from the send channel
+func (c *Client) handleOutgoingMessage(message []byte, ok bool) bool {
+	if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+		return false
+	}
+
+	if !ok {
+		_ = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+		return false
+	}
+
+	return c.writeMessageWithQueue(message)
+}
+
+// writeMessageWithQueue writes a message and any queued messages
+func (c *Client) writeMessageWithQueue(message []byte) bool {
+	w, err := c.conn.NextWriter(websocket.TextMessage)
+	if err != nil {
+		return false
+	}
+
+	if _, err := w.Write(message); err != nil {
+		return false
+	}
+
+	if !c.writeQueuedMessages(w) {
+		return false
+	}
+
+	return w.Close() == nil
+}
+
+// writeQueuedMessages writes any additional queued messages
+func (c *Client) writeQueuedMessages(w interface{ Write([]byte) (int, error) }) bool {
+	n := len(c.send)
+	for i := 0; i < n; i++ {
+		if _, err := w.Write([]byte{'\n'}); err != nil {
+			return false
+		}
+		if _, err := w.Write(<-c.send); err != nil {
+			return false
+		}
+	}
+	return true
+}
+
+// sendPing sends a ping message to keep the connection alive
+func (c *Client) sendPing() bool {
+	if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+		return false
+	}
+	return c.conn.WriteMessage(websocket.PingMessage, nil) == nil
 }
 
 // Send sends a message to the client

@@ -7,6 +7,20 @@ import { LoadingState } from '../components/LoadingState';
 import { EmptyState } from '../components/EmptyState';
 
 /**
+ * Returns the appropriate badge class for an execution status.
+ */
+function getStatusBadgeClass(status: string): string {
+  switch (status) {
+    case 'completed':
+      return 'badge-success';
+    case 'running':
+      return 'badge-warning';
+    default:
+      return 'badge-danger';
+  }
+}
+
+/**
  * Executions page component.
  * Displays a table of scenario executions with their results and scores.
  *
@@ -61,15 +75,7 @@ export default function Executions() {
                   <p className="text-xs text-gray-400">{execution.id.slice(0, 8)}...</p>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`badge ${
-                      execution.status === 'completed'
-                        ? 'badge-success'
-                        : execution.status === 'running'
-                        ? 'badge-warning'
-                        : 'badge-danger'
-                    }`}
-                  >
+                  <span className={`badge ${getStatusBadgeClass(execution.status)}`}>
                     {execution.status}
                   </span>
                 </td>

@@ -62,10 +62,11 @@ export default function Settings() {
           <h2 className="text-lg font-semibold mb-4">Server Configuration</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="server-url" className="block text-sm font-medium text-gray-700 mb-1">
                 Server URL
               </label>
               <input
+                id="server-url"
                 type="text"
                 className="input"
                 value={settings.serverUrl}
@@ -107,25 +108,27 @@ export default function Settings() {
           <h2 className="text-lg font-semibold mb-4">Agent Settings</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="heartbeat-interval" className="block text-sm font-medium text-gray-700 mb-1">
                 Heartbeat Interval (seconds)
               </label>
               <input
+                id="heartbeat-interval"
                 type="number"
                 className="input"
                 value={settings.heartbeatInterval}
-                onChange={(e) => updateSetting('heartbeatInterval', parseInt(e.target.value) || DEFAULT_HEARTBEAT_INTERVAL)}
+                onChange={(e) => updateSetting('heartbeatInterval', Number.parseInt(e.target.value, 10) || DEFAULT_HEARTBEAT_INTERVAL)}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="stale-timeout" className="block text-sm font-medium text-gray-700 mb-1">
                 Stale Agent Timeout (seconds)
               </label>
               <input
+                id="stale-timeout"
                 type="number"
                 className="input"
                 value={settings.staleTimeout}
-                onChange={(e) => updateSetting('staleTimeout', parseInt(e.target.value) || DEFAULT_STALE_TIMEOUT)}
+                onChange={(e) => updateSetting('staleTimeout', Number.parseInt(e.target.value, 10) || DEFAULT_STALE_TIMEOUT)}
               />
             </div>
           </div>
@@ -136,10 +139,11 @@ export default function Settings() {
           <h2 className="text-lg font-semibold mb-4">TLS / mTLS Configuration</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="ca-cert-path" className="block text-sm font-medium text-gray-700 mb-1">
                 CA Certificate Path
               </label>
               <input
+                id="ca-cert-path"
                 type="text"
                 className="input"
                 placeholder="/path/to/ca.crt"
@@ -148,10 +152,11 @@ export default function Settings() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="server-cert-path" className="block text-sm font-medium text-gray-700 mb-1">
                 Server Certificate Path
               </label>
               <input
+                id="server-cert-path"
                 type="text"
                 className="input"
                 placeholder="/path/to/server.crt"
@@ -160,10 +165,11 @@ export default function Settings() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="server-key-path" className="block text-sm font-medium text-gray-700 mb-1">
                 Server Key Path
               </label>
               <input
+                id="server-key-path"
                 type="text"
                 className="input"
                 placeholder="/path/to/server.key"
