@@ -46,7 +46,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   }, []);
 
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+    // Check for both OPEN and CONNECTING states to prevent duplicate connections
+    if (wsRef.current?.readyState === WebSocket.OPEN ||
+        wsRef.current?.readyState === WebSocket.CONNECTING) {
       return;
     }
 

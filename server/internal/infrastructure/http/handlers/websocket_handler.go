@@ -85,8 +85,10 @@ func (h *WebSocketHandler) HandleDashboardConnection(c *gin.Context) {
 		return
 	}
 
-	// Create client with "dashboard" identifier (not an agent)
-	client := websocket.NewClient(h.hub, conn, "dashboard", h.logger)
+	// Create client with empty paw - dashboard clients are not agents
+	// They receive broadcasts via the clients map, not the agents map
+	// Using empty paw prevents collision when multiple dashboards connect
+	client := websocket.NewClient(h.hub, conn, "", h.logger)
 
 	// Register client to receive broadcasts
 	h.hub.Register(client)

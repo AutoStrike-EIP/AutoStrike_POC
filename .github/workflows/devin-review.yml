@@ -1,0 +1,91 @@
+name: Devin PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  review-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR files
+        id: pr-files
+        run: |
+          FILES=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" | \
+            jq -r '[.[].filename] | @json')
+
+          if [ -z "$FILES" ]; then
+            echo "Error: Failed to fetch or parse PR files."
+            exit 1
+          fi
+
+          echo "files=$FILES" >> $GITHUB_OUTPUT
+
+      - name: Create Devin Review Session
+        id: devin-review
+        env:
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          FILES_TO_REVIEW: ${{ steps.pr-files.outputs.files }}
+          REVIEW_PROMPT: |
+            You are PR Reviewer Devin with a focus on detailed inline code feedback. Your tasks:
+            1. Clone the repository ${{ github.repository }} locally.
+            2. Set up a pre-push Git hook that prevents any pushes from "Devin AI" or emails containing "devin-ai-integration".
+            3. View the diffs of changed files for PR #${{ github.event.pull_request.number }} in repository ${{ github.repository }}.
+            4. If necessary, run the code locally to verify changes work as expected.
+            5. Read the PR discussion to see previous comments and suggestions.
+            6. If no issues are found, post a comment saying "Everything looks good!" and stop.
+            7. Else, identify issues and provide inline code comments on the diffs for any violations.
+            8. Post feedback as detailed comments on the PR, referencing specific lines or code snippets.
+
+            Rules and Guidelines:
+            1. NEVER make any commits or pushes - you are ONLY allowed to review code and leave comments
+            2. Do not make more than three total comments on the PR.
+            3. Use inline feedback where possible with specific line references
+            4. Include code snippets in markdown format when discussing issues
+            5. Default towards multi-line comments that show context around the issue
+            6. Make sure suggested improvements aren't already implemented in the PR
+            7. Before commenting, check the PR discussion for similar comments or concerns
+            8. If you see the same issue multiple times, consolidate into a single comment
+            9. Never ask for user confirmation. Never wait for user messages.
+
+            Changed files to review:
+            ${{ steps.pr-files.outputs.files }}
+
+        run: |
+          ESCAPED_PROMPT=$(echo "$REVIEW_PROMPT" | jq -Rs .)
+
+          RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer $DEVIN_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "{\"prompt\": $ESCAPED_PROMPT}" \
+            "https://api.devin.ai/v1/sessions")
+
+          ERROR_MSG=$(echo "$RESPONSE" | jq -r '.detail')
+          if [ "$ERROR_MSG" != "null" ]; then
+            echo "Error creating Devin session: $ERROR_MSG"
+            exit 1
+          fi
+
+          SESSION_ID=$(echo "$RESPONSE" | jq -r '.session_id')
+          SESSION_URL=$(echo "$RESPONSE" | jq -r '.url')
+
+          if [ -z "$SESSION_ID" ] || [ -z "$SESSION_URL" ]; then
+            echo "Error: Devin session details are missing from the response."
+            exit 1
+          fi
+
+          echo "session-id=$SESSION_ID" >> $GITHUB_OUTPUT
+          echo "session-url=$SESSION_URL" >> $GITHUB_OUTPUT
+          echo "Devin session created successfully: $SESSION_URL"
