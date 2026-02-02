@@ -77,6 +77,38 @@ func (h *WebSocketHandler) HandleAgentConnection(c *gin.Context) {
 	go client.ReadPump(h.handleMessage)
 }
 
+// HandleDashboardConnection handles WebSocket connections from dashboard clients
+func (h *WebSocketHandler) HandleDashboardConnection(c *gin.Context) {
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		h.logger.Error("Failed to upgrade dashboard WebSocket", zap.Error(err))
+		return
+	}
+
+	// Create client with "dashboard" identifier (not an agent)
+	client := websocket.NewClient(h.hub, conn, "dashboard", h.logger)
+
+	// Register client to receive broadcasts
+	h.hub.Register(client)
+
+	h.logger.Info("Dashboard client connected")
+
+	// Start read/write pumps (dashboard only receives, but needs read pump to detect disconnection)
+	go client.WritePump()
+	go client.ReadPump(h.handleDashboardMessage)
+}
+
+// handleDashboardMessage processes incoming messages from dashboard (mostly ping/pong)
+func (h *WebSocketHandler) handleDashboardMessage(client *websocket.Client, msg *websocket.Message) {
+	// Dashboard clients primarily receive broadcasts, but may send pings
+	switch msg.Type {
+	case "ping":
+		_ = client.Send("pong", nil)
+	default:
+		// Ignore other messages from dashboard
+	}
+}
+
 // handleMessage processes incoming WebSocket messages
 func (h *WebSocketHandler) handleMessage(client *websocket.Client, msg *websocket.Message) {
 	switch msg.Type {
@@ -168,4 +200,5 @@ func (h *WebSocketHandler) handleTaskResult(client *websocket.Client, payload js
 // RegisterRoutes registers WebSocket routes
 func (h *WebSocketHandler) RegisterRoutes(router *gin.Engine) {
 	router.GET("/ws/agent", h.HandleAgentConnection)
+	router.GET("/ws/dashboard", h.HandleDashboardConnection)
 }

@@ -333,6 +333,63 @@ Arrête une exécution en cours (status `running` ou `pending`).
 
 ---
 
+## WebSocket (Dashboard)
+
+### Connexion
+
+```
+wss://localhost:8443/ws/dashboard
+```
+
+Le dashboard se connecte pour recevoir des notifications en temps réel.
+
+### Messages Server → Dashboard
+
+**Exécution annulée :**
+```json
+{
+  "type": "execution_cancelled",
+  "payload": {
+    "execution_id": "550e8400-e29b-41d4-a716-446655440000",
+    "data": {}
+  }
+}
+```
+
+**Exécution terminée :**
+```json
+{
+  "type": "execution_completed",
+  "payload": {
+    "execution_id": "550e8400-e29b-41d4-a716-446655440000",
+    "data": {}
+  }
+}
+```
+
+**Exécution démarrée :**
+```json
+{
+  "type": "execution_started",
+  "payload": {
+    "execution_id": "550e8400-e29b-41d4-a716-446655440000",
+    "data": {}
+  }
+}
+```
+
+### Messages Dashboard → Server
+
+**Ping :**
+```json
+{
+  "type": "ping",
+  "payload": {}
+}
+```
+
+---
+
 ## WebSocket (Agents)
 
 ### Connexion

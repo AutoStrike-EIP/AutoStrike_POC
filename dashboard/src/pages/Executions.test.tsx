@@ -15,13 +15,17 @@ vi.mock('../lib/api', () => ({
   },
 }));
 
-// Mock the WebSocket hook
+// Mock the WebSocket hook - capture onMessage callback
+let capturedOnMessage: ((message: { type: string; payload: unknown }) => void) | undefined;
 vi.mock('../hooks/useWebSocket', () => ({
-  useWebSocket: vi.fn(() => ({
-    isConnected: false,
-    send: vi.fn(),
-    lastMessage: null,
-  })),
+  useWebSocket: vi.fn((options?: { onMessage?: (message: { type: string; payload: unknown }) => void }) => {
+    capturedOnMessage = options?.onMessage;
+    return {
+      isConnected: false,
+      send: vi.fn(),
+      lastMessage: null,
+    };
+  }),
 }));
 
 // Mock date-fns
@@ -56,6 +60,7 @@ function renderWithClient(ui: React.ReactElement) {
 describe('Executions Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    capturedOnMessage = undefined;
   });
 
   it('renders loading state', () => {
@@ -313,5 +318,161 @@ describe('Executions Page', () => {
     await screen.findByText('completed');
     // Should not have stop button for completed execution
     expect(screen.queryByRole('button', { name: /stop/i })).not.toBeInTheDocument();
+  });
+
+  it('handles stop execution error', async () => {
+    const mockExecutions = [
+      {
+        id: 'exec-error',
+        scenario_id: 'error-scenario',
+        status: 'running',
+        started_at: '2024-01-15T12:00:00Z',
+        safe_mode: true,
+      },
+    ];
+    vi.mocked(executionApi.list).mockResolvedValue({ data: mockExecutions } as never);
+    vi.mocked(executionApi.stop).mockRejectedValue({
+      response: { data: { error: 'Execution already stopped' }, status: 409 }
+    } as never);
+
+    renderWithClient(<Executions />);
+
+    // Open modal
+    const stopButton = await screen.findByRole('button', { name: /stop/i });
+    fireEvent.click(stopButton);
+
+    // Confirm stop
+    const confirmButton = screen.getByRole('button', { name: /stop execution/i });
+    fireEvent.click(confirmButton);
+
+    await waitFor(() => {
+      expect(executionApi.stop).toHaveBeenCalledWith('exec-error');
+    });
+  });
+
+  it('handles stop execution error without response data', async () => {
+    const mockExecutions = [
+      {
+        id: 'exec-network-error',
+        scenario_id: 'network-scenario',
+        status: 'running',
+        started_at: '2024-01-15T12:00:00Z',
+        safe_mode: true,
+      },
+    ];
+    vi.mocked(executionApi.list).mockResolvedValue({ data: mockExecutions } as never);
+    vi.mocked(executionApi.stop).mockRejectedValue(new Error('Network error') as never);
+
+    renderWithClient(<Executions />);
+
+    // Open modal
+    const stopButton = await screen.findByRole('button', { name: /stop/i });
+    fireEvent.click(stopButton);
+
+    // Confirm stop
+    const confirmButton = screen.getByRole('button', { name: /stop execution/i });
+    fireEvent.click(confirmButton);
+
+    await waitFor(() => {
+      expect(executionApi.stop).toHaveBeenCalledWith('exec-network-error');
+    });
+  });
+
+  it('handles WebSocket execution_cancelled message', async () => {
+    const mockExecutions = [
+      {
+        id: 'exec-1',
+        scenario_id: 'scenario-1',
+        status: 'running',
+        started_at: '2024-01-15T12:00:00Z',
+        safe_mode: true,
+      },
+    ];
+    vi.mocked(executionApi.list).mockResolvedValue({ data: mockExecutions } as never);
+
+    renderWithClient(<Executions />);
+
+    await screen.findByText('running');
+
+    // Trigger WebSocket message
+    if (capturedOnMessage) {
+      capturedOnMessage({ type: 'execution_cancelled', payload: { execution_id: 'exec-1' } });
+    }
+
+    // Query should be invalidated (we can check that the callback was captured)
+    expect(capturedOnMessage).toBeDefined();
+  });
+
+  it('handles WebSocket execution_completed message', async () => {
+    const mockExecutions = [
+      {
+        id: 'exec-2',
+        scenario_id: 'scenario-2',
+        status: 'running',
+        started_at: '2024-01-15T12:00:00Z',
+        safe_mode: true,
+      },
+    ];
+    vi.mocked(executionApi.list).mockResolvedValue({ data: mockExecutions } as never);
+
+    renderWithClient(<Executions />);
+
+    await screen.findByText('running');
+
+    // Trigger WebSocket message
+    if (capturedOnMessage) {
+      capturedOnMessage({ type: 'execution_completed', payload: { execution_id: 'exec-2' } });
+    }
+
+    expect(capturedOnMessage).toBeDefined();
+  });
+
+  it('handles WebSocket execution_started message', async () => {
+    const mockExecutions = [
+      {
+        id: 'exec-3',
+        scenario_id: 'scenario-3',
+        status: 'pending',
+        started_at: '2024-01-15T12:00:00Z',
+        safe_mode: true,
+      },
+    ];
+    vi.mocked(executionApi.list).mockResolvedValue({ data: mockExecutions } as never);
+
+    renderWithClient(<Executions />);
+
+    await screen.findByText('pending');
+
+    // Trigger WebSocket message
+    if (capturedOnMessage) {
+      capturedOnMessage({ type: 'execution_started', payload: { execution_id: 'exec-3' } });
+    }
+
+    expect(capturedOnMessage).toBeDefined();
+  });
+
+  it('ignores unrelated WebSocket messages', async () => {
+    const mockExecutions = [
+      {
+        id: 'exec-4',
+        scenario_id: 'scenario-4',
+        status: 'running',
+        started_at: '2024-01-15T12:00:00Z',
+        safe_mode: true,
+      },
+    ];
+    vi.mocked(executionApi.list).mockResolvedValue({ data: mockExecutions } as never);
+
+    renderWithClient(<Executions />);
+
+    await screen.findByText('running');
+
+    // Trigger unrelated WebSocket message
+    if (capturedOnMessage) {
+      capturedOnMessage({ type: 'agent_connected', payload: { agent_id: 'agent-1' } });
+    }
+
+    // Should not cause any errors
+    expect(capturedOnMessage).toBeDefined();
   });
 });

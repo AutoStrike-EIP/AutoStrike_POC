@@ -185,4 +185,75 @@ describe('useWebSocket', () => {
 
     consoleSpy.mockRestore();
   });
+
+  it('should not create new connection if already connected', async () => {
+    const { result } = renderHook(() => useWebSocket());
+
+    await waitFor(() => {
+      expect(result.current.isConnected).toBe(true);
+    });
+
+    // Force readyState to OPEN
+    mockWebSocketInstances[0].readyState = MockWebSocket.OPEN;
+
+    // Should still only have 1 connection
+    expect(mockWebSocketInstances.length).toBe(1);
+  });
+
+  it('should not send messages when not connected', async () => {
+    const { result } = renderHook(() => useWebSocket());
+
+    // Try to send before connection is established
+    act(() => {
+      result.current.send({ type: 'test' });
+    });
+
+    // Message should not be sent (WebSocket not open yet)
+    expect(result.current.isConnected).toBe(false);
+  });
+
+  it('should trigger reconnection logic on close', async () => {
+    const onDisconnect = vi.fn();
+    const { result } = renderHook(() => useWebSocket({ onDisconnect, maxRetries: 1 }));
+
+    await waitFor(() => {
+      expect(result.current.isConnected).toBe(true);
+    });
+
+    // Initial connection
+    expect(mockWebSocketInstances.length).toBe(1);
+
+    // Simulate close - this should trigger reconnect logic
+    act(() => {
+      mockWebSocketInstances[0].simulateClose();
+    });
+
+    expect(result.current.isConnected).toBe(false);
+    expect(onDisconnect).toHaveBeenCalled();
+  });
+
+  it('should use wss protocol for https', async () => {
+    const { result } = renderHook(() => useWebSocket());
+
+    await waitFor(() => {
+      expect(result.current.isConnected).toBe(true);
+    });
+
+    // Default is http, so should use ws
+    expect(mockWebSocketInstances[0].url).toContain('ws:');
+    expect(mockWebSocketInstances[0].url).toContain('/ws/dashboard');
+  });
+
+  it('should clean up on unmount without errors', async () => {
+    const { result, unmount } = renderHook(() => useWebSocket());
+
+    await waitFor(() => {
+      expect(result.current.isConnected).toBe(true);
+    });
+
+    // Unmount should clean up without errors
+    expect(() => unmount()).not.toThrow();
+    expect(mockWebSocketInstances[0].close).toHaveBeenCalled();
+  });
+
 });

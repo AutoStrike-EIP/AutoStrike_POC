@@ -102,7 +102,8 @@ Base URL: `https://localhost:8443/api/v1`
 
 ## WebSocket Protocol
 
-Agent ↔ Server communication via `wss://server:8443/ws/agent`
+### Agent ↔ Server
+Connection: `wss://server:8443/ws/agent`
 
 ```json
 // Register
@@ -113,6 +114,14 @@ Agent ↔ Server communication via `wss://server:8443/ws/agent`
 
 // Result
 {"type": "task_result", "payload": {"task_id": "...", "success": true, ...}}
+```
+
+### Dashboard ↔ Server
+Connection: `wss://server:8443/ws/dashboard`
+
+```json
+// Server notifications (execution_cancelled, execution_completed, execution_started)
+{"type": "execution_cancelled", "payload": {"execution_id": "...", "data": {}}}
 ```
 
 ## Environment Variables
@@ -138,7 +147,7 @@ Agent ↔ Server communication via `wss://server:8443/ws/agent`
 Test coverage:
 - Server: Unit tests for services and handlers (`go test ./...`)
 - Agent: Unit tests in `executor.rs` (`cargo test`)
-- Dashboard: 97 tests (`npm run test`)
+- Dashboard: 108 tests (`npm run test`)
 
 ## Contributing
 
