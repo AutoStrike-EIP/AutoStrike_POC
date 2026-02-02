@@ -18,6 +18,7 @@ Thumbs.db
 
 # ===== Go =====
 server/bin/
+server/autostrike
 server/autostrike-server
 server/*.exe
 server/*.out

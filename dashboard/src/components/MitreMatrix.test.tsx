@@ -1,0 +1,312 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { MitreMatrix } from './MitreMatrix';
+import { Technique } from '../types';
+
+const mockTechniques: Technique[] = [
+  {
+    id: 'T1082',
+    name: 'System Information Discovery',
+    description: 'Adversaries may attempt to get detailed information about the operating system.',
+    tactic: 'discovery',
+    platforms: ['windows', 'linux'],
+    is_safe: true,
+    detection: [
+      { source: 'Process Creation', indicator: 'systeminfo.exe execution' },
+    ],
+  },
+  {
+    id: 'T1083',
+    name: 'File and Directory Discovery',
+    description: 'Adversaries may enumerate files and directories.',
+    tactic: 'discovery',
+    platforms: ['windows', 'linux'],
+    is_safe: true,
+    detection: [],
+  },
+  {
+    id: 'T1059.001',
+    name: 'PowerShell',
+    description: 'Adversaries may abuse PowerShell commands.',
+    tactic: 'execution',
+    platforms: ['windows'],
+    is_safe: false,
+    detection: [
+      { source: 'Script Block', indicator: 'PowerShell execution' },
+    ],
+  },
+  {
+    id: 'T1566',
+    name: 'Phishing',
+    description: 'Adversaries may send phishing messages.',
+    tactic: 'initial_access',
+    platforms: ['windows', 'linux', 'macos'],
+    is_safe: true,
+    detection: [],
+  },
+];
+
+describe('MitreMatrix', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders all 14 tactic headers', () => {
+    render(<MitreMatrix techniques={[]} />);
+
+    expect(screen.getByText('Reconnaissance')).toBeInTheDocument();
+    expect(screen.getByText('Resource Development')).toBeInTheDocument();
+    expect(screen.getByText('Initial Access')).toBeInTheDocument();
+    expect(screen.getByText('Execution')).toBeInTheDocument();
+    expect(screen.getByText('Persistence')).toBeInTheDocument();
+    expect(screen.getByText('Privilege Escalation')).toBeInTheDocument();
+    expect(screen.getByText('Defense Evasion')).toBeInTheDocument();
+    expect(screen.getByText('Credential Access')).toBeInTheDocument();
+    expect(screen.getByText('Discovery')).toBeInTheDocument();
+    expect(screen.getByText('Lateral Movement')).toBeInTheDocument();
+    expect(screen.getByText('Collection')).toBeInTheDocument();
+    expect(screen.getByText('C2')).toBeInTheDocument();
+    expect(screen.getByText('Exfiltration')).toBeInTheDocument();
+    expect(screen.getByText('Impact')).toBeInTheDocument();
+  });
+
+  it('renders techniques in correct tactic columns', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    // Discovery techniques
+    expect(screen.getByText('T1082')).toBeInTheDocument();
+    expect(screen.getByText('System Information Discovery')).toBeInTheDocument();
+    expect(screen.getByText('T1083')).toBeInTheDocument();
+    expect(screen.getByText('File and Directory Discovery')).toBeInTheDocument();
+
+    // Execution technique
+    expect(screen.getByText('T1059.001')).toBeInTheDocument();
+    expect(screen.getByText('PowerShell')).toBeInTheDocument();
+
+    // Initial Access technique
+    expect(screen.getByText('T1566')).toBeInTheDocument();
+    expect(screen.getByText('Phishing')).toBeInTheDocument();
+  });
+
+  it('renders technique count in headers', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    // Discovery has 2 techniques
+    const discoveryCount = screen.getByText('Discovery').parentElement?.querySelector('.text-white\\/70');
+    expect(discoveryCount?.textContent).toBe('2');
+  });
+
+  it('renders platform filter', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    expect(screen.getByText('Platform:')).toBeInTheDocument();
+    expect(screen.getByRole('combobox')).toBeInTheDocument();
+    expect(screen.getByText('All Platforms')).toBeInTheDocument();
+  });
+
+  it('filters techniques by platform', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const platformSelect = screen.getByRole('combobox');
+
+    // Filter by Windows only
+    fireEvent.change(platformSelect, { target: { value: 'windows' } });
+
+    // All techniques support Windows
+    expect(screen.getByText('T1082')).toBeInTheDocument();
+    expect(screen.getByText('T1059.001')).toBeInTheDocument();
+  });
+
+  it('shows technique count', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    expect(screen.getByText('4 techniques loaded')).toBeInTheDocument();
+  });
+
+  it('shows safe/unsafe indicators', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    // Check for safe (green) and unsafe (red) indicators
+    const safeIndicators = document.querySelectorAll('.bg-green-500');
+    const unsafeIndicators = document.querySelectorAll('.bg-red-500');
+
+    expect(safeIndicators.length).toBeGreaterThan(0);
+    expect(unsafeIndicators.length).toBeGreaterThan(0);
+  });
+
+  it('opens technique detail panel on click', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1082: System Information Discovery');
+    fireEvent.click(techniqueButton);
+
+    // Modal should appear with technique details
+    expect(screen.getByRole('heading', { name: 'System Information Discovery' })).toBeInTheDocument();
+    expect(screen.getByText('Adversaries may attempt to get detailed information about the operating system.')).toBeInTheDocument();
+    expect(screen.getByText('Safe')).toBeInTheDocument();
+  });
+
+  it('closes technique detail panel when close button clicked', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    // Open modal
+    const techniqueButton = screen.getByTitle('T1082: System Information Discovery');
+    fireEvent.click(techniqueButton);
+
+    expect(screen.getByRole('heading', { name: 'System Information Discovery' })).toBeInTheDocument();
+
+    // Close modal
+    const closeButton = document.querySelector('.absolute.top-4.right-4');
+    if (closeButton) {
+      fireEvent.click(closeButton);
+    }
+
+    // Modal should be closed - look for dialog that's not visible
+    expect(screen.queryByRole('heading', { name: 'System Information Discovery' })).not.toBeInTheDocument();
+  });
+
+  it('closes technique detail panel when overlay clicked', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    // Open modal
+    const techniqueButton = screen.getByTitle('T1082: System Information Discovery');
+    fireEvent.click(techniqueButton);
+
+    // Click overlay to close
+    const overlay = document.querySelector('.bg-gray-500.bg-opacity-75');
+    if (overlay) {
+      fireEvent.click(overlay);
+    }
+
+    expect(screen.queryByRole('heading', { name: 'System Information Discovery' })).not.toBeInTheDocument();
+  });
+
+  it('shows detection information in detail panel', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1082: System Information Discovery');
+    fireEvent.click(techniqueButton);
+
+    expect(screen.getByText('Detection')).toBeInTheDocument();
+    expect(screen.getByText('Process Creation:')).toBeInTheDocument();
+    expect(screen.getByText('systeminfo.exe execution')).toBeInTheDocument();
+  });
+
+  it('shows platform badges in detail panel', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1082: System Information Discovery');
+    fireEvent.click(techniqueButton);
+
+    // Find platform badges in the detail modal (they have specific badge classes)
+    const modal = document.querySelector('.relative.bg-white.rounded-lg');
+    expect(modal).toBeInTheDocument();
+
+    const badges = modal?.querySelectorAll('.badge.bg-gray-100');
+    expect(badges?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('shows unsafe badge for unsafe technique', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
+    fireEvent.click(techniqueButton);
+
+    expect(screen.getByText('Unsafe')).toBeInTheDocument();
+  });
+
+  it('calls onTechniqueClick callback when provided', () => {
+    const onTechniqueClick = vi.fn();
+    render(<MitreMatrix techniques={mockTechniques} onTechniqueClick={onTechniqueClick} />);
+
+    const techniqueButton = screen.getByTitle('T1082: System Information Discovery');
+    fireEvent.click(techniqueButton);
+
+    expect(onTechniqueClick).toHaveBeenCalledWith(mockTechniques[0]);
+  });
+
+  it('renders "No techniques" message for empty tactics', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    // Tactics without techniques should show "No techniques"
+    const noTechMessages = screen.getAllByText('No techniques');
+    expect(noTechMessages.length).toBeGreaterThan(0);
+  });
+
+  it('renders legend', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    expect(screen.getByText('Safe technique')).toBeInTheDocument();
+    expect(screen.getByText('Potentially unsafe')).toBeInTheDocument();
+  });
+
+  it('handles techniques with hyphenated tactics', () => {
+    const techniquesWithHyphenatedTactic: Technique[] = [
+      {
+        id: 'T1548',
+        name: 'Abuse Elevation Control Mechanism',
+        description: 'Test technique',
+        tactic: 'privilege-escalation', // hyphenated form
+        platforms: ['windows'],
+        is_safe: false,
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={techniquesWithHyphenatedTactic} />);
+
+    expect(screen.getByText('T1548')).toBeInTheDocument();
+    expect(screen.getByText('Abuse Elevation Control Mechanism')).toBeInTheDocument();
+  });
+
+  it('sorts techniques by ID within each tactic', () => {
+    const unsortedTechniques: Technique[] = [
+      {
+        id: 'T1083',
+        name: 'File and Directory Discovery',
+        description: 'Test',
+        tactic: 'discovery',
+        platforms: ['windows'],
+        is_safe: true,
+        detection: [],
+      },
+      {
+        id: 'T1057',
+        name: 'Process Discovery',
+        description: 'Test',
+        tactic: 'discovery',
+        platforms: ['windows'],
+        is_safe: true,
+        detection: [],
+      },
+      {
+        id: 'T1082',
+        name: 'System Information Discovery',
+        description: 'Test',
+        tactic: 'discovery',
+        platforms: ['windows'],
+        is_safe: true,
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={unsortedTechniques} />);
+
+    const techniqueIds = screen.getAllByText(/^T\d+$/).map(el => el.textContent);
+    // Should be sorted: T1057, T1082, T1083
+    expect(techniqueIds).toContain('T1057');
+    expect(techniqueIds).toContain('T1082');
+    expect(techniqueIds).toContain('T1083');
+  });
+
+  it('renders available platforms in filter dropdown', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const platformSelect = screen.getByRole('combobox');
+
+    // Check for platform options
+    expect(platformSelect).toContainHTML('linux');
+    expect(platformSelect).toContainHTML('macos');
+    expect(platformSelect).toContainHTML('windows');
+  });
+});

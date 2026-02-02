@@ -1,0 +1,53 @@
+- id: "T1059.001"
+  name: "PowerShell"
+  description: "Adversaries may abuse PowerShell commands and scripts for execution."
+  tactic: "execution"
+  platforms:
+    - "windows"
+  executors:
+    - type: "psh"
+      command: "Get-Process | Select-Object -First 5"
+      platform: "windows"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "powershell.exe execution with unusual arguments"
+    - source: "Script Block Logging"
+      indicator: "Suspicious PowerShell commands"
+  is_safe: true
+
+- id: "T1059.003"
+  name: "Windows Command Shell"
+  description: "Adversaries may abuse the Windows command shell for execution."
+  tactic: "execution"
+  platforms:
+    - "windows"
+  executors:
+    - type: "cmd"
+      command: "echo %USERNAME% && echo %COMPUTERNAME%"
+      platform: "windows"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "cmd.exe execution with unusual arguments"
+  is_safe: true
+
+- id: "T1059.004"
+  name: "Unix Shell"
+  description: "Adversaries may abuse Unix shell commands and scripts for execution."
+  tactic: "execution"
+  platforms:
+    - "linux"
+  executors:
+    - type: "bash"
+      command: "echo $USER && hostname"
+      platform: "linux"
+      timeout: 60
+    - type: "sh"
+      command: "echo $USER && hostname"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "bash or sh execution with unusual arguments"
+  is_safe: true

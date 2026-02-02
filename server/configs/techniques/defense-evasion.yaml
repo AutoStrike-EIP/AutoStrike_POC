@@ -1,0 +1,22 @@
+- id: "T1070.004"
+  name: "File Deletion"
+  description: "Adversaries may delete files left behind by the actions of their intrusion activity."
+  tactic: "defense-evasion"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "cmd"
+      command: "echo Test file deletion simulation"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "echo Test file deletion simulation"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "File System"
+      indicator: "File deletion events in sensitive directories"
+    - source: "Process Creation"
+      indicator: "del.exe or rm execution"
+  is_safe: true

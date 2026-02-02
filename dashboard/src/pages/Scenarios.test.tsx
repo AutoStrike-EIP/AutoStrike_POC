@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import Scenarios from './Scenarios';
 import { api } from '../lib/api';
 
@@ -8,6 +9,17 @@ import { api } from '../lib/api';
 vi.mock('../lib/api', () => ({
   api: {
     get: vi.fn(),
+  },
+  executionApi: {
+    start: vi.fn(),
+  },
+}));
+
+// Mock react-hot-toast
+vi.mock('react-hot-toast', () => ({
+  default: {
+    success: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
@@ -23,7 +35,9 @@ const createTestQueryClient = () =>
 function renderWithClient(ui: React.ReactElement) {
   const testQueryClient = createTestQueryClient();
   return render(
-    <QueryClientProvider client={testQueryClient}>{ui}</QueryClientProvider>
+    <MemoryRouter>
+      <QueryClientProvider client={testQueryClient}>{ui}</QueryClientProvider>
+    </MemoryRouter>
   );
 }
 

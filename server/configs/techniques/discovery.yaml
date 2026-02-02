@@ -102,3 +102,87 @@
     - source: "Process Creation"
       indicator: "netstat.exe or ss execution"
   is_safe: true
+
+- id: "T1087"
+  name: "Account Discovery"
+  description: "Adversaries may attempt to get a listing of accounts on a system or within an environment."
+  tactic: "discovery"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "cmd"
+      command: "net user"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "cat /etc/passwd | cut -d: -f1"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "net.exe user or cat /etc/passwd execution"
+  is_safe: true
+
+- id: "T1069"
+  name: "Permission Groups Discovery"
+  description: "Adversaries may attempt to find group and permission settings."
+  tactic: "discovery"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "cmd"
+      command: "net localgroup"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "cat /etc/group"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "net.exe localgroup or group file access"
+  is_safe: true
+
+- id: "T1018"
+  name: "Remote System Discovery"
+  description: "Adversaries may attempt to get a listing of other systems by IP address, hostname, or other logical identifier."
+  tactic: "discovery"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "cmd"
+      command: "net view"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "arp -a"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "net.exe view or arp execution"
+  is_safe: true
+
+- id: "T1007"
+  name: "System Service Discovery"
+  description: "Adversaries may try to get information about registered services."
+  tactic: "discovery"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "cmd"
+      command: "sc query"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "systemctl list-units --type=service --state=running"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "sc.exe query or systemctl execution"
+  is_safe: true

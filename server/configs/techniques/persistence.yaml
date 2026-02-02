@@ -1,0 +1,39 @@
+- id: "T1053.005"
+  name: "Scheduled Task"
+  description: "Adversaries may abuse the Windows Task Scheduler to perform task scheduling for initial or recurring execution."
+  tactic: "persistence"
+  platforms:
+    - "windows"
+  executors:
+    - type: "cmd"
+      command: "schtasks /query /fo LIST"
+      platform: "windows"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "schtasks.exe execution"
+    - source: "Windows Event Log"
+      indicator: "Event ID 4698 - Scheduled task created"
+  is_safe: true
+
+- id: "T1547.001"
+  name: "Registry Run Keys / Startup Folder"
+  description: "Adversaries may achieve persistence by adding a program to a startup folder or referencing it with a Registry run key."
+  tactic: "persistence"
+  platforms:
+    - "windows"
+  executors:
+    - type: "cmd"
+      command: "reg query HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
+      platform: "windows"
+      timeout: 60
+    - type: "psh"
+      command: "Get-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'"
+      platform: "windows"
+      timeout: 60
+  detection:
+    - source: "Registry"
+      indicator: "Modification to Run keys"
+    - source: "Process Creation"
+      indicator: "reg.exe query on Run keys"
+  is_safe: true

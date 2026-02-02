@@ -108,6 +108,10 @@ func NewServerWithConfig(
 			executionHandler = handlers.NewExecutionHandler(executionService)
 		}
 		executionHandler.RegisterRoutes(api)
+
+		// Scenarios
+		scenarioHandler := handlers.NewScenarioHandler(scenarioService)
+		scenarioHandler.RegisterRoutes(api)
 	}
 
 	return &Server{
