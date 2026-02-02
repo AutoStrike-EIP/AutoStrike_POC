@@ -12,8 +12,10 @@ import (
 
 	"autostrike/internal/application"
 	"autostrike/internal/domain/entity"
+	"autostrike/internal/infrastructure/websocket"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 func init() {
@@ -1140,4 +1142,49 @@ func TestExecutionHandler_StopExecution_InternalError(t *testing.T) {
 	if w.Code != http.StatusInternalServerError {
 		t.Errorf("Expected status 500, got %d", w.Code)
 	}
+}
+
+func TestNewExecutionHandlerWithHub(t *testing.T) {
+	resultRepo := newMockResultRepo()
+	svc := application.NewExecutionService(resultRepo, nil, nil, nil, nil, nil)
+
+	// Create handler with hub
+	handler := NewExecutionHandlerWithHub(svc, nil)
+	if handler == nil {
+		t.Error("Expected non-nil handler")
+	}
+	if handler.service != svc {
+		t.Error("Service not set correctly")
+	}
+}
+
+func TestExecutionHandler_BroadcastExecutionEvent_NilHub(t *testing.T) {
+	resultRepo := newMockResultRepo()
+	svc := application.NewExecutionService(resultRepo, nil, nil, nil, nil, nil)
+
+	// Handler with nil hub should not panic
+	handler := NewExecutionHandler(svc)
+	handler.broadcastExecutionEvent("test_event", "exec-123", map[string]string{"status": "test"})
+	// No panic means success
+}
+
+func TestExecutionHandler_BroadcastExecutionEvent_WithHub(t *testing.T) {
+	resultRepo := newMockResultRepo()
+	svc := application.NewExecutionService(resultRepo, nil, nil, nil, nil, nil)
+
+	// Create a real hub
+	logger := zap.NewNop()
+	hub := websocket.NewHub(logger)
+
+	// Start hub in goroutine
+	go hub.Run()
+
+	// Create handler with hub
+	handler := NewExecutionHandlerWithHub(svc, hub)
+
+	// This should not panic and should broadcast
+	handler.broadcastExecutionEvent("test_event", "exec-123", map[string]string{"status": "test"})
+
+	// Small delay to let broadcast process
+	time.Sleep(10 * time.Millisecond)
 }
