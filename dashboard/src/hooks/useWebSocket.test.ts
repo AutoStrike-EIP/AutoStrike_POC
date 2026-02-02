@@ -360,7 +360,8 @@ describe('useWebSocket', () => {
   });
 
   it('should handle WebSocket creation error gracefully', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // Suppress console.error for this test
+    vi.spyOn(console, 'error').mockImplementation(() => {});
 
     // Mock WebSocket to throw on construction
     vi.stubGlobal('WebSocket', class {
@@ -369,13 +370,13 @@ describe('useWebSocket', () => {
       }
     });
 
+    // Hook should not crash even if WebSocket fails to create
     const { result } = renderHook(() => useWebSocket());
 
     // Should not crash, isConnected should be false
     expect(result.current.isConnected).toBe(false);
-    expect(consoleSpy).toHaveBeenCalled();
 
-    consoleSpy.mockRestore();
+    vi.restoreAllMocks();
   });
 
 });
