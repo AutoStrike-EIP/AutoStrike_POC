@@ -119,10 +119,6 @@ export default function Executions() {
         message.type === 'execution_started') {
       // Invalidate the executions query to refresh the list
       queryClient.invalidateQueries({ queryKey: ['executions'] });
-
-      if (message.type === 'execution_cancelled') {
-        toast.success('Execution cancelled successfully');
-      }
     }
   }, [queryClient]);
 
@@ -143,7 +139,7 @@ export default function Executions() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['executions'] });
       setExecutionToStop(null);
-      // Toast notification handled by WebSocket message handler (execution_cancelled event)
+      toast.success('Execution cancelled successfully');
     },
     onError: (error: { response?: { data?: { error?: string }; status?: number } }) => {
       const message = error.response?.data?.error || 'Failed to stop execution';
