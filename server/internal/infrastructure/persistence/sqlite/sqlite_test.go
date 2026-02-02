@@ -3,6 +3,8 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -279,6 +281,126 @@ func TestAgentRepository_UpdateLastSeen(t *testing.T) {
 	found, _ := repo.FindByPaw(ctx, "test")
 	if found.Status != entity.AgentOnline {
 		t.Error("Expected agent to be online after UpdateLastSeen")
+	}
+}
+
+func TestAgentRepository_FindByPaws(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewAgentRepository(db)
+	ctx := context.Background()
+
+	// Create multiple agents
+	agents := []*entity.Agent{
+		{Paw: "paw-1", Hostname: "host1", Username: "user1", Platform: "linux", Executors: []string{"sh"}, Status: entity.AgentOnline, LastSeen: time.Now(), CreatedAt: time.Now()},
+		{Paw: "paw-2", Hostname: "host2", Username: "user2", Platform: "windows", Executors: []string{"cmd"}, Status: entity.AgentOnline, LastSeen: time.Now(), CreatedAt: time.Now()},
+		{Paw: "paw-3", Hostname: "host3", Username: "user3", Platform: "linux", Executors: []string{"bash"}, Status: entity.AgentOffline, LastSeen: time.Now(), CreatedAt: time.Now()},
+	}
+	for _, agent := range agents {
+		_ = repo.Create(ctx, agent)
+	}
+
+	// Test: Find multiple agents by paws
+	found, err := repo.FindByPaws(ctx, []string{"paw-1", "paw-3"})
+	if err != nil {
+		t.Fatalf("FindByPaws failed: %v", err)
+	}
+	if len(found) != 2 {
+		t.Errorf("Expected 2 agents, got %d", len(found))
+	}
+
+	// Verify correct agents were found
+	pawSet := make(map[string]bool)
+	for _, a := range found {
+		pawSet[a.Paw] = true
+	}
+	if !pawSet["paw-1"] || !pawSet["paw-3"] {
+		t.Error("Expected to find paw-1 and paw-3")
+	}
+}
+
+func TestAgentRepository_FindByPaws_Empty(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewAgentRepository(db)
+	ctx := context.Background()
+
+	// Test: Empty paws slice returns empty result
+	found, err := repo.FindByPaws(ctx, []string{})
+	if err != nil {
+		t.Fatalf("FindByPaws with empty slice failed: %v", err)
+	}
+	if len(found) != 0 {
+		t.Errorf("Expected 0 agents for empty paws, got %d", len(found))
+	}
+}
+
+func TestAgentRepository_FindByPaws_NonExistent(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewAgentRepository(db)
+	ctx := context.Background()
+
+	// Test: Non-existent paws return empty result (not an error)
+	found, err := repo.FindByPaws(ctx, []string{"nonexistent-1", "nonexistent-2"})
+	if err != nil {
+		t.Fatalf("FindByPaws with non-existent paws failed: %v", err)
+	}
+	if len(found) != 0 {
+		t.Errorf("Expected 0 agents for non-existent paws, got %d", len(found))
+	}
+}
+
+func TestAgentRepository_FindByPaws_Partial(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewAgentRepository(db)
+	ctx := context.Background()
+
+	// Create one agent
+	agent := &entity.Agent{
+		Paw: "existing", Hostname: "host", Username: "user", Platform: "linux",
+		Executors: []string{"sh"}, Status: entity.AgentOnline,
+		LastSeen: time.Now(), CreatedAt: time.Now(),
+	}
+	_ = repo.Create(ctx, agent)
+
+	// Test: Mixed existing and non-existing paws
+	found, err := repo.FindByPaws(ctx, []string{"existing", "nonexistent"})
+	if err != nil {
+		t.Fatalf("FindByPaws with partial match failed: %v", err)
+	}
+	if len(found) != 1 {
+		t.Errorf("Expected 1 agent for partial match, got %d", len(found))
+	}
+	if found[0].Paw != "existing" {
+		t.Errorf("Expected paw 'existing', got '%s'", found[0].Paw)
+	}
+}
+
+func TestAgentRepository_FindByPaws_Single(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewAgentRepository(db)
+	ctx := context.Background()
+
+	agent := &entity.Agent{
+		Paw: "single-paw", Hostname: "host", Username: "user", Platform: "darwin",
+		Executors: []string{"zsh"}, Status: entity.AgentOnline,
+		LastSeen: time.Now(), CreatedAt: time.Now(),
+	}
+	_ = repo.Create(ctx, agent)
+
+	// Test: Single paw lookup
+	found, err := repo.FindByPaws(ctx, []string{"single-paw"})
+	if err != nil {
+		t.Fatalf("FindByPaws with single paw failed: %v", err)
+	}
+	if len(found) != 1 {
+		t.Errorf("Expected 1 agent, got %d", len(found))
+	}
+	if found[0].Hostname != "host" {
+		t.Errorf("Expected hostname 'host', got '%s'", found[0].Hostname)
 	}
 }
 
@@ -920,5 +1042,366 @@ func TestResultRepository_FindResultsByTechnique(t *testing.T) {
 	}
 	if len(results) != 1 {
 		t.Errorf("Expected 1 result for T1059, got %d", len(results))
+	}
+}
+
+// ImportFromYAML tests
+func TestTechniqueRepository_ImportFromYAML(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	// Create a temporary YAML file
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "techniques.yaml")
+	yamlContent := `
+- id: "T1001"
+  name: "Data Obfuscation"
+  description: "Test technique"
+  tactic: "command_and_control"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "sh"
+      command: "echo test"
+  is_safe: true
+- id: "T1002"
+  name: "Data Compressed"
+  description: "Another technique"
+  tactic: "exfiltration"
+  platforms:
+    - "linux"
+  executors:
+    - type: "bash"
+      command: "gzip test"
+  is_safe: true
+`
+	err := os.WriteFile(yamlPath, []byte(yamlContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write YAML file: %v", err)
+	}
+
+	err = repo.ImportFromYAML(ctx, yamlPath)
+	if err != nil {
+		t.Fatalf("ImportFromYAML failed: %v", err)
+	}
+
+	// Verify techniques were imported
+	techniques, err := repo.FindAll(ctx)
+	if err != nil {
+		t.Fatalf("FindAll failed: %v", err)
+	}
+	if len(techniques) != 2 {
+		t.Errorf("Expected 2 techniques, got %d", len(techniques))
+	}
+}
+
+func TestTechniqueRepository_ImportFromYAML_FileNotFound(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	err := repo.ImportFromYAML(ctx, "/nonexistent/path/techniques.yaml")
+	if err == nil {
+		t.Error("Expected error for non-existent file")
+	}
+}
+
+func TestTechniqueRepository_ImportFromYAML_InvalidYAML(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "invalid.yaml")
+	err := os.WriteFile(yamlPath, []byte("not: valid: yaml: ["), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write file: %v", err)
+	}
+
+	err = repo.ImportFromYAML(ctx, yamlPath)
+	if err == nil {
+		t.Error("Expected error for invalid YAML")
+	}
+}
+
+// Tests for JSON marshal errors in Create functions
+func TestAgentRepository_Create_MarshalError(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewAgentRepository(db)
+	ctx := context.Background()
+
+	// Valid agent - should succeed
+	agent := &entity.Agent{
+		Paw:       "marshal-test",
+		Hostname:  "host",
+		Username:  "user",
+		Platform:  "linux",
+		Executors: []string{"sh"},
+		Status:    entity.AgentOnline,
+		LastSeen:  time.Now(),
+		CreatedAt: time.Now(),
+	}
+
+	err := repo.Create(ctx, agent)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	// Verify it was created
+	found, err := repo.FindByPaw(ctx, "marshal-test")
+	if err != nil {
+		t.Fatalf("FindByPaw failed: %v", err)
+	}
+	if found.Paw != "marshal-test" {
+		t.Errorf("Expected paw 'marshal-test', got '%s'", found.Paw)
+	}
+}
+
+// Test for rows.Err() path coverage
+func TestAgentRepository_FindAll_EmptyDB(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewAgentRepository(db)
+	ctx := context.Background()
+
+	// FindAll on empty database
+	agents, err := repo.FindAll(ctx)
+	if err != nil {
+		t.Fatalf("FindAll failed: %v", err)
+	}
+	if len(agents) != 0 {
+		t.Errorf("Expected 0 agents in empty DB, got %d", len(agents))
+	}
+}
+
+func TestScenarioRepository_Create_EmptyPhases(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewScenarioRepository(db)
+	ctx := context.Background()
+
+	scenario := &entity.Scenario{
+		ID:        "empty-phases",
+		Name:      "Empty Phases Test",
+		Phases:    []entity.Phase{},
+		Tags:      []string{},
+		UpdatedAt: time.Now(),
+	}
+
+	err := repo.Create(ctx, scenario)
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	found, err := repo.FindByID(ctx, "empty-phases")
+	if err != nil {
+		t.Fatalf("FindByID failed: %v", err)
+	}
+	if len(found.Phases) != 0 {
+		t.Errorf("Expected 0 phases, got %d", len(found.Phases))
+	}
+}
+
+func TestResultRepository_FindResultsByExecution_Empty(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewResultRepository(db)
+	ctx := context.Background()
+
+	// Find results for non-existent execution
+	results, err := repo.FindResultsByExecution(ctx, "nonexistent")
+	if err != nil {
+		t.Fatalf("FindResultsByExecution failed: %v", err)
+	}
+	if len(results) != 0 {
+		t.Errorf("Expected 0 results, got %d", len(results))
+	}
+}
+
+func TestResultRepository_FindExecutionsByScenario_Empty(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewResultRepository(db)
+	ctx := context.Background()
+
+	executions, err := repo.FindExecutionsByScenario(ctx, "nonexistent")
+	if err != nil {
+		t.Fatalf("FindExecutionsByScenario failed: %v", err)
+	}
+	if len(executions) != 0 {
+		t.Errorf("Expected 0 executions, got %d", len(executions))
+	}
+}
+
+func TestTechniqueRepository_FindByTactic_Empty(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	techniques, err := repo.FindByTactic(ctx, entity.TacticDiscovery)
+	if err != nil {
+		t.Fatalf("FindByTactic failed: %v", err)
+	}
+	if len(techniques) != 0 {
+		t.Errorf("Expected 0 techniques, got %d", len(techniques))
+	}
+}
+
+// Test JSON unmarshal error paths by inserting invalid JSON
+func TestAgentRepository_FindByPaw_InvalidJSON(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewAgentRepository(db)
+	ctx := context.Background()
+
+	// Insert agent with invalid JSON executors directly
+	_, err := db.Exec(`
+		INSERT INTO agents (paw, hostname, username, platform, executors, status, last_seen, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, "invalid-json-agent", "host", "user", "linux", "not valid json", "online", time.Now(), time.Now())
+	if err != nil {
+		t.Fatalf("Failed to insert test data: %v", err)
+	}
+
+	// Should still work, with empty executors
+	agent, err := repo.FindByPaw(ctx, "invalid-json-agent")
+	if err != nil {
+		t.Fatalf("FindByPaw failed: %v", err)
+	}
+	if len(agent.Executors) != 0 {
+		t.Errorf("Expected empty executors for invalid JSON, got %v", agent.Executors)
+	}
+}
+
+func TestAgentRepository_FindAll_InvalidJSON(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewAgentRepository(db)
+	ctx := context.Background()
+
+	// Insert agent with invalid JSON
+	_, _ = db.Exec(`
+		INSERT INTO agents (paw, hostname, username, platform, executors, status, last_seen, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, "agent-invalid", "host", "user", "linux", "{invalid json}", "online", time.Now(), time.Now())
+
+	agents, err := repo.FindAll(ctx)
+	if err != nil {
+		t.Fatalf("FindAll failed: %v", err)
+	}
+	// Should succeed with empty executors
+	if len(agents) == 0 {
+		t.Error("Expected at least 1 agent")
+	}
+}
+
+func TestTechniqueRepository_FindAll_InvalidJSON(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	// Insert technique with invalid JSON fields (include created_at)
+	_, err := db.Exec(`
+		INSERT INTO techniques (id, name, description, tactic, platforms, executors, detection, is_safe, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, "T-invalid", "Test", "Desc", "execution", "not json", "not json", "not json", true, time.Now())
+	if err != nil {
+		t.Fatalf("Failed to insert: %v", err)
+	}
+
+	techniques, err := repo.FindAll(ctx)
+	if err != nil {
+		t.Fatalf("FindAll failed: %v", err)
+	}
+	if len(techniques) != 1 {
+		t.Fatalf("Expected 1 technique, got %d", len(techniques))
+	}
+	// Should have empty arrays due to JSON parse error
+	if len(techniques[0].Platforms) != 0 {
+		t.Errorf("Expected empty platforms for invalid JSON")
+	}
+}
+
+func TestScenarioRepository_FindAll_InvalidJSON(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewScenarioRepository(db)
+	ctx := context.Background()
+
+	// Insert scenario with invalid JSON
+	_, _ = db.Exec(`
+		INSERT INTO scenarios (id, name, description, phases, tags, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`, "s-invalid", "Test", "Desc", "not json", "not json", time.Now(), time.Now())
+
+	scenarios, err := repo.FindAll(ctx)
+	if err != nil {
+		t.Fatalf("FindAll failed: %v", err)
+	}
+	if len(scenarios) != 1 {
+		t.Errorf("Expected 1 scenario, got %d", len(scenarios))
+	}
+}
+
+func TestResultRepository_FindRecentExecutions_WithScore(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewResultRepository(db)
+	ctx := context.Background()
+
+	// Insert execution with score (using correct schema columns)
+	_, err := db.Exec(`
+		INSERT INTO executions (id, scenario_id, status, started_at, completed_at, safe_mode,
+		score_overall, score_blocked, score_detected, score_successful, score_total)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, "exec-score", "s1", "completed", time.Now(), time.Now(), true, 0.85, 2, 3, 5, 10)
+	if err != nil {
+		t.Fatalf("Failed to insert: %v", err)
+	}
+
+	executions, err := repo.FindRecentExecutions(ctx, 10)
+	if err != nil {
+		t.Fatalf("FindRecentExecutions failed: %v", err)
+	}
+	if len(executions) != 1 {
+		t.Errorf("Expected 1 execution, got %d", len(executions))
+	}
+	if executions[0].Score.Overall != 0.85 {
+		t.Errorf("Expected score 0.85, got %f", executions[0].Score.Overall)
+	}
+}
+
+func TestResultRepository_FindExecutionsByScenario_WithResults(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewResultRepository(db)
+	ctx := context.Background()
+
+	// Insert multiple executions for same scenario
+	for i := 0; i < 3; i++ {
+		exec := &entity.Execution{
+			ID:         "exec-" + string(rune('a'+i)),
+			ScenarioID: "scenario-1",
+			Status:     entity.ExecutionCompleted,
+			StartedAt:  time.Now(),
+			SafeMode:   true,
+		}
+		_ = repo.CreateExecution(ctx, exec)
+	}
+
+	executions, err := repo.FindExecutionsByScenario(ctx, "scenario-1")
+	if err != nil {
+		t.Fatalf("FindExecutionsByScenario failed: %v", err)
+	}
+	if len(executions) != 3 {
+		t.Errorf("Expected 3 executions, got %d", len(executions))
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"autostrike/internal/domain/entity"
@@ -74,6 +75,36 @@ func (r *AgentRepository) FindByPaw(ctx context.Context, paw string) (*entity.Ag
 		agent.Executors = []string{} // Default to empty on parse error
 	}
 	return agent, nil
+}
+
+// FindByPaws finds multiple agents by their paws in a single query (batch operation)
+// Security note: This uses parameterized queries - the placeholders ("?") are static,
+// only the count varies. Actual paw values are passed as query parameters, preventing SQL injection.
+func (r *AgentRepository) FindByPaws(ctx context.Context, paws []string) ([]*entity.Agent, error) {
+	if len(paws) == 0 {
+		return []*entity.Agent{}, nil
+	}
+
+	// Build parameterized query with safe placeholders
+	// Each "?" is a placeholder for a prepared statement parameter
+	placeholders := make([]string, len(paws))
+	args := make([]interface{}, len(paws))
+	for i, paw := range paws {
+		placeholders[i] = "?"
+		args[i] = paw
+	}
+
+	// NOSONAR: This is safe - we're only joining "?" placeholders, not user data.
+	// The actual values are passed via args... as prepared statement parameters.
+	query := "SELECT paw, hostname, username, platform, executors, status, last_seen, created_at FROM agents WHERE paw IN (" + strings.Join(placeholders, ",") + ")"
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return r.scanAgents(rows)
 }
 
 // FindAll finds all agents

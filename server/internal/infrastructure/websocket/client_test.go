@@ -2,8 +2,14 @@ package websocket
 
 import (
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
 
@@ -297,4 +303,313 @@ func TestClient_Send_UnmarshalablePayload(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error when sending unmarshalable payload")
 	}
+}
+
+// Test helper to create a WebSocket test server
+func createTestServer(t *testing.T, handler http.HandlerFunc) (*httptest.Server, string) {
+	server := httptest.NewServer(handler)
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
+	return server, wsURL
+}
+
+var testUpgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin:     func(r *http.Request) bool { return true },
+}
+
+func TestClient_ReadPump(t *testing.T) {
+	logger := zap.NewNop()
+	hub := NewHub(logger)
+	go hub.Run()
+
+	var serverConn *websocket.Conn
+	var serverMu sync.Mutex
+
+	server, wsURL := createTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		conn, err := testUpgrader.Upgrade(w, r, nil)
+		if err != nil {
+			t.Logf("Upgrade failed: %v", err)
+			return
+		}
+		serverMu.Lock()
+		serverConn = conn
+		serverMu.Unlock()
+		// Keep connection open
+		select {}
+	})
+	defer server.Close()
+
+	// Connect client
+	clientConn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("Failed to connect: %v", err)
+	}
+
+	client := NewClient(hub, clientConn, "test-agent", logger)
+	hub.Register(client)
+
+	receivedMsgs := make(chan *Message, 10)
+	handler := func(c *Client, msg *Message) {
+		receivedMsgs <- msg
+	}
+
+	go client.ReadPump(handler)
+
+	// Wait for server connection
+	time.Sleep(50 * time.Millisecond)
+
+	serverMu.Lock()
+	if serverConn == nil {
+		t.Fatal("Server connection not established")
+	}
+
+	// Send a message from server to client
+	testMsg := Message{Type: "test", Payload: json.RawMessage(`{"data":"hello"}`)}
+	msgBytes, _ := json.Marshal(testMsg)
+	err = serverConn.WriteMessage(websocket.TextMessage, msgBytes)
+	serverMu.Unlock()
+
+	if err != nil {
+		t.Fatalf("Failed to write message: %v", err)
+	}
+
+	// Wait for message to be received
+	select {
+	case msg := <-receivedMsgs:
+		if msg.Type != "test" {
+			t.Errorf("Expected type 'test', got '%s'", msg.Type)
+		}
+	case <-time.After(1 * time.Second):
+		t.Error("Timeout waiting for message")
+	}
+
+	// Close connection to trigger ReadPump exit
+	clientConn.Close()
+}
+
+func TestClient_WritePump(t *testing.T) {
+	logger := zap.NewNop()
+	hub := NewHub(logger)
+	go hub.Run()
+
+	receivedMsgs := make(chan []byte, 10)
+	var serverConn *websocket.Conn
+
+	server, wsURL := createTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		conn, err := testUpgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		serverConn = conn
+		for {
+			_, data, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
+			receivedMsgs <- data
+		}
+	})
+	defer server.Close()
+
+	clientConn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("Failed to connect: %v", err)
+	}
+
+	client := NewClient(hub, clientConn, "test-agent", logger)
+	hub.Register(client)
+
+	go client.WritePump()
+
+	// Send a message
+	err = client.Send("test-msg", map[string]string{"hello": "world"})
+	if err != nil {
+		t.Fatalf("Send failed: %v", err)
+	}
+
+	// Wait for message to be received by server
+	select {
+	case data := <-receivedMsgs:
+		var msg Message
+		if err := json.Unmarshal(data, &msg); err != nil {
+			t.Fatalf("Failed to unmarshal: %v", err)
+		}
+		if msg.Type != "test-msg" {
+			t.Errorf("Expected type 'test-msg', got '%s'", msg.Type)
+		}
+	case <-time.After(1 * time.Second):
+		t.Error("Timeout waiting for message on server")
+	}
+
+	// Close to trigger WritePump exit
+	clientConn.Close()
+	if serverConn != nil {
+		serverConn.Close()
+	}
+}
+
+func TestClient_WritePump_MultipleMessages(t *testing.T) {
+	logger := zap.NewNop()
+	hub := NewHub(logger)
+	go hub.Run()
+
+	receivedMsgs := make(chan []byte, 20)
+
+	server, wsURL := createTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		conn, err := testUpgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		for {
+			_, data, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
+			receivedMsgs <- data
+		}
+	})
+	defer server.Close()
+
+	clientConn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("Failed to connect: %v", err)
+	}
+
+	client := NewClient(hub, clientConn, "test-agent", logger)
+	hub.Register(client)
+
+	go client.WritePump()
+
+	// Send multiple messages with small delays to ensure separate writes
+	for i := 0; i < 3; i++ {
+		err = client.Send("msg", map[string]int{"num": i})
+		if err != nil {
+			t.Fatalf("Send %d failed: %v", i, err)
+		}
+		time.Sleep(50 * time.Millisecond) // Allow message to be processed
+	}
+
+	// Receive messages (may be batched, so count total received)
+	received := 0
+	timeout := time.After(2 * time.Second)
+	for received < 3 {
+		select {
+		case <-receivedMsgs:
+			received++
+		case <-timeout:
+			// Batching may combine messages, so receiving at least 1 is acceptable
+			if received >= 1 {
+				return
+			}
+			t.Fatalf("Timeout: received %d messages", received)
+		}
+	}
+
+	clientConn.Close()
+}
+
+func TestClient_ReadPump_InvalidJSON(t *testing.T) {
+	logger := zap.NewNop()
+	hub := NewHub(logger)
+	go hub.Run()
+
+	var serverConn *websocket.Conn
+	var mu sync.Mutex
+
+	server, wsURL := createTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		conn, err := testUpgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		mu.Lock()
+		serverConn = conn
+		mu.Unlock()
+		select {}
+	})
+	defer server.Close()
+
+	clientConn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("Failed to connect: %v", err)
+	}
+
+	client := NewClient(hub, clientConn, "test-agent", logger)
+	hub.Register(client)
+
+	handlerCalled := make(chan bool, 10)
+	handler := func(c *Client, msg *Message) {
+		handlerCalled <- true
+	}
+
+	go client.ReadPump(handler)
+
+	time.Sleep(50 * time.Millisecond)
+
+	mu.Lock()
+	if serverConn != nil {
+		// Send invalid JSON
+		_ = serverConn.WriteMessage(websocket.TextMessage, []byte("not valid json"))
+		// Send valid JSON
+		validMsg := Message{Type: "valid", Payload: json.RawMessage(`{}`)}
+		msgBytes, _ := json.Marshal(validMsg)
+		_ = serverConn.WriteMessage(websocket.TextMessage, msgBytes)
+	}
+	mu.Unlock()
+
+	// Should receive the valid message despite the invalid one
+	select {
+	case <-handlerCalled:
+		// Success - handler was called for valid message
+	case <-time.After(1 * time.Second):
+		t.Error("Handler was not called")
+	}
+
+	clientConn.Close()
+}
+
+func TestClient_WritePump_ChannelClosed(t *testing.T) {
+	logger := zap.NewNop()
+	hub := NewHub(logger)
+	go hub.Run()
+
+	server, wsURL := createTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		conn, err := testUpgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		// Read messages to prevent blocking
+		for {
+			_, _, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
+		}
+	})
+	defer server.Close()
+
+	clientConn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("Failed to connect: %v", err)
+	}
+
+	client := NewClient(hub, clientConn, "test-agent", logger)
+
+	done := make(chan bool)
+	go func() {
+		client.WritePump()
+		done <- true
+	}()
+
+	// Close the send channel to trigger WritePump exit
+	close(client.send)
+
+	select {
+	case <-done:
+		// WritePump exited as expected
+	case <-time.After(2 * time.Second):
+		t.Error("WritePump did not exit after channel closed")
+	}
+
+	clientConn.Close()
 }

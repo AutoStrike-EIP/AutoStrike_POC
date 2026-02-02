@@ -54,17 +54,27 @@ func (s *ExecutionService) StartExecution(
 		return nil, fmt.Errorf("scenario not found: %w", err)
 	}
 
-	// Load agents
-	agents := make([]*entity.Agent, 0, len(agentPaws))
+	// Load agents in batch (single query instead of N+1)
+	agents, err := s.agentRepo.FindByPaws(ctx, agentPaws)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load agents: %w", err)
+	}
+
+	// Build a map for quick lookup and validate all agents exist
+	agentMap := make(map[string]*entity.Agent, len(agents))
+	for _, agent := range agents {
+		agentMap[agent.Paw] = agent
+	}
+
+	// Verify all requested agents were found and are online
 	for _, paw := range agentPaws {
-		agent, err := s.agentRepo.FindByPaw(ctx, paw)
-		if err != nil {
-			return nil, fmt.Errorf("agent %s not found: %w", paw, err)
+		agent, found := agentMap[paw]
+		if !found {
+			return nil, fmt.Errorf("agent %s not found", paw)
 		}
 		if agent.Status != entity.AgentOnline {
 			return nil, fmt.Errorf("agent %s is not online", paw)
 		}
-		agents = append(agents, agent)
 	}
 
 	// Create execution plan

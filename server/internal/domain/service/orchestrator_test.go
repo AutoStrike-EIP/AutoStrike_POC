@@ -26,6 +26,15 @@ func (m *mockAgentRepo) FindByPaw(ctx context.Context, paw string) (*entity.Agen
 	}
 	return nil, errors.New("agent not found")
 }
+func (m *mockAgentRepo) FindByPaws(ctx context.Context, paws []string) ([]*entity.Agent, error) {
+	var result []*entity.Agent
+	for _, paw := range paws {
+		if agent, ok := m.agents[paw]; ok {
+			result = append(result, agent)
+		}
+	}
+	return result, nil
+}
 func (m *mockAgentRepo) FindAll(ctx context.Context) ([]*entity.Agent, error) {
 	return nil, nil
 }

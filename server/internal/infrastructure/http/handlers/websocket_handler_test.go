@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -74,6 +75,21 @@ func (m *wsTestAgentRepo) FindByPaw(ctx context.Context, paw string) (*entity.Ag
 		return nil, errors.New("agent not found")
 	}
 	return agent, nil
+}
+
+func (m *wsTestAgentRepo) FindByPaws(ctx context.Context, paws []string) ([]*entity.Agent, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.findErr != nil {
+		return nil, m.findErr
+	}
+	var result []*entity.Agent
+	for _, paw := range paws {
+		if agent, ok := m.agents[paw]; ok {
+			result = append(result, agent)
+		}
+	}
+	return result, nil
 }
 
 func (m *wsTestAgentRepo) FindAll(ctx context.Context) ([]*entity.Agent, error) {
@@ -559,12 +575,180 @@ func TestRegisterPayload_JSONMarshal(t *testing.T) {
 }
 
 func TestUpgrader_CheckOrigin(t *testing.T) {
-	// Test that CheckOrigin allows all origins (for development)
-	req, _ := http.NewRequest("GET", "http://example.com", nil)
-	req.Header.Set("Origin", "http://different-origin.com")
+	// Test that CheckOrigin allows localhost origins (default allowed origins)
+	tests := []struct {
+		name     string
+		origin   string
+		expected bool
+	}{
+		{"localhost http 3000", "http://localhost:3000", true},
+		{"localhost https 3000", "https://localhost:3000", true},
+		{"localhost http 8443", "http://localhost:8443", true},
+		{"localhost https 8443", "https://localhost:8443", true},
+		{"no origin header", "", true}, // Same-origin or non-browser requests
+		{"unknown origin", "http://different-origin.com", false},
+		{"malicious origin", "http://evil.com", false},
+	}
 
-	if !upgrader.CheckOrigin(req) {
-		t.Error("Expected CheckOrigin to return true for all origins")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, _ := http.NewRequest("GET", "http://localhost:8443", nil)
+			if tt.origin != "" {
+				req.Header.Set("Origin", tt.origin)
+			}
+
+			result := upgrader.CheckOrigin(req)
+			if result != tt.expected {
+				t.Errorf("CheckOrigin(%q) = %v, expected %v", tt.origin, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestGetAllowedOrigins_Default(t *testing.T) {
+	// Clear ALLOWED_ORIGINS to test default behavior
+	originalValue := os.Getenv("ALLOWED_ORIGINS")
+	os.Unsetenv("ALLOWED_ORIGINS")
+	defer func() {
+		if originalValue != "" {
+			os.Setenv("ALLOWED_ORIGINS", originalValue)
+		}
+	}()
+
+	origins := getAllowedOrigins()
+
+	expected := []string{
+		"http://localhost:3000",
+		"https://localhost:3000",
+		"http://localhost:8443",
+		"https://localhost:8443",
+	}
+
+	if len(origins) != len(expected) {
+		t.Errorf("Expected %d default origins, got %d", len(expected), len(origins))
+	}
+
+	for i, exp := range expected {
+		if origins[i] != exp {
+			t.Errorf("Expected origin[%d] = '%s', got '%s'", i, exp, origins[i])
+		}
+	}
+}
+
+func TestGetAllowedOrigins_CustomSingle(t *testing.T) {
+	originalValue := os.Getenv("ALLOWED_ORIGINS")
+	os.Setenv("ALLOWED_ORIGINS", "https://myapp.com")
+	defer func() {
+		if originalValue != "" {
+			os.Setenv("ALLOWED_ORIGINS", originalValue)
+		} else {
+			os.Unsetenv("ALLOWED_ORIGINS")
+		}
+	}()
+
+	origins := getAllowedOrigins()
+
+	if len(origins) != 1 {
+		t.Errorf("Expected 1 origin, got %d", len(origins))
+	}
+
+	if origins[0] != "https://myapp.com" {
+		t.Errorf("Expected 'https://myapp.com', got '%s'", origins[0])
+	}
+}
+
+func TestGetAllowedOrigins_CustomMultiple(t *testing.T) {
+	originalValue := os.Getenv("ALLOWED_ORIGINS")
+	os.Setenv("ALLOWED_ORIGINS", "https://app1.com,https://app2.com,http://localhost:5000")
+	defer func() {
+		if originalValue != "" {
+			os.Setenv("ALLOWED_ORIGINS", originalValue)
+		} else {
+			os.Unsetenv("ALLOWED_ORIGINS")
+		}
+	}()
+
+	origins := getAllowedOrigins()
+
+	if len(origins) != 3 {
+		t.Errorf("Expected 3 origins, got %d", len(origins))
+	}
+
+	expected := []string{"https://app1.com", "https://app2.com", "http://localhost:5000"}
+	for i, exp := range expected {
+		if origins[i] != exp {
+			t.Errorf("Expected origin[%d] = '%s', got '%s'", i, exp, origins[i])
+		}
+	}
+}
+
+func TestUpgrader_CheckOrigin_WithCustomOrigins(t *testing.T) {
+	originalValue := os.Getenv("ALLOWED_ORIGINS")
+	os.Setenv("ALLOWED_ORIGINS", "https://trusted.com,https://allowed.org")
+	defer func() {
+		if originalValue != "" {
+			os.Setenv("ALLOWED_ORIGINS", originalValue)
+		} else {
+			os.Unsetenv("ALLOWED_ORIGINS")
+		}
+	}()
+
+	tests := []struct {
+		name     string
+		origin   string
+		expected bool
+	}{
+		{"trusted origin", "https://trusted.com", true},
+		{"allowed origin", "https://allowed.org", true},
+		{"no origin", "", true},
+		{"untrusted origin", "https://evil.com", false},
+		{"localhost not allowed", "http://localhost:3000", false}, // Not in custom list
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, _ := http.NewRequest("GET", "http://localhost:8443", nil)
+			if tt.origin != "" {
+				req.Header.Set("Origin", tt.origin)
+			}
+
+			result := upgrader.CheckOrigin(req)
+			if result != tt.expected {
+				t.Errorf("CheckOrigin(%q) = %v, expected %v", tt.origin, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestUpgrader_CheckOrigin_WithWhitespace(t *testing.T) {
+	originalValue := os.Getenv("ALLOWED_ORIGINS")
+	os.Setenv("ALLOWED_ORIGINS", "https://site1.com, https://site2.com , https://site3.com")
+	defer func() {
+		if originalValue != "" {
+			os.Setenv("ALLOWED_ORIGINS", originalValue)
+		} else {
+			os.Unsetenv("ALLOWED_ORIGINS")
+		}
+	}()
+
+	// CheckOrigin uses TrimSpace, so origins with whitespace should still match
+	tests := []struct {
+		origin   string
+		expected bool
+	}{
+		{"https://site1.com", true},
+		{"https://site2.com", true},
+		{"https://site3.com", true},
+	}
+
+	for _, tt := range tests {
+		req, _ := http.NewRequest("GET", "http://localhost:8443", nil)
+		req.Header.Set("Origin", tt.origin)
+
+		result := upgrader.CheckOrigin(req)
+		if result != tt.expected {
+			t.Errorf("CheckOrigin(%q) = %v, expected %v", tt.origin, result, tt.expected)
+		}
 	}
 }
 

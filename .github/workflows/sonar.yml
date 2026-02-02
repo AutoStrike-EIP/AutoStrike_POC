@@ -3,10 +3,9 @@ name: SonarCloud Analysis
 on:
   push:
     branches:
-      - '**'
+      - main
   pull_request:
-    branches:
-      - '**'
+    types: [opened, synchronize, reopened]
 
 jobs:
   sonarcloud:
@@ -17,21 +16,38 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Setup Go for backend tests
+      # ---------------------------
+      # 1. SERVER (Go)
+      # ---------------------------
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
 
-      # Run Go tests with coverage
       - name: Run Go Tests
         working-directory: server
         run: |
           go test -coverprofile=coverage.out -covermode=atomic ./...
-          # Fix paths for SonarCloud (autostrike/ -> server/)
-          sed -i 's|autostrike/|server/|g' coverage.out
+          sed -i 's|autostrike/|server/|g' coverage.out || true
 
-      # Setup Node.js for frontend tests
+      # ---------------------------
+      # 2. AGENT (Rust)
+      # ---------------------------
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "agent"
+
+      - name: Run Rust Tests
+        working-directory: agent
+        run: cargo test --verbose
+
+      # ---------------------------
+      # 3. DASHBOARD (Node/Vite)
+      # ---------------------------
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -39,17 +55,18 @@ jobs:
           cache: 'npm'
           cache-dependency-path: dashboard/package-lock.json
 
-      # Install frontend dependencies
       - name: Install Dependencies
         working-directory: dashboard
         run: npm ci
 
-      # Run frontend tests with coverage
       - name: Run Frontend Tests
         working-directory: dashboard
-        run: npm run test:coverage || true
+        # Le "|| true" permet au workflow de continuer même si les tests failent
+        run: npm run coverage -- --reporter=lcov || true
 
-      # SonarCloud Analysis
+      # ---------------------------
+      # 4. ANALYSE SONAR
+      # ---------------------------
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v4
         env:

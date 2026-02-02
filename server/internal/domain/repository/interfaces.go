@@ -12,6 +12,7 @@ type AgentRepository interface {
 	Update(ctx context.Context, agent *entity.Agent) error
 	Delete(ctx context.Context, paw string) error
 	FindByPaw(ctx context.Context, paw string) (*entity.Agent, error)
+	FindByPaws(ctx context.Context, paws []string) ([]*entity.Agent, error) // Batch query to avoid N+1
 	FindAll(ctx context.Context) ([]*entity.Agent, error)
 	FindByStatus(ctx context.Context, status entity.AgentStatus) ([]*entity.Agent, error)
 	FindByPlatform(ctx context.Context, platform string) ([]*entity.Agent, error)

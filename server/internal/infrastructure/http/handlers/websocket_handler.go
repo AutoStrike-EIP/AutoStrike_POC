@@ -3,6 +3,8 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"strings"
 
 	"autostrike/internal/application"
 	"autostrike/internal/infrastructure/websocket"
@@ -12,11 +14,31 @@ import (
 	"go.uber.org/zap"
 )
 
+// getAllowedOrigins returns the list of allowed origins from environment
+func getAllowedOrigins() []string {
+	origins := os.Getenv("ALLOWED_ORIGINS")
+	if origins == "" {
+		// Default to localhost for development
+		return []string{"http://localhost:3000", "https://localhost:3000", "http://localhost:8443", "https://localhost:8443"}
+	}
+	return strings.Split(origins, ",")
+}
+
 var upgrader = gorillaws.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all origins for development
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true // Allow requests without origin (same-origin or non-browser)
+		}
+		allowedOrigins := getAllowedOrigins()
+		for _, allowed := range allowedOrigins {
+			if strings.TrimSpace(allowed) == origin {
+				return true
+			}
+		}
+		return false
 	},
 }
 
