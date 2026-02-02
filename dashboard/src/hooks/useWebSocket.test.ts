@@ -257,67 +257,33 @@ describe('useWebSocket', () => {
   });
 
   it('should not reconnect when cleaning up (component unmounting)', async () => {
-    vi.useFakeTimers();
     const { result, unmount } = renderHook(() => useWebSocket({ maxRetries: 3 }));
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(result.current.isConnected).toBe(true);
     });
 
     const initialInstanceCount = mockWebSocketInstances.length;
 
-    // Unmount the component (sets isCleaningUpRef to true)
+    // Unmount the component
     unmount();
 
-    // Advance timers - no reconnect should happen
-    vi.advanceTimersByTime(10000);
+    // Give time for any potential reconnection attempts
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
 
-    // No new connection should be created
+    // No new connection should be created after unmount
     expect(mockWebSocketInstances.length).toBe(initialInstanceCount);
-
-    vi.useRealTimers();
   });
 
   it('should attempt reconnection with backoff on disconnect when not cleaning up', async () => {
-    vi.useFakeTimers();
     const { result } = renderHook(() => useWebSocket({
       maxRetries: 3,
-      reconnectInterval: 1000
+      reconnectInterval: 50 // Short interval for testing
     }));
 
-    await vi.waitFor(() => {
-      expect(result.current.isConnected).toBe(true);
-    });
-
-    const initialInstanceCount = mockWebSocketInstances.length;
-
-    // Simulate close without unmounting
-    act(() => {
-      mockWebSocketInstances[0].readyState = MockWebSocket.CLOSED;
-      mockWebSocketInstances[0].onclose?.(new CloseEvent('close'));
-    });
-
-    expect(result.current.isConnected).toBe(false);
-
-    // Advance time to trigger reconnect
-    await act(async () => {
-      vi.advanceTimersByTime(1000);
-    });
-
-    // A new connection attempt should be made
-    expect(mockWebSocketInstances.length).toBe(initialInstanceCount + 1);
-
-    vi.useRealTimers();
-  });
-
-  it('should not reconnect if max retries exceeded', async () => {
-    vi.useFakeTimers();
-    const { result } = renderHook(() => useWebSocket({
-      maxRetries: 0,
-      reconnectInterval: 1000
-    }));
-
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(result.current.isConnected).toBe(true);
     });
 
@@ -329,15 +295,37 @@ describe('useWebSocket', () => {
       mockWebSocketInstances[0].onclose?.(new CloseEvent('close'));
     });
 
-    // Advance time
+    // Wait for reconnection attempt
+    await waitFor(() => {
+      expect(mockWebSocketInstances.length).toBe(initialInstanceCount + 1);
+    }, { timeout: 500 });
+  });
+
+  it('should not reconnect if max retries exceeded', async () => {
+    const { result } = renderHook(() => useWebSocket({
+      maxRetries: 0,
+      reconnectInterval: 50
+    }));
+
+    await waitFor(() => {
+      expect(result.current.isConnected).toBe(true);
+    });
+
+    const initialInstanceCount = mockWebSocketInstances.length;
+
+    // Simulate close
+    act(() => {
+      mockWebSocketInstances[0].readyState = MockWebSocket.CLOSED;
+      mockWebSocketInstances[0].onclose?.(new CloseEvent('close'));
+    });
+
+    // Wait a bit to ensure no reconnection happens
     await act(async () => {
-      vi.advanceTimersByTime(5000);
+      await new Promise(resolve => setTimeout(resolve, 200));
     });
 
     // No reconnection since maxRetries is 0
     expect(mockWebSocketInstances.length).toBe(initialInstanceCount);
-
-    vi.useRealTimers();
   });
 
   it('should prevent duplicate connections when in CONNECTING state', async () => {

@@ -22,7 +22,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === HttpStatusCode.Unauthorized) {
       localStorage.removeItem('token');
-      globalThis.location.href = '/login';
+      // TODO: Redirect to login page when implemented (Phase 3)
     }
     return Promise.reject(error);
   }

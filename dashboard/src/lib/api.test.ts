@@ -143,7 +143,7 @@ describe('Response Interceptor Logic', () => {
     expect(result).toBe(response);
   });
 
-  it('removes token and redirects on 401 error', async () => {
+  it('removes token on 401 error', async () => {
     localStorage.setItem('token', 'expired-token');
 
     vi.resetModules();
@@ -161,7 +161,6 @@ describe('Response Interceptor Logic', () => {
 
     await expect(errorHandler(error)).rejects.toBe(error);
     expect(localStorage.removeItem).toHaveBeenCalledWith('token');
-    expect(global.location.href).toBe('/login');
   });
 
   it('rejects error without redirect on non-401', async () => {

@@ -323,8 +323,7 @@ func TestScenarioHandler_CreateScenario(t *testing.T) {
 		Phases: []entity.Phase{
 			{Name: "Discovery", Techniques: []string{"T1082"}, Order: 1},
 		},
-		Tags:   []string{"test"},
-		Author: "test-user",
+		Tags: []string{"test"},
 	}
 	jsonBody, _ := json.Marshal(body)
 
@@ -467,5 +466,230 @@ func TestScenarioHandler_DeleteScenario_Error(t *testing.T) {
 
 	if w.Code != http.StatusInternalServerError {
 		t.Errorf("Expected status 500, got %d", w.Code)
+	}
+}
+
+func TestScenarioHandler_GetScenariosByTag_Error(t *testing.T) {
+	scenarioRepo := newTestScenarioRepo()
+	scenarioRepo.err = errors.New("database error")
+	techRepo := newTestTechniqueRepo()
+	svc := createTestScenarioService(scenarioRepo, techRepo)
+	handler := NewScenarioHandler(svc)
+
+	router := gin.New()
+	router.GET("/scenarios/tag/:tag", handler.GetScenariosByTag)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/scenarios/tag/apt29", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d", w.Code)
+	}
+}
+
+func TestScenarioHandler_CreateScenario_ValidationError(t *testing.T) {
+	scenarioRepo := newTestScenarioRepo()
+	techRepo := newTestTechniqueRepo()
+	// Don't add the technique - this will cause validation to fail
+	svc := createTestScenarioService(scenarioRepo, techRepo)
+	handler := NewScenarioHandler(svc)
+
+	router := gin.New()
+	router.POST("/scenarios", handler.CreateScenario)
+
+	body := CreateScenarioRequest{
+		Name:        "Test Scenario",
+		Description: "A test scenario",
+		Phases: []entity.Phase{
+			{Name: "Discovery", Techniques: []string{"T9999"}, Order: 1}, // Invalid technique
+		},
+		Tags: []string{"test"},
+	}
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/scenarios", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestScenarioHandler_CreateScenario_ServiceError(t *testing.T) {
+	scenarioRepo := newTestScenarioRepo()
+	scenarioRepo.err = errors.New("database error")
+	techRepo := newTestTechniqueRepo()
+	techRepo.techniques["T1082"] = &entity.Technique{
+		ID:        "T1082",
+		Name:      "System Information Discovery",
+		Tactic:    entity.TacticDiscovery,
+		Platforms: []string{"windows", "linux"},
+	}
+	svc := createTestScenarioService(scenarioRepo, techRepo)
+	handler := NewScenarioHandler(svc)
+
+	router := gin.New()
+	router.POST("/scenarios", handler.CreateScenario)
+
+	body := CreateScenarioRequest{
+		Name:        "Test Scenario",
+		Description: "A test scenario",
+		Phases: []entity.Phase{
+			{Name: "Discovery", Techniques: []string{"T1082"}, Order: 1},
+		},
+		Tags: []string{"test"},
+	}
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/scenarios", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestScenarioHandler_UpdateScenario_BadRequest(t *testing.T) {
+	scenarioRepo := newTestScenarioRepo()
+	scenarioRepo.scenarios["s1"] = &entity.Scenario{
+		ID:        "s1",
+		Name:      "Original Name",
+		CreatedAt: time.Now(),
+		Phases: []entity.Phase{
+			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+		},
+	}
+	techRepo := newTestTechniqueRepo()
+	svc := createTestScenarioService(scenarioRepo, techRepo)
+	handler := NewScenarioHandler(svc)
+
+	router := gin.New()
+	router.PUT("/scenarios/:id", handler.UpdateScenario)
+
+	// Missing required fields
+	body := `{"description": "missing name and phases"}`
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PUT", "/scenarios/s1", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Code)
+	}
+}
+
+func TestScenarioHandler_UpdateScenario_ValidationError(t *testing.T) {
+	scenarioRepo := newTestScenarioRepo()
+	scenarioRepo.scenarios["s1"] = &entity.Scenario{
+		ID:        "s1",
+		Name:      "Original Name",
+		CreatedAt: time.Now(),
+		Phases: []entity.Phase{
+			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+		},
+	}
+	techRepo := newTestTechniqueRepo()
+	// Don't add the technique - this will cause validation to fail
+	svc := createTestScenarioService(scenarioRepo, techRepo)
+	handler := NewScenarioHandler(svc)
+
+	router := gin.New()
+	router.PUT("/scenarios/:id", handler.UpdateScenario)
+
+	body := UpdateScenarioRequest{
+		Name: "Updated Name",
+		Phases: []entity.Phase{
+			{Name: "Phase 1", Techniques: []string{"T9999"}, Order: 1}, // Invalid technique
+		},
+	}
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PUT", "/scenarios/s1", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// testScenarioRepoWithUpdateError is a mock that succeeds on find but fails on update
+type testScenarioRepoWithUpdateError struct {
+	scenarios map[string]*entity.Scenario
+}
+
+func (m *testScenarioRepoWithUpdateError) Create(ctx context.Context, s *entity.Scenario) error {
+	return nil
+}
+func (m *testScenarioRepoWithUpdateError) Update(ctx context.Context, s *entity.Scenario) error {
+	return errors.New("database error on update")
+}
+func (m *testScenarioRepoWithUpdateError) Delete(ctx context.Context, id string) error {
+	return nil
+}
+func (m *testScenarioRepoWithUpdateError) FindByID(ctx context.Context, id string) (*entity.Scenario, error) {
+	s, ok := m.scenarios[id]
+	if !ok {
+		return nil, errors.New("not found")
+	}
+	return s, nil
+}
+func (m *testScenarioRepoWithUpdateError) FindAll(ctx context.Context) ([]*entity.Scenario, error) {
+	return nil, nil
+}
+func (m *testScenarioRepoWithUpdateError) FindByTag(ctx context.Context, tag string) ([]*entity.Scenario, error) {
+	return nil, nil
+}
+
+func TestScenarioHandler_UpdateScenario_ServiceError(t *testing.T) {
+	scenarioRepo := &testScenarioRepoWithUpdateError{
+		scenarios: map[string]*entity.Scenario{
+			"s1": {
+				ID:        "s1",
+				Name:      "Original Name",
+				CreatedAt: time.Now(),
+				Phases: []entity.Phase{
+					{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+				},
+			},
+		},
+	}
+	techRepo := newTestTechniqueRepo()
+	techRepo.techniques["T1082"] = &entity.Technique{
+		ID:        "T1082",
+		Name:      "System Information Discovery",
+		Tactic:    entity.TacticDiscovery,
+		Platforms: []string{"windows", "linux"},
+	}
+	validator := service.NewTechniqueValidator()
+	svc := application.NewScenarioService(scenarioRepo, techRepo, validator)
+	handler := NewScenarioHandler(svc)
+
+	router := gin.New()
+	router.PUT("/scenarios/:id", handler.UpdateScenario)
+
+	body := UpdateScenarioRequest{
+		Name:        "Updated Name",
+		Description: "Updated description",
+		Phases: []entity.Phase{
+			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+		},
+	}
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PUT", "/scenarios/s1", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d: %s", w.Code, w.Body.String())
 	}
 }

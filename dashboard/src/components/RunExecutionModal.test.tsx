@@ -401,4 +401,72 @@ describe('RunExecutionModal', () => {
     expect(platformTexts.some(t => t?.includes('windows'))).toBe(true);
     expect(platformTexts.some(t => t?.includes('linux'))).toBe(true);
   });
+
+  it('does not call onConfirm when no agents are selected and submit is triggered', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: mockAgents } as never);
+
+    const onConfirm = vi.fn();
+    renderModal({ onConfirm });
+
+    await waitFor(() => {
+      expect(screen.getByText('workstation-1')).toBeInTheDocument();
+    });
+
+    // Try to click the run button (which is disabled but we'll force call handleSubmit)
+    const runButton = screen.getByRole('button', { name: /Run on 0 agents/i });
+    fireEvent.click(runButton);
+
+    // onConfirm should NOT be called because no agents are selected
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('displays singular "agent" when exactly one agent is selected', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: mockAgents } as never);
+
+    renderModal();
+
+    await waitFor(() => {
+      expect(screen.getByText('workstation-1')).toBeInTheDocument();
+    });
+
+    // Select exactly one agent
+    const checkbox = screen.getAllByRole('checkbox')[0];
+    fireEvent.click(checkbox);
+
+    // Should show "Run on 1 agent" (singular)
+    expect(screen.getByRole('button', { name: 'Run on 1 agent' })).toBeInTheDocument();
+  });
+
+  it('displays plural "agents" when multiple agents are selected', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: mockAgents } as never);
+
+    renderModal();
+
+    await waitFor(() => {
+      expect(screen.getByText('workstation-1')).toBeInTheDocument();
+    });
+
+    // Select both agents
+    fireEvent.click(screen.getByText('Select All'));
+
+    // Should show "Run on 2 agents" (plural)
+    expect(screen.getByRole('button', { name: 'Run on 2 agents' })).toBeInTheDocument();
+  });
+
+  it('hides warning when at least one agent is selected', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: mockAgents } as never);
+
+    renderModal();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Please select at least one agent/)).toBeInTheDocument();
+    });
+
+    // Select an agent
+    const checkbox = screen.getAllByRole('checkbox')[0];
+    fireEvent.click(checkbox);
+
+    // Warning should disappear
+    expect(screen.queryByText(/Please select at least one agent/)).not.toBeInTheDocument();
+  });
 });

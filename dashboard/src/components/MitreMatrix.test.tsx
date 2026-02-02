@@ -241,12 +241,13 @@ describe('MitreMatrix', () => {
   });
 
   it('handles techniques with hyphenated tactics', () => {
+    // Test that component handles hyphenated tactics from backend
     const techniquesWithHyphenatedTactic: Technique[] = [
       {
         id: 'T1548',
         name: 'Abuse Elevation Control Mechanism',
         description: 'Test technique',
-        tactic: 'privilege-escalation', // hyphenated form
+        tactic: 'privilege-escalation' as Technique['tactic'], // hyphenated form from backend
         platforms: ['windows'],
         is_safe: false,
         detection: [],
@@ -308,5 +309,64 @@ describe('MitreMatrix', () => {
     expect(platformSelect).toContainHTML('linux');
     expect(platformSelect).toContainHTML('macos');
     expect(platformSelect).toContainHTML('windows');
+  });
+
+  it('closes technique detail panel when Escape key is pressed on overlay', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    // Open modal
+    const techniqueButton = screen.getByTitle('T1082: System Information Discovery');
+    fireEvent.click(techniqueButton);
+
+    expect(screen.getByRole('heading', { name: 'System Information Discovery' })).toBeInTheDocument();
+
+    // Press Escape on overlay
+    const overlay = document.querySelector('.bg-gray-500.bg-opacity-75');
+    if (overlay) {
+      fireEvent.keyDown(overlay, { key: 'Escape' });
+    }
+
+    expect(screen.queryByRole('heading', { name: 'System Information Discovery' })).not.toBeInTheDocument();
+  });
+
+  it('does not close modal when non-Escape key is pressed on overlay', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    // Open modal
+    const techniqueButton = screen.getByTitle('T1082: System Information Discovery');
+    fireEvent.click(techniqueButton);
+
+    expect(screen.getByRole('heading', { name: 'System Information Discovery' })).toBeInTheDocument();
+
+    // Press Enter on overlay (should not close)
+    const overlay = document.querySelector('.bg-gray-500.bg-opacity-75');
+    if (overlay) {
+      fireEvent.keyDown(overlay, { key: 'Enter' });
+    }
+
+    // Modal should still be open
+    expect(screen.getByRole('heading', { name: 'System Information Discovery' })).toBeInTheDocument();
+  });
+
+  it('shows detection section only when detection data exists', () => {
+    const techniqueWithNoDetection: Technique[] = [
+      {
+        id: 'T1083',
+        name: 'File and Directory Discovery',
+        description: 'Test technique',
+        tactic: 'discovery',
+        platforms: ['windows'],
+        is_safe: true,
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={techniqueWithNoDetection} />);
+
+    const techniqueButton = screen.getByTitle('T1083: File and Directory Discovery');
+    fireEvent.click(techniqueButton);
+
+    // Detection section should not be visible when detection array is empty
+    expect(screen.queryByText('Detection')).not.toBeInTheDocument();
   });
 });

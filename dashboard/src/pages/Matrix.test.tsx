@@ -322,4 +322,40 @@ describe('Matrix Page', () => {
       expect(screen.getByText('14/14')).toBeInTheDocument();
     });
   });
+
+  it('handles null coverage data gracefully', async () => {
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/techniques') {
+        return Promise.resolve({ data: mockTechniques }) as never;
+      }
+      if (url === '/techniques/coverage') {
+        return Promise.resolve({ data: null }) as never;
+      }
+      return Promise.reject(new Error('Unknown endpoint')) as never;
+    });
+
+    renderMatrix();
+
+    await waitFor(() => {
+      expect(screen.getByText('0/14')).toBeInTheDocument();
+    });
+  });
+
+  it('handles undefined techniques gracefully', async () => {
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/techniques') {
+        return Promise.resolve({ data: undefined }) as never;
+      }
+      if (url === '/techniques/coverage') {
+        return Promise.resolve({ data: mockCoverage }) as never;
+      }
+      return Promise.reject(new Error('Unknown endpoint')) as never;
+    });
+
+    renderMatrix();
+
+    await waitFor(() => {
+      expect(screen.getByText('No techniques loaded')).toBeInTheDocument();
+    });
+  });
 });

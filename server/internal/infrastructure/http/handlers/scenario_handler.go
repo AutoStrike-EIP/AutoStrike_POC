@@ -40,6 +40,10 @@ func (h *ScenarioHandler) ListScenarios(c *gin.Context) {
 		return
 	}
 
+	// Return empty array instead of null
+	if scenarios == nil {
+		scenarios = []*entity.Scenario{}
+	}
 	c.JSON(http.StatusOK, scenarios)
 }
 
@@ -66,6 +70,10 @@ func (h *ScenarioHandler) GetScenariosByTag(c *gin.Context) {
 		return
 	}
 
+	// Return empty array instead of null
+	if scenarios == nil {
+		scenarios = []*entity.Scenario{}
+	}
 	c.JSON(http.StatusOK, scenarios)
 }
 
@@ -75,7 +83,6 @@ type CreateScenarioRequest struct {
 	Description string         `json:"description"`
 	Phases      []entity.Phase `json:"phases" binding:"required"`
 	Tags        []string       `json:"tags,omitempty"`
-	Author      string         `json:"author,omitempty"`
 }
 
 // CreateScenario creates a new scenario
@@ -91,7 +98,6 @@ func (h *ScenarioHandler) CreateScenario(c *gin.Context) {
 		Description: req.Description,
 		Phases:      req.Phases,
 		Tags:        req.Tags,
-		Author:      req.Author,
 	}
 
 	if err := h.service.CreateScenario(c.Request.Context(), scenario); err != nil {
@@ -113,7 +119,6 @@ type UpdateScenarioRequest struct {
 	Description string         `json:"description"`
 	Phases      []entity.Phase `json:"phases" binding:"required"`
 	Tags        []string       `json:"tags,omitempty"`
-	Author      string         `json:"author,omitempty"`
 }
 
 // UpdateScenario updates an existing scenario
@@ -139,7 +144,6 @@ func (h *ScenarioHandler) UpdateScenario(c *gin.Context) {
 		Description: req.Description,
 		Phases:      req.Phases,
 		Tags:        req.Tags,
-		Author:      req.Author,
 		CreatedAt:   existing.CreatedAt,
 	}
 

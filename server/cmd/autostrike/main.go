@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"autostrike/internal/infrastructure/persistence/sqlite"
 	"autostrike/internal/infrastructure/websocket"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
@@ -21,6 +23,9 @@ import (
 )
 
 func main() {
+	// Load .env file (optional - won't fail if not found)
+	_ = godotenv.Load()
+
 	// Initialize logger
 	logger, err := zap.NewProduction()
 	if err != nil {
@@ -71,6 +76,9 @@ func main() {
 	)
 	techniqueService := application.NewTechniqueService(techniqueRepo)
 
+	// Auto-import techniques from configs directory at startup
+	autoImportTechniques(techniqueService, logger)
+
 	// Initialize WebSocket hub
 	hub := websocket.NewHub(logger)
 	go hub.Run()
@@ -100,6 +108,32 @@ func main() {
 	<-quit
 
 	logger.Info("Shutting down server...")
+}
+
+func autoImportTechniques(service *application.TechniqueService, logger *zap.Logger) {
+	// Import techniques from all YAML files in configs/techniques
+	paths := []string{
+		"./configs/techniques/discovery.yaml",
+		"./configs/techniques/execution.yaml",
+		"./configs/techniques/persistence.yaml",
+		"./configs/techniques/defense-evasion.yaml",
+	}
+
+	imported := 0
+	for _, path := range paths {
+		if _, err := os.Stat(path); err == nil {
+			if err := service.ImportTechniques(context.Background(), path); err != nil {
+				logger.Warn("Failed to import techniques", zap.String("path", path), zap.Error(err))
+			} else {
+				imported++
+				logger.Info("Imported techniques", zap.String("path", path))
+			}
+		}
+	}
+
+	if imported > 0 {
+		logger.Info("Auto-imported technique files", zap.Int("count", imported))
+	}
 }
 
 func loadConfig() error {

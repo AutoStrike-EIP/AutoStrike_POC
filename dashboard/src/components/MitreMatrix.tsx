@@ -79,7 +79,7 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
     acc[tactic.id] = techniques
       .filter(t => {
         // Map backend tactic format to frontend format
-        const techTactic = String(t.tactic).replace(/-/g, '_');
+        const techTactic = String(t.tactic).replaceAll('-', '_');
         const matches = techTactic === tactic.id;
         const platformMatches = platformFilter === 'all' || t.platforms.includes(platformFilter);
         return matches && platformMatches;
@@ -98,14 +98,15 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
   };
 
   // Get unique platforms from techniques
-  const platforms = [...new Set(techniques.flatMap(t => t.platforms))].sort();
+  const platforms = [...new Set(techniques.flatMap(t => t.platforms))].sort((a, b) => a.localeCompare(b));
 
   return (
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex items-center gap-4">
-        <label className="text-sm font-medium text-gray-700">Platform:</label>
+        <label htmlFor="platform-filter" className="text-sm font-medium text-gray-700">Platform:</label>
         <select
+          id="platform-filter"
           value={platformFilter}
           onChange={(e) => setPlatformFilter(e.target.value)}
           className="input py-1 px-2 text-sm"
@@ -172,7 +173,14 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
       {selectedTechnique && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen p-4">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75" onClick={handleCloseDetail}></div>
+            <div
+              className="fixed inset-0 bg-gray-500 bg-opacity-75"
+              onClick={handleCloseDetail}
+              onKeyDown={(e) => e.key === 'Escape' && handleCloseDetail()}
+              role="button"
+              tabIndex={0}
+              aria-label="Close modal"
+            />
             <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
               <button
                 onClick={handleCloseDetail}
@@ -183,13 +191,13 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
                 </svg>
               </button>
               <div className="flex items-start gap-3">
-                <div className={`${tacticHeaderColors[selectedTechnique.tactic as TacticType] || 'bg-gray-600'} text-white px-2 py-1 rounded text-xs font-semibold`}>
+                <div className={`${tacticHeaderColors[String(selectedTechnique.tactic).replaceAll('-', '_') as TacticType] ?? 'bg-gray-600'} text-white px-2 py-1 rounded text-xs font-semibold`}>
                   {selectedTechnique.id}
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">{selectedTechnique.name}</h3>
                   <p className="text-sm text-gray-500 capitalize">
-                    {String(selectedTechnique.tactic).replace(/_/g, ' ')}
+                    {String(selectedTechnique.tactic).replaceAll('-', '_').replaceAll('_', ' ')}
                   </p>
                 </div>
               </div>
@@ -206,8 +214,8 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
                 <div className="mt-4">
                   <h4 className="text-sm font-semibold text-gray-700 mb-2">Detection</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    {selectedTechnique.detection.map((d, i) => (
-                      <li key={i} className="flex gap-2">
+                    {selectedTechnique.detection.map((d) => (
+                      <li key={`${d.source}-${d.indicator}`} className="flex gap-2">
                         <span className="font-medium">{d.source}:</span>
                         <span>{d.indicator}</span>
                       </li>

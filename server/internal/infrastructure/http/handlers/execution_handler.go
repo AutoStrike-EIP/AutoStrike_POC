@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"autostrike/internal/application"
+	"autostrike/internal/domain/entity"
 	"autostrike/internal/infrastructure/websocket"
 
 	"github.com/gin-gonic/gin"
@@ -70,6 +71,10 @@ func (h *ExecutionHandler) ListExecutions(c *gin.Context) {
 		return
 	}
 
+	// Return empty array instead of null
+	if executions == nil {
+		executions = []*entity.Execution{}
+	}
 	c.JSON(http.StatusOK, executions)
 }
 
@@ -96,6 +101,10 @@ func (h *ExecutionHandler) GetResults(c *gin.Context) {
 		return
 	}
 
+	// Return empty array instead of null
+	if results == nil {
+		results = []*entity.ExecutionResult{}
+	}
 	c.JSON(http.StatusOK, results)
 }
 

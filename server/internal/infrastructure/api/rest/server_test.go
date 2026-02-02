@@ -121,8 +121,22 @@ func TestNewServerConfig_Default(t *testing.T) {
 	if config.AgentSecret != "" {
 		t.Errorf("Expected empty agent secret, got '%s'", config.AgentSecret)
 	}
+	// Auth is disabled by default when JWT_SECRET is not set (dev mode)
+	if config.EnableAuth {
+		t.Error("Expected EnableAuth to be false when JWT_SECRET is not set")
+	}
+}
+
+func TestNewServerConfig_EnabledWithSecret(t *testing.T) {
+	os.Setenv("JWT_SECRET", "my-secret-key")
+	os.Unsetenv("ENABLE_AUTH")
+	defer os.Unsetenv("JWT_SECRET")
+
+	config := NewServerConfig()
+
+	// Auth is automatically enabled when JWT_SECRET is set
 	if !config.EnableAuth {
-		t.Error("Expected EnableAuth to be true by default")
+		t.Error("Expected EnableAuth to be true when JWT_SECRET is set")
 	}
 }
 

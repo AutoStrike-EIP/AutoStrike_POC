@@ -9,12 +9,26 @@ AutoStrike is a **Breach and Attack Simulation (BAS)** platform for security tes
 ### Components
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│    Dashboard    │────▶│     Server      │◀────│     Agent       │
-│  (React + TS)   │     │      (Go)       │     │     (Rust)      │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-     Port 3000              Port 8443              WebSocket
+┌─────────────────────────────────────────────────────────────────┐
+│                    Server (Go) - Port 8443                       │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              │
+│  │  Dashboard  │  │  REST API   │  │  WebSocket  │              │
+│  │  (Static)   │  │  /api/v1/*  │  │  /ws/*      │              │
+│  └─────────────┘  └─────────────┘  └─────────────┘              │
+└─────────────────────────────────────────────────────────────────┘
+                              ▲
+                              │ WebSocket
+                    ┌─────────┴─────────┐
+                    │      Agent        │
+                    │     (Rust)        │
+                    └───────────────────┘
 ```
+
+**Single server on port 8443** serves:
+- Dashboard (static files from `dashboard/dist`)
+- REST API (`/api/v1/*`)
+- WebSocket (`/ws/*`)
+- Health check (`/health`)
 
 ### Directory Structure
 
@@ -64,6 +78,12 @@ autostrike/
 ## Development Commands
 
 ```bash
+# Quick Start (recommended)
+make run        # Build and start everything on http://localhost:8443
+make agent      # Connect an agent
+make stop       # Stop all services
+make logs       # View server logs
+
 # Server
 cd server && go build ./...
 cd server && go test ./...
@@ -75,7 +95,7 @@ cd agent && cargo test
 # Dashboard
 cd dashboard && npm install
 cd dashboard && npm run build
-cd dashboard && npm run dev
+cd dashboard && npm test -- --run
 
 # Full stack (Docker)
 docker compose up --build
@@ -94,6 +114,13 @@ Base URL: `https://localhost:8443/api/v1`
 | `/agents/:paw` | GET | Get agent details |
 | `/techniques` | GET | List MITRE techniques |
 | `/techniques/tactic/:tactic` | GET | Techniques by tactic |
+| `/techniques/coverage` | GET | Get MITRE coverage stats |
+| `/scenarios` | GET | List all scenarios |
+| `/scenarios/:id` | GET | Get scenario details |
+| `/scenarios/tag/:tag` | GET | Scenarios by tag |
+| `/scenarios` | POST | Create scenario |
+| `/scenarios/:id` | PUT | Update scenario |
+| `/scenarios/:id` | DELETE | Delete scenario |
 | `/executions` | GET | List all executions |
 | `/executions/:id` | GET | Get execution details |
 | `/executions` | POST | Start execution |
@@ -128,11 +155,17 @@ Connection: `wss://server:8443/ws/dashboard`
 ## Environment Variables
 
 ### Server (.env)
-- `JWT_SECRET` - JWT signing key
-- `AGENT_SECRET` - Agent authentication
-- `DATABASE_PATH` - SQLite database path
+- `DATABASE_PATH` - SQLite database path (default: `./data/autostrike.db`)
+- `DASHBOARD_PATH` - Path to dashboard dist folder (default: `../dashboard/dist`)
+- `JWT_SECRET` - JWT signing key (optional - auth disabled if not set)
+- `AGENT_SECRET` - Agent authentication secret
+- `ENABLE_AUTH` - Explicit auth override (`true`/`false`)
 
-### Dashboard (.env)
+**Authentication behavior:**
+- `JWT_SECRET` not set → Auth **disabled** (development mode)
+- `JWT_SECRET` set → Auth **enabled** (production mode)
+
+### Dashboard (.env) - Only for Vite dev server
 - `VITE_SERVER_URL` - Backend server URL
 - `VITE_API_BASE_URL` - API base path
 
@@ -148,7 +181,7 @@ Connection: `wss://server:8443/ws/dashboard`
 Test coverage:
 - Server: Unit tests for services and handlers (`go test ./...`)
 - Agent: Unit tests in `executor.rs` (`cargo test`)
-- Dashboard: 115 tests (`npm run test`)
+- Dashboard: 180 tests (`npm run test`)
 
 ## Contributing
 

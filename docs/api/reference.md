@@ -213,6 +213,132 @@ POST /api/v1/techniques/import
 
 ---
 
+## Scénarios
+
+### Lister les scénarios
+
+```http
+GET /api/v1/scenarios
+```
+
+**Réponse :**
+
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "APT29 Discovery",
+    "description": "Simulation des techniques de découverte APT29",
+    "phases": [
+      {
+        "name": "Initial Discovery",
+        "techniques": ["T1082", "T1083"],
+        "order": 1
+      }
+    ],
+    "tags": ["apt29", "discovery"],
+    "created_at": "2024-01-01T10:00:00Z",
+    "updated_at": "2024-01-01T10:00:00Z"
+  }
+]
+```
+
+### Obtenir un scénario
+
+```http
+GET /api/v1/scenarios/:id
+```
+
+### Scénarios par tag
+
+```http
+GET /api/v1/scenarios/tag/:tag
+```
+
+### Créer un scénario
+
+```http
+POST /api/v1/scenarios
+```
+
+**Body :**
+
+```json
+{
+  "name": "APT29 Discovery",
+  "description": "Simulation des techniques de découverte APT29",
+  "phases": [
+    {
+      "name": "Initial Discovery",
+      "techniques": ["T1082", "T1083"],
+      "order": 1
+    }
+  ],
+  "tags": ["apt29", "discovery"]
+}
+```
+
+**Réponse (201) :**
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "APT29 Discovery",
+  "description": "Simulation des techniques de découverte APT29",
+  "phases": [...],
+  "tags": ["apt29", "discovery"],
+  "created_at": "2024-01-01T10:00:00Z"
+}
+```
+
+**Erreurs :**
+
+| Code | Description |
+|------|-------------|
+| 400 | Champs requis manquants (name, phases) ou technique invalide |
+| 500 | Erreur serveur |
+
+### Mettre à jour un scénario
+
+```http
+PUT /api/v1/scenarios/:id
+```
+
+**Body :**
+
+```json
+{
+  "name": "APT29 Discovery Updated",
+  "description": "Description mise à jour",
+  "phases": [
+    {
+      "name": "Phase 1",
+      "techniques": ["T1082"],
+      "order": 1
+    }
+  ],
+  "tags": ["apt29"]
+}
+```
+
+**Erreurs :**
+
+| Code | Description |
+|------|-------------|
+| 400 | Champs requis manquants ou technique invalide |
+| 404 | Scénario non trouvé |
+| 500 | Erreur serveur |
+
+### Supprimer un scénario
+
+```http
+DELETE /api/v1/scenarios/:id
+```
+
+**Réponse :** 204 No Content
+
+---
+
 ## Exécutions
 
 ### Lister les exécutions récentes

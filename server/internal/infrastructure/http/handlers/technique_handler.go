@@ -40,6 +40,10 @@ func (h *TechniqueHandler) ListTechniques(c *gin.Context) {
 		return
 	}
 
+	// Return empty array instead of null
+	if techniques == nil {
+		techniques = []*entity.Technique{}
+	}
 	c.JSON(http.StatusOK, techniques)
 }
 
@@ -66,6 +70,10 @@ func (h *TechniqueHandler) GetByTactic(c *gin.Context) {
 		return
 	}
 
+	// Return empty array instead of null
+	if techniques == nil {
+		techniques = []*entity.Technique{}
+	}
 	c.JSON(http.StatusOK, techniques)
 }
 
@@ -79,6 +87,10 @@ func (h *TechniqueHandler) GetByPlatform(c *gin.Context) {
 		return
 	}
 
+	// Return empty array instead of null
+	if techniques == nil {
+		techniques = []*entity.Technique{}
+	}
 	c.JSON(http.StatusOK, techniques)
 }
 

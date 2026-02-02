@@ -77,7 +77,7 @@ export function RunExecutionModal({ scenario, onConfirm, onCancel, isLoading }: 
                 {/* Agent Selection */}
                 <div className="mt-4">
                   <div className="flex justify-between items-center mb-2">
-                    <label className="text-sm font-medium text-gray-700">Select Target Agents</label>
+                    <span className="text-sm font-medium text-gray-700">Select Target Agents</span>
                     {onlineAgents.length > 0 && (
                       <button
                         type="button"
@@ -89,13 +89,15 @@ export function RunExecutionModal({ scenario, onConfirm, onCancel, isLoading }: 
                     )}
                   </div>
 
-                  {agentsLoading ? (
+                  {agentsLoading && (
                     <div className="text-sm text-gray-500">Loading agents...</div>
-                  ) : onlineAgents.length === 0 ? (
+                  )}
+                  {!agentsLoading && onlineAgents.length === 0 && (
                     <div className="text-sm text-amber-600 p-3 bg-amber-50 rounded-md">
                       No online agents available. Please ensure at least one agent is connected.
                     </div>
-                  ) : (
+                  )}
+                  {!agentsLoading && onlineAgents.length > 0 && (
                     <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-2">
                       {onlineAgents.map(agent => (
                         <label
@@ -150,7 +152,8 @@ export function RunExecutionModal({ scenario, onConfirm, onCancel, isLoading }: 
               onClick={handleSubmit}
               className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Starting...' : `Run on ${selectedAgents.length} agent${selectedAgents.length !== 1 ? 's' : ''}`}
+              {isLoading && 'Starting...'}
+              {!isLoading && `Run on ${selectedAgents.length} agent${selectedAgents.length === 1 ? '' : 's'}`}
             </button>
             <button
               type="button"
