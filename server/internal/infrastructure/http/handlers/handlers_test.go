@@ -1151,7 +1151,7 @@ func TestNewExecutionHandlerWithHub(t *testing.T) {
 	// Create handler with hub
 	handler := NewExecutionHandlerWithHub(svc, nil)
 	if handler == nil {
-		t.Error("Expected non-nil handler")
+		t.Fatal("Expected non-nil handler")
 	}
 	if handler.service != svc {
 		t.Error("Service not set correctly")
