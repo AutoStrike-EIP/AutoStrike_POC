@@ -54,7 +54,7 @@ services:
       dockerfile: Dockerfile
     container_name: autostrike-agent-dev
     environment:
-      - AUTOSTRIKE_SERVER=ws://server:8443/ws/agent
+      - AUTOSTRIKE_SERVER=ws://server:8443
       - AUTOSTRIKE_PAW=dev-agent-001
     depends_on:
       server:
