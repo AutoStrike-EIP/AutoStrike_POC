@@ -65,14 +65,17 @@ jobs:
 
       - name: Run Frontend Tests
         working-directory: dashboard
-        # Le "|| true" permet au workflow de continuer même si les tests failent
-        run: npm run coverage -- --reporter=lcov || true
+        run: npm run test -- --coverage
 
       # ---------------------------
       # 4. ANALYSE SONAR
       # ---------------------------
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v4
+        uses: SonarSource/sonarcloud-github-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: >
+            -Dsonar.go.coverage.reportPaths=server/coverage.out
+            -Dsonar.javascript.lcov.reportPaths=dashboard/coverage/lcov.info
