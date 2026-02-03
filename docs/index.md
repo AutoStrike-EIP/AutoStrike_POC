@@ -63,8 +63,8 @@ A single server on **port 8443** serves the Dashboard, REST API, and WebSocket c
 
 ```bash
 # Clone and install
-git clone https://github.com/AutoStrike-EIP/AutoStrike.git
-cd AutoStrike
+git clone https://github.com/AutoStrike-EIP/AutoStrike_POC.git
+cd AutoStrike_POC
 make install
 
 # Start server and dashboard
@@ -153,8 +153,7 @@ Measures how well your defenses perform:
 
 ## Links
 
-- [GitHub Repository](https://github.com/AutoStrike-EIP/AutoStrike)
+- [GitHub Repository](https://github.com/AutoStrike-EIP/AutoStrike_POC)
 - [MITRE ATT&CK Framework](https://attack.mitre.org/)
 - [API Reference](api/reference.md)
 - [Quick Start Guide](guide/quickstart.md)
-

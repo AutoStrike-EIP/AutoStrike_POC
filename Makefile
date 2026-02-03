@@ -6,7 +6,7 @@
 .PHONY: agent-build agent-test
 .PHONY: dashboard-build dashboard-test
 .PHONY: certs docker-build docker-up docker-down
-.PHONY: run stop logs agent
+.PHONY: run stop logs agent deps deps-install install setup
 
 # Variables
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -20,6 +20,9 @@ RESET := \033[0m
 
 help: ## Show this help
 	@echo "$(CYAN)AutoStrike$(RESET) - Breach and Attack Simulation Platform"
+	@echo ""
+	@echo "$(GREEN)First time? Run:$(RESET)"
+	@echo "  $(CYAN)make setup$(RESET)  - Install all dependencies + certificates"
 	@echo ""
 	@echo "$(GREEN)Quick Start:$(RESET)"
 	@echo "  $(CYAN)make run$(RESET)    - Build and start everything"
@@ -122,7 +125,7 @@ server-test: ## Run server tests
 
 agent-test: ## Run agent tests
 	@echo "$(YELLOW)Testing agent...$(RESET)"
-	cd agent && cargo test
+	cd agent && PATH="$$HOME/.cargo/bin:$$PATH" cargo test
 
 dashboard-test: ## Run dashboard tests
 	@echo "$(YELLOW)Testing dashboard...$(RESET)"
@@ -131,7 +134,7 @@ dashboard-test: ## Run dashboard tests
 lint: ## Run linters
 	@echo "$(YELLOW)Linting...$(RESET)"
 	cd server && go vet ./...
-	cd agent && cargo clippy
+	cd agent && PATH="$$HOME/.cargo/bin:$$PATH" cargo clippy
 	cd dashboard && npm run lint
 
 # =============================================================================
@@ -176,11 +179,93 @@ certs: ## Generate TLS certificates
 # Utilities
 # =============================================================================
 
-install: ## Install all dependencies
-	@echo "$(YELLOW)Installing dependencies...$(RESET)"
+deps: ## Check and install system dependencies (Go, Rust, Node)
+	@echo "$(YELLOW)Checking system dependencies...$(RESET)"
+	@echo ""
+	@echo "$(CYAN)Build tools:$(RESET)"
+	@which git > /dev/null 2>&1 && echo "$(GREEN)  ✓ git$(RESET)" || { echo "$(YELLOW)  ✗ git - sudo apt install git$(RESET)"; exit 1; }
+	@which make > /dev/null 2>&1 && echo "$(GREEN)  ✓ make$(RESET)" || { echo "$(YELLOW)  ✗ make - sudo apt install make$(RESET)"; exit 1; }
+	@which curl > /dev/null 2>&1 && echo "$(GREEN)  ✓ curl$(RESET)" || { echo "$(YELLOW)  ✗ curl - sudo apt install curl$(RESET)"; exit 1; }
+	@which openssl > /dev/null 2>&1 && echo "$(GREEN)  ✓ openssl$(RESET)" || { echo "$(YELLOW)  ✗ openssl - sudo apt install openssl$(RESET)"; exit 1; }
+	@(which gcc > /dev/null 2>&1 || which cc > /dev/null 2>&1) && echo "$(GREEN)  ✓ gcc$(RESET)" || { echo "$(YELLOW)  ✗ gcc - sudo apt install build-essential$(RESET)"; exit 1; }
+	@which pkg-config > /dev/null 2>&1 && echo "$(GREEN)  ✓ pkg-config$(RESET)" || echo "$(YELLOW)  ⚠ pkg-config (optional) - sudo apt install pkg-config$(RESET)"
+	@echo ""
+	@echo "$(CYAN)Languages:$(RESET)"
+	@# Check Go
+	@which go > /dev/null 2>&1 && echo "$(GREEN)  ✓ Go $$(go version | cut -d' ' -f3) (need 1.21+)$(RESET)" || { \
+		echo "$(YELLOW)  ✗ Go not found$(RESET)"; \
+		echo "    Ubuntu/Debian: sudo snap install go --classic"; \
+		echo "    macOS: brew install go"; \
+		echo "    Other: https://go.dev/dl/"; \
+		exit 1; \
+	}
+	@# Check Rust
+	@(which cargo > /dev/null 2>&1 || test -f "$$HOME/.cargo/bin/cargo") && echo "$(GREEN)  ✓ Rust $$(rustc --version 2>/dev/null | cut -d' ' -f2 || $$HOME/.cargo/bin/rustc --version 2>/dev/null | cut -d' ' -f2) (need 1.75+)$(RESET)" || { \
+		echo "$(YELLOW)  ✗ Rust not found$(RESET)"; \
+		echo "    All platforms: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"; \
+		echo "    Then run: source ~/.cargo/env"; \
+		exit 1; \
+	}
+	@# Check Node
+	@which node > /dev/null 2>&1 && echo "$(GREEN)  ✓ Node $$(node -v) (need v18+)$(RESET)" || { \
+		echo "$(YELLOW)  ✗ Node.js not found$(RESET)"; \
+		echo "    Ubuntu/Debian: curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt install -y nodejs"; \
+		echo "    macOS: brew install node"; \
+		exit 1; \
+	}
+	@# Check npm
+	@which npm > /dev/null 2>&1 && echo "$(GREEN)  ✓ npm $$(npm -v)$(RESET)" || { echo "$(YELLOW)  ✗ npm (comes with Node)$(RESET)"; exit 1; }
+	@echo ""
+	@echo "$(CYAN)Optional (for Docker/cross-compile):$(RESET)"
+	@which docker > /dev/null 2>&1 && echo "$(GREEN)  ✓ docker $$(docker --version | cut -d' ' -f3 | tr -d ',')$(RESET)" || echo "$(YELLOW)  ⚠ docker (optional) - https://docs.docker.com/get-docker/$(RESET)"
+	@which docker-compose > /dev/null 2>&1 && echo "$(GREEN)  ✓ docker-compose$(RESET)" || (which docker > /dev/null 2>&1 && docker compose version > /dev/null 2>&1 && echo "$(GREEN)  ✓ docker compose$(RESET)" || echo "$(YELLOW)  ⚠ docker-compose (optional)$(RESET)")
+	@echo ""
+	@echo "$(GREEN)All required dependencies OK!$(RESET)"
+
+deps-install: ## Auto-install missing dependencies (requires sudo)
+	@echo "$(YELLOW)Installing system dependencies...$(RESET)"
+	@echo ""
+	@# Detect package manager
+	@if which apt-get > /dev/null 2>&1; then \
+		echo "$(CYAN)Detected: Debian/Ubuntu$(RESET)"; \
+		sudo apt-get update; \
+		sudo apt-get install -y git make curl openssl build-essential pkg-config; \
+		echo ""; \
+		echo "$(YELLOW)Installing Go...$(RESET)"; \
+		which go > /dev/null 2>&1 || sudo snap install go --classic; \
+		echo ""; \
+		echo "$(YELLOW)Installing Node.js...$(RESET)"; \
+		which node > /dev/null 2>&1 || (curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt-get install -y nodejs); \
+		echo ""; \
+		echo "$(YELLOW)Installing Rust...$(RESET)"; \
+		which cargo > /dev/null 2>&1 || (curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && echo "Run: source ~/.cargo/env"); \
+	elif which brew > /dev/null 2>&1; then \
+		echo "$(CYAN)Detected: macOS (Homebrew)$(RESET)"; \
+		brew install git curl openssl pkg-config go node; \
+		which cargo > /dev/null 2>&1 || (curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y); \
+	elif which dnf > /dev/null 2>&1; then \
+		echo "$(CYAN)Detected: Fedora/RHEL$(RESET)"; \
+		sudo dnf install -y git make curl openssl gcc pkg-config golang nodejs; \
+		which cargo > /dev/null 2>&1 || (curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y); \
+	elif which pacman > /dev/null 2>&1; then \
+		echo "$(CYAN)Detected: Arch Linux$(RESET)"; \
+		sudo pacman -S --noconfirm git make curl openssl gcc pkgconf go nodejs npm rust; \
+	else \
+		echo "$(YELLOW)Unknown package manager. Please install manually:$(RESET)"; \
+		echo "  - git, make, curl, openssl, gcc, pkg-config"; \
+		echo "  - Go 1.21+, Node.js 18+, Rust 1.75+"; \
+		exit 1; \
+	fi
+	@echo ""
+	@echo "$(GREEN)Installation complete!$(RESET)"
+	@echo "$(YELLOW)Note: Run 'source ~/.cargo/env' if Rust was just installed$(RESET)"
+
+install: deps ## Install all project dependencies
+	@echo "$(YELLOW)Installing project dependencies...$(RESET)"
 	cd server && go mod download
-	cd agent && cargo fetch
+	cd agent && PATH="$$HOME/.cargo/bin:$$PATH" cargo fetch
 	cd dashboard && npm install
+	@echo "$(GREEN)✓ All dependencies installed$(RESET)"
 
 clean: ## Clean build artifacts
 	@echo "$(YELLOW)Cleaning...$(RESET)"
@@ -190,12 +275,18 @@ clean: ## Clean build artifacts
 	rm -rf dashboard/dist/
 	rm -rf dashboard/node_modules/
 
-setup: install certs ## Initial project setup
-	@echo "$(GREEN)Project setup complete!$(RESET)"
+setup: deps install certs ## Initial project setup (installs everything)
 	@echo ""
-	@echo "Next steps:"
-	@echo "  1. Run 'make run' to start AutoStrike"
-	@echo "  2. Open http://localhost:8443"
+	@echo "$(GREEN)════════════════════════════════════════$(RESET)"
+	@echo "$(GREEN)  Setup complete!$(RESET)"
+	@echo "$(GREEN)════════════════════════════════════════$(RESET)"
+	@echo ""
+	@echo "  Next steps:"
+	@echo "    $(CYAN)make run$(RESET)    - Start the server"
+	@echo "    $(CYAN)make agent$(RESET)  - Connect an agent"
+	@echo ""
+	@echo "  Dashboard: $(CYAN)https://localhost:8443$(RESET)"
+	@echo ""
 
 stop: ## Stop all running services
 	@echo "$(YELLOW)Stopping services...$(RESET)"

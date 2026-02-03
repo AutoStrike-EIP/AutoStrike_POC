@@ -33,8 +33,8 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/AutoStrike-EIP/AutoStrike.git
-cd AutoStrike
+git clone https://github.com/AutoStrike-EIP/AutoStrike_POC.git
+cd AutoStrike_POC
 
 # Install dependencies and build everything
 make install
@@ -54,8 +54,8 @@ The server starts on **https://localhost:8443** and serves:
 #### 1. Clone the repository
 
 ```bash
-git clone https://github.com/AutoStrike-EIP/AutoStrike.git
-cd AutoStrike
+git clone https://github.com/AutoStrike-EIP/AutoStrike_POC.git
+cd AutoStrike_POC
 ```
 
 #### 2. Environment Configuration

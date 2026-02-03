@@ -18,8 +18,8 @@ This guide will help you run your first attack simulation in 5 minutes.
 
 ```bash
 # Clone the repository
-git clone https://github.com/AutoStrike-EIP/AutoStrike.git
-cd AutoStrike
+git clone https://github.com/AutoStrike-EIP/AutoStrike_POC.git
+cd AutoStrike_POC
 
 # Install dependencies and build
 make install

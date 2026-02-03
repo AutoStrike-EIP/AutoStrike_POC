@@ -4,9 +4,72 @@ The AutoStrike control server is built with **Go 1.21+** using the **Gin** frame
 
 ---
 
-## Hexagonal Architecture
+## Qu'est-ce que l'Architecture Hexagonale ?
 
-The server follows the **Ports & Adapters** pattern for clear separation of concerns:
+L'architecture hexagonale (aussi appelée **Ports & Adapters**) est un pattern qui **isole la logique métier** des détails techniques (base de données, HTTP, fichiers, etc.).
+
+### Le Principe
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    INFRASTRUCTURE                            │
+│    (HTTP handlers, SQLite, WebSocket, fichiers YAML)        │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │                   APPLICATION                         │  │
+│  │           (Orchestration des use cases)               │  │
+│  │  ┌─────────────────────────────────────────────────┐  │  │
+│  │  │                   DOMAIN                        │  │  │
+│  │  │                                                 │  │  │
+│  │  │   Entités : Agent, Technique, Execution         │  │  │
+│  │  │   Services : Orchestrator, Validator, Score     │  │  │
+│  │  │   Interfaces : Repository (ports)               │  │  │
+│  │  │                                                 │  │  │
+│  │  │        ⚠️ AUCUNE DÉPENDANCE EXTERNE             │  │  │
+│  │  └─────────────────────────────────────────────────┘  │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+
+Les dépendances vont TOUJOURS vers l'intérieur (→ Domain)
+```
+
+### Pourquoi c'est utile ?
+
+| Avantage | Exemple concret dans AutoStrike |
+|----------|--------------------------------|
+| **Changer de BDD facilement** | SQLite → PostgreSQL = modifier uniquement `infrastructure/persistence/` |
+| **Changer de framework HTTP** | Gin → Echo = modifier uniquement `infrastructure/http/` |
+| **Tests unitaires simples** | Tester `ExecutionService` sans base de données (mocks) |
+| **Code métier stable** | Ajouter une API GraphQL sans toucher au domain |
+
+### Les 3 couches
+
+| Couche | Responsabilité | Dépend de |
+|--------|----------------|-----------|
+| **Domain** | Logique métier pure, entités, interfaces | Rien (indépendant) |
+| **Application** | Orchestration des use cases | Domain uniquement |
+| **Infrastructure** | Adapters externes (HTTP, DB, WS) | Application + Domain |
+
+### Exemple : Ajouter un agent
+
+```
+1. HTTP Handler reçoit POST /api/v1/agents
+   └─> infrastructure/http/handlers/agent_handler.go
+
+2. Handler appelle AgentService.Register()
+   └─> application/agent_service.go
+
+3. Service valide et appelle Repository.Save()
+   └─> domain/repository/agent_repository.go (interface)
+
+4. SQLite Repository implémente l'interface
+   └─> infrastructure/persistence/sqlite/agent_repository.go
+```
+
+**Le Domain ne sait pas** que c'est SQLite ou HTTP. Il définit juste des interfaces.
+
+---
+
+## Structure des dossiers
 
 ```
 server/

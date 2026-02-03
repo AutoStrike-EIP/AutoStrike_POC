@@ -1,8 +1,8 @@
 site_name: AutoStrike Documentation
 site_description: "Plateforme BAS (Breach and Attack Simulation) basée sur MITRE ATT&CK"
-site_url: https://autostrike-eip.github.io/AutoStrike
-repo_url: https://github.com/AutoStrike-EIP/AutoStrike
-repo_name: AutoStrike
+site_url: https://autostrike-eip.github.io/AutoStrike_POC
+repo_url: https://github.com/AutoStrike-EIP/AutoStrike_POC
+repo_name: AutoStrike_POC
 
 theme:
   name: material
@@ -101,7 +101,7 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/AutoStrike-EIP/AutoStrike
+      link: https://github.com/AutoStrike-EIP/AutoStrike_POC
       name: GitHub
 
 nav:

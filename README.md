@@ -62,8 +62,8 @@ AutoStrike est une plateforme open-source de validation continue des défenses d
 
 ```bash
 # Cloner le projet
-git clone https://github.com/AutoStrike-EIP/AutoStrike.git
-cd AutoStrike
+git clone https://github.com/AutoStrike-EIP/AutoStrike_POC.git
+cd AutoStrike_POC
 
 # Installer les dépendances et build
 make install

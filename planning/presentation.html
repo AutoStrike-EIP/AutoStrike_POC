@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoStrike - Team Onboarding</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .slide {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px 10%;
+            position: relative;
+        }
+
+        .slide:nth-child(even) {
+            background: linear-gradient(135deg, #1a1a3e 0%, #0f0f23 100%);
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            background: linear-gradient(90deg, #00d4ff, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            color: #00d4ff;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            color: #7c3aed;
+            margin: 1.5rem 0 1rem;
+        }
+
+        p, li {
+            font-size: 1.25rem;
+            line-height: 1.8;
+            max-width: 900px;
+        }
+
+        .subtitle {
+            font-size: 1.5rem;
+            color: #a0a0a0;
+            margin-bottom: 2rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 8px 20px;
+            background: linear-gradient(90deg, #7c3aed, #00d4ff);
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin: 5px;
+        }
+
+        .badge-outline {
+            background: transparent;
+            border: 2px solid #7c3aed;
+        }
+
+        .badge-green {
+            background: linear-gradient(90deg, #10b981, #059669);
+        }
+
+        .badge-orange {
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+        }
+
+        .architecture-box {
+            background: #1e1e3f;
+            border: 2px solid #7c3aed;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            max-width: 100%;
+        }
+
+        .code-box {
+            background: #0d0d0d;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+            max-width: 800px;
+            margin: 1rem 0;
+            overflow-x: auto;
+        }
+
+        .code-box .comment {
+            color: #6a9955;
+        }
+
+        .code-box .command {
+            color: #4ec9b0;
+        }
+
+        .code-box .output {
+            color: #888;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 2rem;
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .card {
+            background: rgba(124, 58, 237, 0.1);
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            border-radius: 15px;
+            padding: 25px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(124, 58, 237, 0.2);
+        }
+
+        .card h4 {
+            color: #00d4ff;
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+
+        .card p {
+            font-size: 1rem;
+            color: #b0b0b0;
+        }
+
+        .card-highlight {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.15), rgba(124, 58, 237, 0.15));
+            border: 2px solid #00d4ff;
+        }
+
+        .card code {
+            background: #1e1e3f;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 2rem;
+        }
+
+        .tech-item {
+            background: linear-gradient(135deg, #1e1e3f, #2a2a5f);
+            border: 1px solid #3a3a6f;
+            border-radius: 10px;
+            padding: 20px 30px;
+            text-align: center;
+            min-width: 150px;
+        }
+
+        .tech-item .icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .tech-item .name {
+            font-weight: 600;
+            color: #00d4ff;
+        }
+
+        .tech-item .desc {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .flow-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin-top: 2rem;
+        }
+
+        .flow-step {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 10px;
+            padding: 15px 25px;
+            width: 100%;
+            max-width: 700px;
+        }
+
+        .flow-step .num {
+            background: linear-gradient(90deg, #7c3aed, #00d4ff);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .arrow {
+            color: #00d4ff;
+            font-size: 1.5rem;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            max-width: 1000px;
+            margin-top: 2rem;
+        }
+
+        th, td {
+            padding: 15px 20px;
+            text-align: left;
+            border-bottom: 1px solid #3a3a6f;
+        }
+
+        th {
+            background: rgba(124, 58, 237, 0.2);
+            color: #00d4ff;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: rgba(0, 212, 255, 0.05);
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            max-width: 1000px;
+            margin-top: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(0, 212, 255, 0.1));
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 3rem;
+            font-weight: bold;
+            background: linear-gradient(90deg, #00d4ff, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-card .label {
+            color: #888;
+            margin-top: 10px;
+        }
+
+        .mitre-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            max-width: 900px;
+            margin-top: 2rem;
+        }
+
+        .mitre-tactic {
+            background: rgba(124, 58, 237, 0.15);
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .mitre-tactic .name {
+            color: #00d4ff;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .mitre-tactic .count {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #7c3aed;
+        }
+
+        ul {
+            list-style: none;
+            max-width: 700px;
+        }
+
+        ul li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+
+        ul li::before {
+            content: ">";
+            position: absolute;
+            left: 0;
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
+        ul.check li::before {
+            content: "✓";
+        }
+
+        .quote {
+            font-style: italic;
+            font-size: 1.4rem;
+            color: #a0a0a0;
+            border-left: 4px solid #7c3aed;
+            padding-left: 20px;
+            margin: 2rem 0;
+            max-width: 800px;
+        }
+
+        .nav-dots {
+            position: fixed;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .nav-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .nav-dot:hover, .nav-dot.active {
+            background: #00d4ff;
+            transform: scale(1.3);
+        }
+
+        .logo-container {
+            margin-bottom: 2rem;
+        }
+
+        .logo-container svg {
+            width: 150px;
+            height: 150px;
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .file-tree {
+            text-align: left;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            background: #0d0d0d;
+            padding: 20px 30px;
+            border-radius: 10px;
+            line-height: 1.6;
+        }
+
+        .file-tree .folder {
+            color: #00d4ff;
+        }
+
+        .file-tree .file {
+            color: #a0a0a0;
+        }
+
+        .file-tree .important {
+            color: #f59e0b;
+        }
+
+        .task-list {
+            max-width: 900px;
+            width: 100%;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(124, 58, 237, 0.1);
+            border: 1px solid rgba(124, 58, 237, 0.3);
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin-bottom: 10px;
+        }
+
+        .task-item .difficulty {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .task-item .difficulty.easy {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .task-item .difficulty.medium {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+
+        .task-item .difficulty.hard {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .task-item .tech {
+            padding: 3px 8px;
+            background: #1e1e3f;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            color: #00d4ff;
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            h2 { font-size: 1.8rem; }
+            .slide { padding: 40px 5%; }
+            .stat-grid { grid-template-columns: repeat(2, 1fr); }
+            .mitre-grid { grid-template-columns: repeat(2, 1fr); }
+            .nav-dots { display: none; }
+            .grid-3, .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation dots -->
+    <div class="nav-dots">
+        <div class="nav-dot active" onclick="scrollToSlide(0)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(1)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(2)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(3)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(4)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(5)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(6)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(7)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(8)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(9)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(10)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(11)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(12)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(13)"></div>
+        <div class="nav-dot" onclick="scrollToSlide(14)"></div>
+    </div>
+
+    <!-- Slide 1: Title -->
+    <section class="slide">
+        <div class="logo-container">
+            <svg viewBox="0 0 100 100">
+                <defs>
+                    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#00d4ff"/>
+                        <stop offset="100%" style="stop-color:#7c3aed"/>
+                    </linearGradient>
+                </defs>
+                <circle cx="50" cy="50" r="45" fill="none" stroke="url(#grad)" stroke-width="3"/>
+                <path d="M50 20 L65 45 L50 40 L35 45 Z" fill="url(#grad)"/>
+                <circle cx="50" cy="55" r="15" fill="none" stroke="url(#grad)" stroke-width="2"/>
+                <circle cx="50" cy="55" r="5" fill="url(#grad)"/>
+                <line x1="50" y1="70" x2="50" y2="85" stroke="url(#grad)" stroke-width="3"/>
+            </svg>
+        </div>
+        <h1>AutoStrike</h1>
+        <p class="subtitle">Breach and Attack Simulation Platform</p>
+        <div style="margin-bottom: 2rem;">
+            <span class="badge">MITRE ATT&CK</span>
+            <span class="badge">Go + Rust + React</span>
+            <span class="badge">Team Onboarding</span>
+        </div>
+        <p style="color: #888; font-size: 1rem;">Fleches haut/bas | Espace | Scroll</p>
+    </section>
+
+    <!-- Slide 2: C'est quoi -->
+    <section class="slide">
+        <h2>C'est quoi AutoStrike ?</h2>
+        <p class="quote">
+            "Une plateforme qui simule des cyberattaques basees sur MITRE ATT&CK pour tester si les defenses d'un reseau detectent vraiment les menaces."
+        </p>
+        <div class="grid grid-3" style="max-width: 1100px;">
+            <div class="card">
+                <div class="feature-icon">🎯</div>
+                <h4>BAS Platform</h4>
+                <p>Breach and Attack Simulation - on simule des attaques connues pour tester les detections.</p>
+            </div>
+            <div class="card">
+                <div class="feature-icon">🛡️</div>
+                <h4>Pour les SOC</h4>
+                <p>Les equipes securite valident leurs regles de detection sans attendre une vraie attaque.</p>
+            </div>
+            <div class="card">
+                <div class="feature-icon">📊</div>
+                <h4>MITRE ATT&CK</h4>
+                <p>Framework standard qui catalogue toutes les techniques d'attaque connues.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 3: Architecture Overview -->
+    <section class="slide">
+        <h2>Architecture Globale</h2>
+        <div class="architecture-box">
++------------------------------------------------------------------+
+|                    SERVER (Go) - Port 8443                        |
+|  +---------------+  +---------------+  +---------------+          |
+|  |   Dashboard   |  |   REST API    |  |   WebSocket   |          |
+|  |   (React)     |  |   /api/v1/*   |  |   /ws/*       |          |
+|  +---------------+  +---------------+  +---------------+          |
+|                                                                   |
+|  [SQLite DB]     [Technique Engine]     [Execution Orchestrator]  |
++------------------------------------------------------------------+
+                              ^
+                              | WebSocket bidirectionnel
+          +-------------------+-------------------+
+          |                   |                   |
+    +-----+-----+       +-----+-----+       +-----+-----+
+    |   AGENT   |       |   AGENT   |       |   AGENT   |
+    |  Windows  |       |   Linux   |       |   MacOS   |
+    +-----------+       +-----------+       +-----------+
+        </div>
+        <div class="grid grid-3" style="max-width: 900px; margin-top: 1rem;">
+            <div style="text-align: center;">
+                <span class="badge">Server</span>
+                <p style="font-size: 1rem; margin-top: 10px;">Go 1.21 + Gin</p>
+            </div>
+            <div style="text-align: center;">
+                <span class="badge">Dashboard</span>
+                <p style="font-size: 1rem; margin-top: 10px;">React 18 + TypeScript</p>
+            </div>
+            <div style="text-align: center;">
+                <span class="badge">Agent</span>
+                <p style="font-size: 1rem; margin-top: 10px;">Rust + Tokio</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 4: Stack Technique -->
+    <section class="slide">
+        <h2>Stack Technique</h2>
+        <table>
+            <tr>
+                <th>Composant</th>
+                <th>Techno</th>
+                <th>Pourquoi ?</th>
+            </tr>
+            <tr>
+                <td><strong>Backend</strong></td>
+                <td>Go 1.21 + Gin</td>
+                <td>Binaire unique, goroutines pour gerer plein d'agents, performant</td>
+            </tr>
+            <tr>
+                <td><strong>Agent</strong></td>
+                <td>Rust + Tokio</td>
+                <td>Securite memoire, cross-compile facile, difficile a reverse-engineer</td>
+            </tr>
+            <tr>
+                <td><strong>Frontend</strong></td>
+                <td>React 18 + TypeScript</td>
+                <td>Ecosysteme mature, type safety, facile a recruter</td>
+            </tr>
+            <tr>
+                <td><strong>Styling</strong></td>
+                <td>TailwindCSS</td>
+                <td>Utility-first, rapide a prototyper, coherent</td>
+            </tr>
+            <tr>
+                <td><strong>Database</strong></td>
+                <td>SQLite</td>
+                <td>Zero config pour MVP, migration PostgreSQL possible</td>
+            </tr>
+            <tr>
+                <td><strong>Communication</strong></td>
+                <td>WebSocket</td>
+                <td>Bidirectionnel, temps reel, push des taches aux agents</td>
+            </tr>
+        </table>
+    </section>
+
+    <!-- Slide 5: Structure du Projet -->
+    <section class="slide">
+        <h2>Structure du Projet</h2>
+        <div class="grid grid-2" style="max-width: 1100px;">
+            <div class="file-tree">
+<span class="folder">autostrike/</span>
+├── <span class="folder">server/</span>              <span class="comment"># Backend Go</span>
+│   ├── <span class="folder">cmd/autostrike/</span>  <span class="important"># main.go</span>
+│   ├── <span class="folder">internal/</span>
+│   │   ├── <span class="folder">domain/</span>      <span class="comment"># Logique metier</span>
+│   │   ├── <span class="folder">application/</span> <span class="comment"># Use cases</span>
+│   │   └── <span class="folder">infrastructure/</span> <span class="comment"># HTTP, DB, WS</span>
+│   └── <span class="folder">configs/</span>         <span class="comment"># Techniques YAML</span>
+│
+├── <span class="folder">agent/</span>               <span class="comment"># Agent Rust</span>
+│   └── <span class="folder">src/</span>
+│       ├── <span class="important">main.rs</span>
+│       └── <span class="important">executor.rs</span>  <span class="comment"># Execution cmds</span>
+│
+├── <span class="folder">dashboard/</span>           <span class="comment"># Frontend React</span>
+│   └── <span class="folder">src/</span>
+│       ├── <span class="folder">pages/</span>       <span class="comment"># 6 pages</span>
+│       ├── <span class="folder">components/</span>  <span class="comment"># UI components</span>
+│       └── <span class="folder">lib/</span>         <span class="important"># api.ts</span>
+│
+└── <span class="folder">docs/</span>                <span class="comment"># MkDocs</span>
+            </div>
+            <div>
+                <div class="card" style="margin-bottom: 20px;">
+                    <h4>Architecture Hexagonale</h4>
+                    <p>Le server suit le pattern Clean Architecture :</p>
+                    <ul style="font-size: 0.95rem; margin-top: 10px;">
+                        <li><code>domain/</code> = logique pure, pas de deps externes</li>
+                        <li><code>application/</code> = orchestration des use cases</li>
+                        <li><code>infrastructure/</code> = adapters (HTTP, DB, WS)</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h4>Fichiers cles a connaitre</h4>
+                    <ul style="font-size: 0.95rem; margin-top: 10px;">
+                        <li><code>server/cmd/autostrike/main.go</code></li>
+                        <li><code>server/internal/domain/entity/</code></li>
+                        <li><code>dashboard/src/lib/api.ts</code></li>
+                        <li><code>agent/src/executor.rs</code></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 6: Setup Dev Environment -->
+    <section class="slide">
+        <h2>Setup Environnement Dev</h2>
+        <div class="grid grid-2" style="max-width: 1000px;">
+            <div>
+                <h3>Prerequisites</h3>
+                <div class="code-box">
+<span class="comment"># Installer</span>
+- Go 1.21+
+- Rust 1.75+
+- Node.js 18+
+- Make
+                </div>
+            </div>
+            <div>
+                <h3>Clone & Run</h3>
+                <div class="code-box">
+<span class="command">git clone</span> [repo]
+<span class="command">cd</span> autostrike
+
+<span class="comment"># Tout lancer en une commande</span>
+<span class="command">make dev</span>
+
+<span class="comment"># Ou separement</span>
+<span class="command">make run</span>      <span class="comment"># Server :8443</span>
+<span class="command">make agent</span>   <span class="comment"># Agent Rust</span>
+                </div>
+            </div>
+        </div>
+
+        <h3 style="margin-top: 2rem;">Commandes utiles</h3>
+        <table style="max-width: 800px;">
+            <tr><th>Commande</th><th>Description</th></tr>
+            <tr><td><code>make run</code></td><td>Lance le server Go sur :8443</td></tr>
+            <tr><td><code>make agent</code></td><td>Lance un agent Rust</td></tr>
+            <tr><td><code>make test</code></td><td>Lance tous les tests</td></tr>
+            <tr><td><code>make build</code></td><td>Build tous les composants</td></tr>
+            <tr><td><code>make lint</code></td><td>Lint Go + Rust + TS</td></tr>
+        </table>
+    </section>
+
+    <!-- Slide 7: Comment ca marche -->
+    <section class="slide">
+        <h2>Comment ca marche ?</h2>
+        <div class="flow-diagram">
+            <div class="flow-step">
+                <div class="num">1</div>
+                <div><strong>Agent se connecte</strong> - WebSocket vers le server, envoie ses infos (hostname, OS, etc.)</div>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="flow-step">
+                <div class="num">2</div>
+                <div><strong>User lance un scenario</strong> - Depuis le dashboard, selectionne agents + scenario</div>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="flow-step">
+                <div class="num">3</div>
+                <div><strong>Server orchestre</strong> - Cree l'execution, envoie les taches aux agents via WebSocket</div>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="flow-step">
+                <div class="num">4</div>
+                <div><strong>Agent execute</strong> - Execute les commandes MITRE (ex: <code>systeminfo</code>, <code>ps aux</code>)</div>
+            </div>
+            <div class="arrow">↓</div>
+            <div class="flow-step">
+                <div class="num">5</div>
+                <div><strong>Resultats temps reel</strong> - Agent renvoie les outputs, dashboard les affiche live</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 8: MITRE ATT&CK explique -->
+    <section class="slide">
+        <h2>MITRE ATT&CK en 2 minutes</h2>
+        <p style="text-align: center; max-width: 800px; margin-bottom: 2rem;">
+            C'est un framework qui organise les techniques d'attaque en <strong style="color: #00d4ff;">Tactiques</strong> (le "quoi") et <strong style="color: #7c3aed;">Techniques</strong> (le "comment").
+        </p>
+        <div class="mitre-grid">
+            <div class="mitre-tactic">
+                <div class="name">Discovery</div>
+                <div class="count">9</div>
+                <div style="font-size: 0.75rem; color: #888;">techniques</div>
+            </div>
+            <div class="mitre-tactic">
+                <div class="name">Execution</div>
+                <div class="count">3</div>
+                <div style="font-size: 0.75rem; color: #888;">techniques</div>
+            </div>
+            <div class="mitre-tactic">
+                <div class="name">Persistence</div>
+                <div class="count">2</div>
+                <div style="font-size: 0.75rem; color: #888;">techniques</div>
+            </div>
+            <div class="mitre-tactic">
+                <div class="name">Defense Evasion</div>
+                <div class="count">1</div>
+                <div style="font-size: 0.75rem; color: #888;">techniques</div>
+            </div>
+        </div>
+        <div class="card" style="margin-top: 2rem; max-width: 700px;">
+            <h4>Exemple : T1082 - System Information Discovery</h4>
+            <div class="code-box" style="margin-top: 10px;">
+<span class="comment"># Windows</span>
+<span class="command">systeminfo</span>
+
+<span class="comment"># Linux</span>
+<span class="command">uname -a && cat /etc/os-release</span>
+            </div>
+            <p style="margin-top: 10px; font-size: 0.9rem;">L'attaquant veut connaitre le systeme cible. On simule ca pour voir si le SOC detecte.</p>
+        </div>
+    </section>
+
+    <!-- Slide 9: API Endpoints -->
+    <section class="slide">
+        <h2>API REST - Endpoints Principaux</h2>
+        <p style="text-align: center; margin-bottom: 1rem;">Base URL: <code>https://localhost:8443/api/v1</code></p>
+        <table style="max-width: 1000px;">
+            <tr>
+                <th>Method</th>
+                <th>Endpoint</th>
+                <th>Description</th>
+            </tr>
+            <tr>
+                <td><span class="badge badge-green" style="font-size: 0.7rem;">GET</span></td>
+                <td><code>/agents</code></td>
+                <td>Liste tous les agents connectes</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-green" style="font-size: 0.7rem;">GET</span></td>
+                <td><code>/techniques</code></td>
+                <td>Liste toutes les techniques MITRE</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-green" style="font-size: 0.7rem;">GET</span></td>
+                <td><code>/scenarios</code></td>
+                <td>Liste tous les scenarios</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-orange" style="font-size: 0.7rem;">POST</span></td>
+                <td><code>/executions</code></td>
+                <td>Lance une execution (scenario + agents)</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-green" style="font-size: 0.7rem;">GET</span></td>
+                <td><code>/executions/:id/results</code></td>
+                <td>Resultats d'une execution</td>
+            </tr>
+            <tr>
+                <td><span class="badge badge-green" style="font-size: 0.7rem;">GET</span></td>
+                <td><code>/techniques/coverage</code></td>
+                <td>Couverture MITRE par tactique</td>
+            </tr>
+        </table>
+        <div class="code-box" style="margin-top: 2rem;">
+<span class="comment"># Exemple: Lancer une execution</span>
+<span class="command">curl -X POST</span> https://localhost:8443/api/v1/executions \
+  -H "Content-Type: application/json" \
+  -d '{"scenario_id": "scenario-quick-scan", "agent_paws": ["abc123"], "safe_mode": true}'
+        </div>
+    </section>
+
+    <!-- Slide 10: Ce qui est fait -->
+    <section class="slide">
+        <h2>Etat du Projet</h2>
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="number">~15k</div>
+                <div class="label">Lignes de code</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">447</div>
+                <div class="label">Tests</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">15</div>
+                <div class="label">Techniques</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">4</div>
+                <div class="label">Scenarios</div>
+            </div>
+        </div>
+
+        <div class="grid grid-2" style="max-width: 1000px; margin-top: 2rem;">
+            <div>
+                <h3 style="color: #10b981;">Fait</h3>
+                <ul class="check">
+                    <li>API REST complete</li>
+                    <li>WebSocket bidirectionnel</li>
+                    <li>Dashboard 6 pages</li>
+                    <li>Agent multi-plateforme</li>
+                    <li>Import YAML techniques</li>
+                    <li>CI/CD GitHub Actions</li>
+                    <li>Documentation MkDocs</li>
+                </ul>
+            </div>
+            <div>
+                <h3 style="color: #f59e0b;">A faire</h3>
+                <ul>
+                    <li>Login UI (auth existe cote server)</li>
+                    <li>Export PDF rapports</li>
+                    <li>Plus de techniques MITRE</li>
+                    <li>Scheduling executions</li>
+                    <li>Tests E2E</li>
+                    <li>Deploy Docker prod</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 11: Pourquoi ne pas changer -->
+    <section class="slide">
+        <h2>Pourquoi Garder Cette Stack ?</h2>
+        <p class="quote" style="margin-bottom: 2rem;">
+            "J'ai pose les fondations solides. Maintenant on construit dessus ensemble."
+        </p>
+        <div class="grid grid-3" style="max-width: 1100px;">
+            <div class="card card-highlight">
+                <h4>Go (Backend)</h4>
+                <p>Kubernetes, Docker, Terraform, Caldera... tous en Go. C'est <strong>LE standard</strong> pour les outils d'infra et secu.</p>
+            </div>
+            <div class="card card-highlight">
+                <h4>Rust (Agent)</h4>
+                <p>Les agents Python se font <strong>bloquer par Windows Defender</strong>. Rust compile en natif, passe sous les radars.</p>
+            </div>
+            <div class="card card-highlight">
+                <h4>React (Dashboard)</h4>
+                <p>Framework le plus populaire. <strong>Tout le monde peut contribuer</strong>. TypeScript evite les bugs runtime.</p>
+            </div>
+        </div>
+        <div class="card" style="margin-top: 2rem; max-width: 800px;">
+            <h4>L'avantage de l'architecture hexagonale</h4>
+            <p>Changer SQLite → PostgreSQL = <strong>1 fichier</strong>. Changer le framework HTTP = <strong>1 dossier</strong>. Le code metier ne bouge pas.</p>
+        </div>
+        <div style="margin-top: 2rem;">
+            <span class="badge badge-green">447 tests</span>
+            <span class="badge badge-green">97% coverage</span>
+            <span class="badge badge-green">CI/CD complet</span>
+            <span class="badge badge-green">Doc complete</span>
+        </div>
+    </section>
+
+    <!-- Slide 12: Taches disponibles -->
+    <section class="slide">
+        <h2>Taches Disponibles</h2>
+        <p style="text-align: center; margin-bottom: 2rem;">Choisissez selon votre niveau et vos preferences !</p>
+
+        <div class="task-list">
+            <div class="task-item">
+                <span class="difficulty easy">Easy</span>
+                <span class="tech">YAML</span>
+                <div>Ajouter 10 nouvelles techniques MITRE (copier le format existant)</div>
+            </div>
+            <div class="task-item">
+                <span class="difficulty easy">Easy</span>
+                <span class="tech">React</span>
+                <div>Ameliorer le design du dashboard (dark mode, animations)</div>
+            </div>
+            <div class="task-item">
+                <span class="difficulty medium">Medium</span>
+                <span class="tech">React</span>
+                <div>Ajouter la page Login avec formulaire + JWT storage</div>
+            </div>
+            <div class="task-item">
+                <span class="difficulty medium">Medium</span>
+                <span class="tech">Go</span>
+                <div>Endpoint d'export PDF des rapports d'execution</div>
+            </div>
+            <div class="task-item">
+                <span class="difficulty medium">Medium</span>
+                <span class="tech">Rust</span>
+                <div>Ajouter de nouveaux executors (Python, PowerShell avance)</div>
+            </div>
+            <div class="task-item">
+                <span class="difficulty hard">Hard</span>
+                <span class="tech">Go + React</span>
+                <div>Scheduling d'executions (cron-like) avec UI</div>
+            </div>
+            <div class="task-item">
+                <span class="difficulty hard">Hard</span>
+                <span class="tech">DevOps</span>
+                <div>Deploy Kubernetes avec Helm charts</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 13: Comment contribuer -->
+    <section class="slide">
+        <h2>Comment Contribuer</h2>
+        <div class="grid grid-2" style="max-width: 1000px;">
+            <div>
+                <h3>Workflow Git</h3>
+                <div class="code-box">
+<span class="comment"># 1. Creer une branche</span>
+<span class="command">git checkout -b</span> feat/ma-feature
+
+<span class="comment"># 2. Faire les modifs + tests</span>
+<span class="command">make test</span>
+<span class="command">make lint</span>
+
+<span class="comment"># 3. Commit avec message clair</span>
+<span class="command">git commit -m</span> "feat: add login page"
+
+<span class="comment"># 4. Push + PR</span>
+<span class="command">git push origin</span> feat/ma-feature
+                </div>
+            </div>
+            <div>
+                <h3>Conventions</h3>
+                <div class="card">
+                    <h4>Commits</h4>
+                    <p style="font-size: 0.9rem;"><code>feat:</code> nouvelle feature<br>
+                    <code>fix:</code> bug fix<br>
+                    <code>docs:</code> documentation<br>
+                    <code>refactor:</code> refactoring</p>
+                </div>
+                <div class="card" style="margin-top: 15px;">
+                    <h4>Avant de push</h4>
+                    <p style="font-size: 0.9rem;">
+                        - <code>make test</code> doit passer<br>
+                        - <code>make lint</code> doit passer<br>
+                        - Pas de secrets dans le code
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 14: Resources -->
+    <section class="slide">
+        <h2>Ressources</h2>
+        <div class="grid grid-3" style="max-width: 1100px;">
+            <div class="card">
+                <div class="feature-icon">📚</div>
+                <h4>Documentation</h4>
+                <p>MkDocs complete avec guides utilisateur et API reference.</p>
+                <p style="margin-top: 10px;"><code>docs/</code></p>
+            </div>
+            <div class="card">
+                <div class="feature-icon">📝</div>
+                <h4>CLAUDE.md</h4>
+                <p>Fichier de contexte projet pour Claude Code / Cursor.</p>
+                <p style="margin-top: 10px;"><code>CLAUDE.md</code></p>
+            </div>
+            <div class="card">
+                <div class="feature-icon">🔗</div>
+                <h4>MITRE ATT&CK</h4>
+                <p>Reference officielle des techniques.</p>
+                <p style="margin-top: 10px;">attack.mitre.org</p>
+            </div>
+        </div>
+
+        <h3 style="margin-top: 3rem;">Liens utiles</h3>
+        <table style="max-width: 700px;">
+            <tr><td>Dashboard local</td><td><code>https://localhost:8443</code></td></tr>
+            <tr><td>API docs</td><td><code>docs/api/</code></td></tr>
+            <tr><td>Techniques YAML</td><td><code>server/configs/techniques/</code></td></tr>
+            <tr><td>Scenarios YAML</td><td><code>server/configs/scenarios/</code></td></tr>
+        </table>
+    </section>
+
+    <!-- Slide 15: Questions -->
+    <section class="slide">
+        <h2>Questions ?</h2>
+        <div class="logo-container" style="margin-top: 2rem;">
+            <svg viewBox="0 0 100 100">
+                <defs>
+                    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#00d4ff"/>
+                        <stop offset="100%" style="stop-color:#7c3aed"/>
+                    </linearGradient>
+                </defs>
+                <circle cx="50" cy="50" r="45" fill="none" stroke="url(#grad2)" stroke-width="3"/>
+                <path d="M50 20 L65 45 L50 40 L35 45 Z" fill="url(#grad2)"/>
+                <circle cx="50" cy="55" r="15" fill="none" stroke="url(#grad2)" stroke-width="2"/>
+                <circle cx="50" cy="55" r="5" fill="url(#grad2)"/>
+                <line x1="50" y1="70" x2="50" y2="85" stroke="url(#grad2)" stroke-width="3"/>
+            </svg>
+        </div>
+        <p class="subtitle" style="margin-top: 2rem;">Let's build something awesome together!</p>
+        <div style="margin-top: 2rem;">
+            <span class="badge">make dev</span>
+            <span class="badge">localhost:8443</span>
+        </div>
+        <div class="code-box" style="margin-top: 3rem; text-align: center;">
+<span class="comment"># TL;DR pour commencer</span>
+<span class="command">git clone</span> [repo] && <span class="command">cd</span> autostrike && <span class="command">make dev</span>
+        </div>
+    </section>
+
+    <script>
+        function scrollToSlide(index) {
+            const slides = document.querySelectorAll('.slide');
+            if (slides[index]) {
+                slides[index].scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        const slides = document.querySelectorAll('.slide');
+        const dots = document.querySelectorAll('.nav-dot');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const index = Array.from(slides).indexOf(entry.target);
+                    dots.forEach((dot, i) => {
+                        dot.classList.toggle('active', i === index);
+                    });
+                }
+            });
+        }, { threshold: 0.5 });
+
+        slides.forEach(slide => observer.observe(slide));
+
+        document.addEventListener('keydown', (e) => {
+            const currentSlide = Array.from(slides).findIndex(slide => {
+                const rect = slide.getBoundingClientRect();
+                return rect.top >= -100 && rect.top <= 100;
+            });
+
+            if (e.key === 'ArrowDown' || e.key === ' ' || e.key === 'PageDown') {
+                e.preventDefault();
+                scrollToSlide(Math.min(currentSlide + 1, slides.length - 1));
+            } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+                e.preventDefault();
+                scrollToSlide(Math.max(currentSlide - 1, 0));
+            }
+        });
+    </script>
+</body>
+</html>

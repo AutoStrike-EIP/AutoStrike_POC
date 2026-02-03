@@ -10,12 +10,12 @@
 
 ## 📋 Table des Matières
 
-**Validation Compétences EIP**
-- [C1 - Recensement Besoins Client](#c1---recensement-des-besoins-client-et-utilisateurs)
-- [C2 - Audit Technique et Sécurité](#c2---audit-technique-fonctionnel-et-de-sécurité)
-- [C3 - Spécifications Techniques/Fonctionnelles](#c3---spécifications-techniques-et-fonctionnelles)
-- [C4 - Chiffrage et Benchmark](#c4---chiffrage-et-benchmark)
-- [C5 - Impacts et Mitigation](#c5---impacts-et-plan-de-mitigation)
+**Validation Compétences EIP** (🔴 NON VALIDÉES - Mars 2026)
+- [C1 - Recenser les besoins client/utilisateurs](#c1---recenser-les-besoins-du-client-et-des-utilisateurs)
+- [C2 - Audit technique, fonctionnel et sécurité](#c2---réaliser-un-audit-technique-fonctionnel-et-de-sécurité)
+- [C3 - Spécifications techniques et fonctionnelles](#c3---rédiger-les-spécifications-techniques-et-fonctionnelles)
+- [C4 - Chiffrage et benchmark](#c4---chiffrer-le-projet-et-réaliser-un-benchmark)
+- [C5 - Impacts et mitigation](#c5---prévoir-les-impacts-et-sécuriser-des-pistes-de-mitigation)
 
 **Documentation Technique**
 1. [Vision du Projet](#1-vision-du-projet)
@@ -25,7 +25,11 @@
 5. [Stack Technologique](#5-stack-technologique)
 6. [Modèle de Données](#6-modèle-de-données)
 7. [Protocoles de Communication](#7-protocoles-de-communication)
-8. [Techniques MITRE ATT&CK](#8-techniques-mitre-attck)
+8. [Techniques MITRE ATT&CK & EBIOS RM](#8-techniques-mitre-attck)
+   - [8.1 Techniques Prioritaires (MVP)](#81-techniques-prioritaires-mvp)
+   - [8.2 Implémentation Type](#82-implémentation-type)
+   - [8.3 Scénarios Prédéfinis](#83-scénarios-prédéfinis)
+   - [8.4 Alignement EBIOS RM (ANSSI)](#84-alignement-ebios-rm-méthode-anssi)
 9. [Interface Utilisateur](#9-interface-utilisateur)
 10. [Sécurité](#10-sécurité)
 11. [Roadmap](#11-roadmap)
@@ -38,7 +42,11 @@
 
 > **Cette section documente la méthodologie appliquée pour valider les compétences C1 à C5 du référentiel EPITECH.**
 
-### C1 - Recensement des Besoins Client et Utilisateurs
+### C1 - Recenser les besoins du client et des utilisateurs
+
+> **Définition officielle:** Recenser les besoins du client et des utilisateurs en observant et en échangeant avec les parties prenantes afin de cerner les usages prévus, notamment pour les personnes en situation de handicap.
+>
+> **Statut: 🔴 NON VALIDÉ** (validation prévue: Mars 2026)
 
 #### 1.1 Méthodologie de Recueil des Besoins
 
@@ -231,7 +239,11 @@
 
 ---
 
-### C2 - Audit Technique, Fonctionnel et de Sécurité
+### C2 - Réaliser un audit technique, fonctionnel et de sécurité
+
+> **Définition officielle:** Réaliser un audit technique, fonctionnel et de sécurité de l'environnement dans lequel s'inscrit le projet (infrastructure, système d'information, ressources humaines, ...) afin de proposer les solutions les plus adaptées au contexte, en analysant les solutions déjà en place et leurs effets.
+>
+> **Statut: 🔴 NON VALIDÉ** (validation prévue: Mars 2026)
 
 #### 2.1 Méthodologie d'Audit
 
@@ -337,7 +349,11 @@
 
 ---
 
-### C3 - Spécifications Techniques et Fonctionnelles
+### C3 - Rédiger les spécifications techniques et fonctionnelles
+
+> **Définition officielle:** Rédiger les spécifications techniques et fonctionnelles à partir des résultats de l'audit, afin de couvrir tous les besoins clients, en décrivant précisément tous les aspects techniques (spécifications techniques) et humains (spécifications fonctionnelles).
+>
+> **Statut: 🔴 NON VALIDÉ** (validation prévue: Mars 2026)
 
 #### 3.1 Document de Spécifications Fonctionnelles (SFD)
 
@@ -623,7 +639,11 @@ components:
 
 ---
 
-### C4 - Chiffrage et Benchmark
+### C4 - Chiffrer le projet et réaliser un benchmark
+
+> **Définition officielle:** Chiffrer le projet en calculant les éléments financiers de la solution technique et en réalisant un benchmark des solutions existantes afin de cadrer les prévisions budgétaires.
+>
+> **Statut: 🔴 NON VALIDÉ** (validation prévue: Mars 2026)
 
 #### 4.1 Benchmark Solutions Existantes
 
@@ -718,7 +738,11 @@ components:
 
 ---
 
-### C5 - Impacts et Plan de Mitigation
+### C5 - Prévoir les impacts et sécuriser des pistes de mitigation
+
+> **Définition officielle:** Prévoir les impacts techniques et fonctionnels de la solution préconisée, afin de sécuriser des pistes de mitigation le cas échéant, en s'assurant de sa bonne intégration dans l'environnement d'exploitation du client.
+>
+> **Statut: 🔴 NON VALIDÉ** (validation prévue: Mars 2026)
 
 #### 5.1 Analyse des Impacts
 
@@ -2377,7 +2401,7 @@ export const ExecutionMonitor: React.FC<ExecutionMonitorProps> = ({
 |-----------|-------------|---------|---------------|
 | **Server** | Go | 1.21+ | Performance, concurrence, simplicité |
 | **Server Framework** | Gin | 1.9+ | Rapide, bien documenté |
-| **Agent** | Rust | 1.70+ | Sécurité mémoire, performance, évasion AV |
+| **Agent** | Rust | 1.75+ | Sécurité mémoire, performance, évasion AV |
 | **Dashboard** | React | 18+ | Écosystème riche, composants réutilisables |
 | **Dashboard Build** | Vite | 5+ | Bundler rapide |
 | **TypeScript** | TypeScript | 5+ | Typage statique |
@@ -2775,6 +2799,9 @@ type EventType =
 | T1016 | System Network Configuration | Discovery | Faible | P1 |
 | T1069 | Permission Groups Discovery | Discovery | Faible | P1 |
 | T1087 | Account Discovery | Discovery | Faible | P1 |
+| T1018 | Remote System Discovery | Discovery | Faible | P1 |
+| T1007 | System Service Discovery | Discovery | Faible | P1 |
+| T1049 | System Network Connections | Discovery | Faible | P1 |
 | **Execution** |
 | T1059.001 | PowerShell | Execution | Faible | P0 |
 | T1059.003 | Windows Command Shell | Execution | Faible | P0 |
@@ -2913,6 +2940,50 @@ phases:
     techniques:
       - T1486  # Data Encrypted (simulation - crée fichiers test)
 ```
+
+### 8.4 Alignement EBIOS RM (Méthode ANSSI)
+
+AutoStrike s'aligne sur **deux frameworks complémentaires** pour une couverture internationale et française :
+
+| Framework | Origine | Usage | Granularité |
+|-----------|---------|-------|-------------|
+| **MITRE ATT&CK** | USA (MITRE Corp) | Standard international | Techniques détaillées (T1082, T1059...) |
+| **EBIOS RM** | France (ANSSI) | Conformité française | Phases d'attaque (CRTE) |
+
+#### Méthodologie CRTE
+
+La méthode EBIOS Risk Manager de l'ANSSI structure les scénarios d'attaque en 4 phases **CRTE** :
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  CONNAÎTRE  │───>│   RENTRER   │───>│   TROUVER   │───>│  EXPLOITER  │
+│             │    │             │    │             │    │             │
+│ Reconnaissance│   │ Accès initial│   │ Exploration │    │ Exécution   │
+│ de la cible │    │ au système  │    │ interne     │    │ de l'attaque│
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+```
+
+#### Mapping CRTE ↔ MITRE ATT&CK
+
+| Phase CRTE | Description | Tactiques MITRE | Couverture AutoStrike |
+|------------|-------------|-----------------|----------------------|
+| **C - Connaître** | Reconnaissance de la cible | Reconnaissance, Discovery | ✅ 9 techniques Discovery |
+| **R - Rentrer** | Accès initial au système | Initial Access | 🔜 Année 2 |
+| **T - Trouver** | Exploration interne, mouvement latéral | Discovery, Lateral Movement | ✅ Partiel (Discovery) |
+| **E - Exploiter** | Exécution de l'attaque, impact | Execution, Persistence, Impact | ✅ 6 techniques |
+
+**Couverture actuelle :** 3/4 phases CRTE partiellement couvertes (15 techniques)
+
+#### Pourquoi ce double alignement ?
+
+| Contexte | Framework privilégié |
+|----------|---------------------|
+| **Client international** | MITRE ATT&CK (standard mondial) |
+| **Client français / ANSSI** | EBIOS RM + MITRE ATT&CK |
+| **Audit de conformité** | EBIOS RM (méthode homologuée) |
+| **Équipe SOC technique** | MITRE ATT&CK (granularité) |
+
+> **Argument clé :** "AutoStrike parle les deux langages - MITRE pour la technique, EBIOS RM pour la conformité française."
 
 ---
 
@@ -3116,21 +3187,21 @@ is_safe: false
 
 ### 11.2 Année 1 - Détail
 
-#### Phase 1: Fondations (M1-M3)
+#### Phase 1: Fondations (M1-M3) ✅ COMPLÈTE
 
 **Objectifs:**
-- [ ] Architecture hexagonale serveur (Go)
-- [ ] Agent basique Windows (Rust)
-- [ ] Protocole de communication mTLS
-- [ ] 5 techniques Discovery de base
-- [ ] API REST CRUD basique
-- [ ] Dashboard squelette React
+- [x] Architecture hexagonale serveur (Go)
+- [x] Agent basique Windows (Rust)
+- [x] Protocole de communication mTLS
+- [x] 5 techniques Discovery de base
+- [x] API REST CRUD basique
+- [x] Dashboard squelette React
 
 **Livrables:**
-- Serveur Go fonctionnel avec API REST
-- Agent Rust qui beacon et exécute des commandes
-- Communication sécurisée mTLS
-- UI basique pour voir les agents
+- ✅ Serveur Go fonctionnel avec API REST
+- ✅ Agent Rust qui beacon et exécute des commandes
+- ✅ Communication sécurisée mTLS
+- ✅ UI basique pour voir les agents
 
 **Techniques implémentées:**
 - T1082 (System Information Discovery)
@@ -3139,21 +3210,30 @@ is_safe: false
 - T1059.001 (PowerShell)
 - T1059.003 (Windows Command Shell)
 
-#### Phase 2: Core Features (M4-M6)
+#### Phase 2: Core Features (M4-M6) ✅ COMPLÈTE
 
 **Objectifs:**
-- [ ] Gestion des scénarios (CRUD)
-- [ ] Orchestrateur d'attaques
-- [ ] 10 techniques supplémentaires
-- [ ] Matrice ATT&CK interactive (D3.js)
-- [ ] WebSocket temps réel
-- [ ] Système de résultats
+- [x] Gestion des scénarios (CRUD)
+- [x] Orchestrateur d'attaques
+- [x] 10 techniques supplémentaires
+- [x] Matrice ATT&CK interactive (CSS Grid)
+- [x] WebSocket temps réel
+- [x] Système de résultats
 
 **Livrables:**
-- Créer et exécuter des scénarios
-- Visualisation matrice avec couleurs
-- Monitoring temps réel des exécutions
-- Score de sécurité basique
+- ✅ Créer et exécuter des scénarios
+- ✅ Visualisation matrice avec couleurs
+- ✅ Monitoring temps réel des exécutions
+- ✅ Score de sécurité basique
+
+**Métriques atteintes (Phase 1+2) :**
+| Métrique | Valeur |
+|----------|--------|
+| Tests | 447 (193 server + 193 dashboard + 61 agent) |
+| Coverage | 97%+ sur le domaine |
+| Techniques MITRE | 15 (4 tactiques) |
+| Issues GitHub | 170 fermées / 49 ouvertes |
+| Lignes de code | ~15,000 |
 
 **Techniques ajoutées:**
 - T1016 (System Network Configuration)
@@ -3167,21 +3247,21 @@ is_safe: false
 - T1049 (System Network Connections)
 - T1007 (System Service Discovery)
 
-#### Phase 3: Polish (M7-M9)
+#### Phase 3: Polish (M7-M9) 🔄 EN COURS
 
 **Objectifs:**
-- [ ] Agent Linux
+- [x] Agent Linux (cross-compilation)
 - [ ] Profils adversaires prédéfinis (APT29, etc.)
 - [ ] Export rapports PDF
-- [ ] Amélioration UX dashboard
-- [ ] Documentation technique
-- [ ] Tests unitaires et intégration
+- [x] Amélioration UX dashboard (8 pages)
+- [x] Documentation technique (MkDocs)
+- [x] Tests unitaires et intégration (447 tests)
 
 **Livrables:**
-- Support multi-plateforme (Windows + Linux)
-- 3 profils adversaires utilisables
-- Rapports exportables
-- Documentation complète
+- ✅ Support multi-plateforme (Windows + Linux)
+- En cours : 3 profils adversaires utilisables
+- En cours : Rapports exportables
+- ✅ Documentation complète
 
 #### Phase 4: V1.0 (M10-M12)
 
@@ -3215,13 +3295,13 @@ is_safe: false
 
 ### 12.1 Membres
 
-| Nom | Rôle Principal | Responsabilités |
-|-----|----------------|-----------------|
-| **Nathan** | Project Lead | Architecture globale, coordination |
-| **Alexandre** | Security Lead | Techniques MITRE, agent Rust, tests sécu |
-| **Erwan** | Backend Lead | Control Server Go, API, DB |
-| **Elie** | Frontend Lead | Dashboard React, UX/UI |
-| **[+1-2]** | DevOps / QA | CI/CD, tests, documentation |
+| Rôle | Responsabilités |
+|------|-----------------|
+| **Project Lead** | Architecture globale, coordination |
+| **Security Lead** | Techniques MITRE, agent Rust, tests sécu |
+| **Backend Lead** | Control Server Go, API, DB |
+| **Frontend Lead** | Dashboard React, UX/UI |
+| **DevOps / QA** | CI/CD, tests, documentation |
 
 ### 12.2 Répartition des Tâches
 
@@ -3232,19 +3312,19 @@ is_safe: false
 │                                                                   │
 │  AGENT (Rust)          │  SERVER (Go)         │  DASHBOARD (React)│
 │  ──────────────────    │  ──────────────────  │  ─────────────────│
-│  Alexandre             │  Erwan               │  Elie             │
+│  Security Lead         │  Backend Lead        │  Frontend Lead    │
 │  • Communication       │  • API REST          │  • Matrice ATT&CK │
 │  • Executors           │  • WebSocket         │  • Scénarios UI   │
 │  • Techniques MITRE    │  • Orchestrateur     │  • Agents Manager │
 │  • Évasion             │  • Persistence       │  • Rapports       │
 │                        │                      │                   │
-│  Nathan (support)      │  Nathan (review)     │  Nathan (review)  │
+│  Project Lead (support)│  Project Lead (review)│ Project Lead (review)
 │                                                                   │
 ├──────────────────────────────────────────────────────────────────┤
 │                                                                   │
 │  TRANSVERSE            │                                          │
 │  ──────────────────    │                                          │
-│  Nathan                │                                          │
+│  Project Lead          │                                          │
 │  • Architecture        │                                          │
 │  • Documentation       │                                          │
 │  • Gestion projet      │                                          │
@@ -3279,14 +3359,15 @@ is_safe: false
 
 ## 13. Ressources et Références
 
-### 13.1 Documentation MITRE
+### 13.1 Documentation Sécurité
 
-| Ressource | URL |
-|-----------|-----|
-| MITRE ATT&CK | https://attack.mitre.org/ |
-| ATT&CK Navigator | https://mitre-attack.github.io/attack-navigator/ |
-| MITRE Caldera | https://github.com/mitre/caldera |
-| Atomic Red Team | https://github.com/redcanaryco/atomic-red-team |
+| Ressource | Origine | URL |
+|-----------|---------|-----|
+| MITRE ATT&CK | USA | https://attack.mitre.org/ |
+| ATT&CK Navigator | USA | https://mitre-attack.github.io/attack-navigator/ |
+| **EBIOS RM** | **France (ANSSI)** | **https://cyber.gouv.fr/la-methode-ebios-risk-manager** |
+| MITRE Caldera | USA | https://github.com/mitre/caldera |
+| Atomic Red Team | USA | https://github.com/redcanaryco/atomic-red-team |
 
 ### 13.2 Projets Open-Source de Référence
 
@@ -3315,6 +3396,14 @@ is_safe: false
 - *Practical Malware Analysis* - Michael Sikorski
 - *Clean Architecture* - Robert C. Martin
 
+### 13.5 Documents Complémentaires
+
+| Document | Contenu | Usage |
+|----------|---------|-------|
+| [ROADMAP.md](./ROADMAP.md) | 49 issues GitHub, effort estimé, assignations | Planification opérationnelle |
+| [PRESENTATION.md](./PRESENTATION.md) | Slides, arguments clés, FAQ | Présentation équipe |
+| [CLAUDE.md](../CLAUDE.md) | Contexte technique pour IA | Assistance développement |
+
 ---
 
 ## Annexes
@@ -3324,6 +3413,8 @@ is_safe: false
 | Terme | Définition |
 |-------|------------|
 | **BAS** | Breach and Attack Simulation |
+| **CRTE** | Connaître, Rentrer, Trouver, Exploiter - Phases d'attaque EBIOS RM |
+| **EBIOS RM** | Expression des Besoins et Identification des Objectifs de Sécurité - Risk Manager (méthode ANSSI) |
 | **TTP** | Tactics, Techniques, and Procedures |
 | **EDR** | Endpoint Detection and Response |
 | **SIEM** | Security Information and Event Management |
@@ -3383,11 +3474,20 @@ VITE_WS_URL=wss://localhost:8443
 
 Ce projet est développé dans le cadre de l'EIP EPITECH.
 
-**Auteurs:** Nathan, Alexandre, Erwan, Elie
+**Auteurs:** Équipe EIP AutoStrike
 
-**Année:** 2026-2028
+**Année:** 2026-2028 (Promotion 2028)
 
 ---
 
-*Document généré le 29 janvier 2026*
-*Version: 1.0.0*
+## Historique des Versions
+
+| Version | Date | Changements |
+|---------|------|-------------|
+| 1.0.0 | Jan 2026 | Version initiale |
+| 2.0.0 | Fév 2026 | Ajout EBIOS RM (CRTE), mise à jour métriques Phase 1+2, cross-références |
+
+---
+
+*Document mis à jour le 2026-02-03*
+*Version: 2.0.0*
