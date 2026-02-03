@@ -14,32 +14,49 @@ https://server:8443/api/v1
 
 ## Authentification
 
-L'API utilise des tokens JWT.
+L'authentification JWT est **optionnelle** par défaut. Elle est activée uniquement si `JWT_SECRET` est défini dans `.env`.
+
+### Sans authentification (développement)
 
 ```bash
-curl -X POST https://server:8443/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "user@example.com", "password": "password"}'
+curl https://localhost:8443/api/v1/agents
 ```
 
-Réponse :
+### Avec authentification (production)
 
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "expires_at": "2024-01-01T00:00:00Z"
-}
-```
-
-Utilisez le token dans le header `Authorization` :
+Quand `JWT_SECRET` est défini, incluez le token dans le header `Authorization` :
 
 ```bash
-curl https://server:8443/api/v1/agents \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."
+curl https://localhost:8443/api/v1/agents \
+  -H "Authorization: Bearer <your-jwt-token>"
 ```
+
+> **Note**: Il n'y a pas d'endpoint `/auth/login`. Les tokens JWT doivent être générés par votre système d'authentification externe ou via les outils de développement.
 
 ---
 
-## Endpoints
+## Endpoints principaux
 
-Voir la [Référence API](reference.md) pour la liste complète.
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/health` | Health check |
+| GET | `/agents` | Liste des agents |
+| GET | `/techniques` | Liste des techniques MITRE |
+| GET | `/scenarios` | Liste des scénarios |
+| POST | `/executions` | Lancer une exécution |
+| GET | `/executions/:id` | Détails d'une exécution |
+
+---
+
+## WebSocket
+
+| Path | Description |
+|------|-------------|
+| `/ws/agent` | Connexion agent |
+| `/ws/dashboard` | Mises à jour temps réel |
+
+---
+
+## Documentation complète
+
+Voir la [Référence API](reference.md) pour tous les endpoints, paramètres et exemples.

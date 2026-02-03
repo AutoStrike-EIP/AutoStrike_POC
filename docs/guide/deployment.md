@@ -1,47 +1,62 @@
-# Déploiement
+# Deployment
 
-Guide de déploiement d'AutoStrike en production.
+Production deployment guide for AutoStrike.
 
 ---
 
-## Prérequis
+## Prerequisites
 
-- Docker et Docker Compose
-- Certificats TLS (ou Let's Encrypt)
-- Serveur Linux (Ubuntu 22.04+ recommandé)
+- Docker and Docker Compose (optional)
+- TLS certificates (or Let's Encrypt)
+- Linux server (Ubuntu 22.04+ recommended)
+- Go 1.21+ and Node.js 18+ (for manual deployment)
 
 ---
 
 ## Configuration
 
-### 1. Variables d'environnement
+### 1. Environment Variables
 
-Créer un fichier `.env` à partir du template :
+Create a `.env` file from the template:
 
 ```bash
+cd server
 cp .env.example .env
 ```
 
-Générer des secrets sécurisés :
+Generate secure secrets:
 
 ```bash
-# Générer JWT_SECRET
+# Generate JWT_SECRET
 openssl rand -base64 32
 
-# Générer AGENT_SECRET
+# Generate AGENT_SECRET
 openssl rand -base64 32
 ```
 
-Éditer `.env` avec les valeurs générées :
+Edit `.env` with the generated values:
 
 ```env
-JWT_SECRET=<votre-jwt-secret-généré>
-AGENT_SECRET=<votre-agent-secret-généré>
+# Authentication (required for production)
+JWT_SECRET=<your-generated-jwt-secret>
+AGENT_SECRET=<your-generated-agent-secret>
+
+# Database
+DATABASE_PATH=./data/autostrike.db
+
+# Dashboard (path to built React app)
+DASHBOARD_PATH=../dashboard/dist
+
+# CORS (adjust for your domain)
+ALLOWED_ORIGINS=https://your-domain.com
+
+# Logging
+LOG_LEVEL=info
 ```
 
-### 2. Certificats TLS
+### 2. TLS Certificates
 
-#### Option A : Certificats auto-signés (test)
+#### Option A: Self-signed certificates (testing)
 
 ```bash
 mkdir -p certs
@@ -51,83 +66,133 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -subj "/CN=autostrike.local"
 ```
 
-#### Option B : Let's Encrypt (production)
+#### Option B: Let's Encrypt (production)
 
 ```bash
-# Installer certbot
+# Install certbot
 apt install certbot
 
-# Obtenir un certificat
+# Obtain certificate
 certbot certonly --standalone -d autostrike.example.com
 
-# Copier les certificats
+# Copy certificates
 cp /etc/letsencrypt/live/autostrike.example.com/fullchain.pem certs/server.crt
 cp /etc/letsencrypt/live/autostrike.example.com/privkey.pem certs/server.key
 ```
 
 ---
 
-## Déploiement Docker
+## Deployment Methods
 
-### Lancement
+### Option 1: Makefile (Recommended)
 
 ```bash
-# Construire et démarrer les services
-docker compose up -d
+# Build everything
+make install
 
-# Vérifier l'état
-docker compose ps
+# Start server (background)
+make run
 
-# Voir les logs
-docker compose logs -f server
+# Check logs
+make logs
+
+# Stop
+make stop
 ```
 
-### Services
-
-| Service | Port | Description |
-|---------|------|-------------|
-| server | 8443 | API REST + WebSocket |
-| dashboard | 3000 | Interface web |
-
-### Vérification
+### Option 2: Docker Compose
 
 ```bash
-# Tester la connexion HTTPS
-curl -k https://localhost:8443/health
+# Build and start
+docker compose up -d
 
-# Tester l'API (nécessite un token JWT)
-curl -k -H "Authorization: Bearer <token>" https://localhost:8443/api/v1/agents
+# Check status
+docker compose ps
+
+# View logs
+docker compose logs -f
+
+# Stop
+docker compose down
+```
+
+### Option 3: Manual
+
+```bash
+# Build backend
+cd server
+go build -o autostrike ./cmd/autostrike
+
+# Build frontend
+cd ../dashboard
+npm install && npm run build
+
+# Start server
+cd ../server
+./autostrike
+```
+
+### Verification
+
+```bash
+# Test HTTPS connection
+curl -k https://localhost:8443/health
+# Expected: {"status":"ok"}
+
+# Test API (with JWT if enabled)
+curl -k https://localhost:8443/api/v1/agents
 ```
 
 ---
 
-## Déploiement des agents
+## Single Port Architecture
+
+AutoStrike serves everything on **port 8443**:
+
+| Path | Description |
+|------|-------------|
+| `/` | Dashboard (React SPA) |
+| `/api/v1/*` | REST API |
+| `/ws/agent` | WebSocket for agents |
+| `/ws/dashboard` | WebSocket for real-time updates |
+| `/health` | Health check |
+
+No separate ports needed for dashboard.
+
+---
+
+## Agent Deployment
+
+### Build from Source
+
+```bash
+cd agent
+cargo build --release
+# Binary: target/release/autostrike-agent
+```
 
 ### Windows
 
 ```powershell
-# Télécharger l'agent
-Invoke-WebRequest -Uri "https://server:8443/deploy/agent.exe" -OutFile "autostrike-agent.exe"
-
-# Lancer avec le serveur configuré
+# Copy binary to target machine
+# Run with server URL
 .\autostrike-agent.exe --server https://server:8443 --paw agent-win-01
 ```
 
 ### Linux
 
 ```bash
-# Télécharger l'agent
-curl -k -o autostrike-agent https://server:8443/deploy/agent
+# Copy binary to target machine
 chmod +x autostrike-agent
 
-# Lancer l'agent
+# Run with server URL
 ./autostrike-agent --server https://server:8443 --paw agent-linux-01
 ```
 
-### Agent comme service (systemd)
+### Agent as systemd Service
 
 ```bash
-# Créer le fichier service
+# Create service file
 cat > /etc/systemd/system/autostrike-agent.service << EOF
 [Unit]
 Description=AutoStrike BAS Agent
@@ -135,7 +200,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/opt/autostrike/agent --server https://server:8443 --paw $(hostname)
+ExecStart=/opt/autostrike/autostrike-agent --server https://server:8443 --paw $(hostname)
 Restart=always
 RestartSec=10
 
@@ -143,7 +208,8 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-# Activer et démarrer
+# Enable and start
+systemctl daemon-reload
 systemctl enable autostrike-agent
 systemctl start autostrike-agent
 ```
@@ -152,78 +218,105 @@ systemctl start autostrike-agent
 
 ## Maintenance
 
-### Sauvegarde
+### Backup
 
 ```bash
-# Sauvegarder la base de données
+# Backup SQLite database
+cp server/data/autostrike.db backup-$(date +%Y%m%d).db
+
+# With Docker
 docker compose exec server sqlite3 /app/data/autostrike.db ".backup /app/data/backup.db"
 docker cp autostrike-server:/app/data/backup.db ./backup-$(date +%Y%m%d).db
 ```
 
-### Mise à jour
+### Update
 
 ```bash
-# Arrêter les services
-docker compose down
+# Stop services
+make stop  # or docker compose down
 
-# Mettre à jour le code
+# Pull updates
 git pull
 
-# Reconstruire et redémarrer
-docker compose up -d --build
+# Rebuild and restart
+make install
+make run  # or docker compose up -d --build
 ```
 
 ### Logs
 
 ```bash
-# Logs du serveur
-docker compose logs -f server
+# With Makefile
+make logs
 
-# Logs du dashboard
-docker compose logs -f dashboard
+# With Docker
+docker compose logs -f
+
+# Direct
+tail -f server/logs/autostrike.log
 ```
 
 ---
 
-## Sécurité
+## Security Recommendations
 
-### Recommandations
+### Production Checklist
 
-1. **Secrets** : Utiliser des secrets de 32+ caractères générés aléatoirement
-2. **TLS** : Toujours utiliser HTTPS en production
-3. **Firewall** : Restreindre l'accès aux ports 8443 et 3000
-4. **Réseau** : Isoler les agents dans un réseau dédié
-5. **Logs** : Activer la journalisation centralisée
+1. **Secrets**: Use 32+ character randomly generated secrets
+2. **TLS**: Always use HTTPS in production (Let's Encrypt or commercial cert)
+3. **Firewall**: Restrict access to port 8443
+4. **Network**: Isolate agents in a dedicated network/VLAN
+5. **Logging**: Enable centralized logging
+6. **Updates**: Keep Go, Rust, and dependencies updated
 
-### Ports à ouvrir
+### Firewall Rules
+
+```bash
+# Allow HTTPS
+ufw allow 8443/tcp
+
+# Restrict to specific IPs (optional)
+ufw allow from 10.0.0.0/8 to any port 8443
+```
+
+### Port Requirements
 
 | Port | Direction | Description |
 |------|-----------|-------------|
-| 8443 | Entrant | API + WebSocket agents |
-| 3000 | Entrant | Dashboard web |
+| 8443 | Inbound | API + WebSocket + Dashboard |
 
 ---
 
 ## Troubleshooting
 
-### L'agent ne se connecte pas
+### Agent won't connect
 
-1. Vérifier la connectivité réseau vers le serveur
-2. Vérifier les certificats TLS (utiliser `--insecure` pour les tests)
-3. Vérifier les logs : `./agent --debug`
+1. Verify network connectivity:
+   ```bash
+   curl -k https://server:8443/health
+   ```
+2. Check TLS certificates (use `--debug` flag)
+3. Check agent logs: `journalctl -u autostrike-agent -f`
 
-### Erreur 401 Unauthorized
+### Error 401 Unauthorized
 
-1. Vérifier que le token JWT n'est pas expiré
-2. Vérifier que `JWT_SECRET` est identique entre génération et serveur
+1. Verify JWT token is not expired
+2. Verify `JWT_SECRET` matches between token generation and server
+3. Check if auth is enabled (set `JWT_SECRET` in `.env`)
 
-### Base de données corrompue
+### Database issues
 
 ```bash
-# Sauvegarder l'état actuel
-docker cp autostrike-server:/app/data/autostrike.db ./autostrike-corrupted.db
+# Check database file
+ls -la server/data/autostrike.db
 
-# Supprimer et recréer
-docker compose down -v
-docker compose up -d
+# Reset database (WARNING: deletes all data)
+rm server/data/autostrike.db
+make run  # Will create new database
 ```
+
+### WebSocket connection issues
+
+1. Check firewall allows WebSocket upgrade
+2. Verify no proxy is interfering with WebSocket
+3. Check server logs for connection errors

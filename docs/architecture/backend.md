@@ -1,60 +1,65 @@
 # Backend (Go)
 
-Le serveur de contrôle AutoStrike est développé en **Go 1.21** avec le framework **Gin** et une architecture **hexagonale**.
+The AutoStrike control server is built with **Go 1.21+** using the **Gin** framework and **hexagonal architecture**.
 
 ---
 
-## Architecture Hexagonale
+## Hexagonal Architecture
 
-Le serveur suit le pattern **Ports & Adapters** pour une séparation claire des responsabilités :
+The server follows the **Ports & Adapters** pattern for clear separation of concerns:
 
 ```
 server/
 ├── cmd/autostrike/
-│   └── main.go                    # Point d'entrée, DI
-├── config/
-│   └── config.yaml                # Configuration YAML
+│   └── main.go                    # Entry point, DI, startup
+├── configs/
+│   └── techniques/                # YAML technique definitions
+│       ├── discovery.yaml
+│       ├── execution.yaml
+│       ├── persistence.yaml
+│       └── defense-evasion.yaml
 ├── internal/
-│   ├── domain/                    # 🟢 Couche Métier (indépendante)
-│   │   ├── entity/                # Entités: Agent, Technique, Scenario, Result
-│   │   ├── repository/            # Interfaces (ports sortants)
-│   │   ├── service/               # Services domaine
-│   │   │   ├── orchestrator.go    # Orchestration des attaques
-│   │   │   ├── validator.go       # Validation compatibilité
-│   │   │   └── score_calculator.go # Calcul des scores
-│   │   └── valueobject/           # Objets valeur
-│   ├── application/               # 🟡 Cas d'utilisation
-│   │   ├── agent_service.go       # CRUD agents, heartbeat
-│   │   ├── execution_service.go   # Démarrage/suivi exécutions
-│   │   ├── scenario_service.go    # Gestion scénarios
-│   │   └── technique_service.go   # Catalogue techniques
-│   └── infrastructure/            # 🔵 Adaptateurs externes
+│   ├── domain/                    # 🟢 Business Layer (independent)
+│   │   ├── entity/                # Entities: Agent, Technique, Scenario, Execution, Result
+│   │   ├── repository/            # Interfaces (outbound ports)
+│   │   └── service/               # Domain services
+│   │       ├── orchestrator.go    # Attack orchestration
+│   │       ├── validator.go       # Compatibility validation
+│   │       └── score_calculator.go # Security score calculation
+│   ├── application/               # 🟡 Use Cases
+│   │   ├── agent_service.go       # Agent CRUD, heartbeat
+│   │   ├── execution_service.go   # Execution lifecycle
+│   │   ├── scenario_service.go    # Scenario management
+│   │   └── technique_service.go   # Technique catalog
+│   └── infrastructure/            # 🔵 External Adapters
 │       ├── api/rest/
-│       │   └── server.go          # Serveur REST Gin
+│       │   └── server.go          # Gin REST server
 │       ├── http/
-│       │   ├── handlers/          # Handlers HTTP
+│       │   ├── handlers/          # HTTP handlers
 │       │   │   ├── agent_handler.go
 │       │   │   ├── technique_handler.go
-│       │   │   └── execution_handler.go
-│       │   └── middleware/        # Auth JWT, Logging
+│       │   │   ├── scenario_handler.go
+│       │   │   ├── execution_handler.go
+│       │   │   └── websocket_handler.go
+│       │   └── middleware/        # JWT Auth, Logging
 │       │       ├── auth.go
 │       │       └── logging.go
-│       ├── persistence/sqlite/    # Implémentation SQLite
+│       ├── persistence/sqlite/    # SQLite implementation
 │       │   ├── schema.go
 │       │   ├── agent_repository.go
 │       │   ├── technique_repository.go
 │       │   ├── scenario_repository.go
 │       │   └── result_repository.go
-│       └── websocket/             # Communication agents
-│           ├── hub.go
-│           └── client.go
+│       └── websocket/             # Agent communication
+│           ├── hub.go             # Connection management
+│           └── client.go          # Client handling
 ├── go.mod
 └── go.sum
 ```
 
 ---
 
-## Flux de Dépendances
+## Dependency Flow
 
 ```
 Infrastructure → Application → Domain
@@ -64,118 +69,253 @@ Infrastructure → Application → Domain
   WebSocket
 ```
 
-**Règle** : Les dépendances pointent toujours vers le centre (Domain).
+**Rule**: Dependencies always point inward toward Domain.
+
+---
+
+## API Endpoints
+
+Base URL: `https://localhost:8443/api/v1`
+
+### Health
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Server health check |
+
+### Agents
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/agents` | List agents (`?all=true` for offline) |
+| `GET` | `/agents/:paw` | Get agent details |
+| `POST` | `/agents` | Register agent |
+| `DELETE` | `/agents/:paw` | Delete agent |
+| `POST` | `/agents/:paw/heartbeat` | Update last_seen |
+
+### Techniques
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/techniques` | List all techniques |
+| `GET` | `/techniques/:id` | Get technique by ID |
+| `GET` | `/techniques/tactic/:tactic` | By tactic |
+| `GET` | `/techniques/platform/:platform` | By platform |
+| `GET` | `/techniques/coverage` | Coverage statistics |
+| `POST` | `/techniques/import` | Import from YAML |
+
+### Scenarios
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/scenarios` | List all scenarios |
+| `GET` | `/scenarios/:id` | Get scenario details |
+| `GET` | `/scenarios/tag/:tag` | By tag |
+| `POST` | `/scenarios` | Create scenario |
+| `PUT` | `/scenarios/:id` | Update scenario |
+| `DELETE` | `/scenarios/:id` | Delete scenario |
+
+### Executions
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/executions` | Recent executions (limit 50) |
+| `GET` | `/executions/:id` | Get execution details |
+| `GET` | `/executions/:id/results` | Get results |
+| `POST` | `/executions` | Start execution |
+| `POST` | `/executions/:id/stop` | Stop execution |
+| `POST` | `/executions/:id/complete` | Complete execution |
+
+---
+
+## WebSocket Protocol
+
+### Agent Connection
+Endpoint: `wss://localhost:8443/ws/agent`
+
+```json
+// Agent → Server: Registration
+{"type": "register", "payload": {"paw": "...", "hostname": "...", "platform": "...", "executors": [...]}}
+
+// Server → Agent: Registered
+{"type": "registered", "payload": {"status": "ok", "paw": "..."}}
+
+// Agent → Server: Heartbeat (every 30s)
+{"type": "heartbeat", "payload": {"paw": "..."}}
+
+// Server → Agent: Task
+{"type": "task", "payload": {"id": "...", "technique_id": "T1082", "command": "...", "executor": "cmd", "timeout": 300}}
+
+// Agent → Server: Result
+{"type": "task_result", "payload": {"task_id": "...", "technique_id": "...", "success": true, "output": "...", "exit_code": 0}}
+
+// Server → Agent: Acknowledgment
+{"type": "task_ack", "payload": {"task_id": "...", "status": "received"}}
+```
+
+### Dashboard Connection
+Endpoint: `wss://localhost:8443/ws/dashboard`
+
+```json
+// Server broadcasts to all dashboards
+{"type": "execution_started", "payload": {"execution_id": "...", "data": {...}}}
+{"type": "execution_completed", "payload": {"execution_id": "...", "data": {...}}}
+{"type": "execution_cancelled", "payload": {"execution_id": "...", "data": {...}}}
+
+// Dashboard → Server: Ping
+{"type": "ping", "payload": {}}
+// Server → Dashboard: Pong
+{"type": "pong", "payload": {}}
+```
+
+### Connection Parameters
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Ping interval | 54 seconds | Server sends ping frames |
+| Pong timeout | 60 seconds | Connection closed if no pong |
+| Max message size | 512 KB | Maximum frame size |
+| Write timeout | 10 seconds | Maximum write duration |
+
+---
+
+## WebSocket Hub
+
+The Hub manages all WebSocket connections:
+
+```go
+type Hub struct {
+    clients   map[*Client]bool     // All connected clients
+    agents    map[string]*Client   // Agents indexed by PAW
+    broadcast chan []byte          // Broadcast channel
+    register  chan *Client         // Registration channel
+    unregister chan *Client        // Unregistration channel
+}
+
+// Key methods
+func (h *Hub) SendToAgent(paw string, message []byte) bool
+func (h *Hub) Broadcast(message []byte)
+func (h *Hub) IsAgentConnected(paw string) bool
+func (h *Hub) GetConnectedAgents() []string
+func (h *Hub) SetOnAgentDisconnect(callback func(paw string))
+```
+
+---
+
+## Security Score
+
+**Formula**: `(blocked × 100 + detected × 50) / (total × 100) × 100`
+
+| Status | Points | Description |
+|--------|--------|-------------|
+| Blocked | 100 | Attack prevented by defenses |
+| Detected | 50 | Attack executed but detected |
+| Success | 0 | Attack executed without detection |
+
+Example: 5 techniques, 2 blocked, 2 detected, 1 successful
+```
+Score = (2×100 + 2×50) / (5×100) × 100 = 60%
+```
+
+---
+
+## Domain Entities
+
+### Agent
+```go
+type Agent struct {
+    Paw       string
+    Hostname  string
+    Platform  string      // windows, linux, darwin
+    Username  string
+    Executors []string    // psh, cmd, bash, sh
+    Status    AgentStatus // online, offline, busy
+    LastSeen  time.Time
+}
+```
+
+### Technique
+```go
+type Technique struct {
+    ID          string
+    Name        string
+    Description string
+    Tactic      TacticType
+    Platforms   []string
+    Executors   []Executor
+    Detection   []Detection
+    IsSafe      bool
+}
+```
+
+### Execution
+```go
+type Execution struct {
+    ID          string
+    ScenarioID  string
+    Status      ExecutionStatus // pending, running, completed, failed, cancelled
+    StartedAt   time.Time
+    CompletedAt *time.Time
+    SafeMode    bool
+    Score       *SecurityScore
+}
+```
+
+### ExecutionResult
+```go
+type ExecutionResult struct {
+    ID          string
+    ExecutionID string
+    TechniqueID string
+    AgentPaw    string
+    Status      ResultStatus // pending, success, blocked, detected, failed
+    Output      string
+    ExitCode    int
+    StartedAt   time.Time
+    CompletedAt *time.Time
+}
+```
 
 ---
 
 ## Configuration
 
-```yaml
-# config/config.yaml
-server:
-  host: "0.0.0.0"
-  port: 8443
-  mode: "release"
+Environment variables:
 
-database:
-  driver: "sqlite3"
-  path: "./data/autostrike.db"
-
-security:
-  jwt_secret: "${JWT_SECRET}"
-  agent_secret: "${AGENT_SECRET}"
-  tls:
-    enabled: true
-    cert_file: "./certs/server.crt"
-    key_file: "./certs/server.key"
-    ca_file: "./certs/ca.crt"
-    mtls: true
-
-agent:
-  heartbeat_interval: 30
-  stale_timeout: 120
-
-execution:
-  default_timeout: 300
-  max_concurrent: 10
-  safe_mode_default: true
-```
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DATABASE_PATH` | SQLite database path | `./data/autostrike.db` |
+| `DASHBOARD_PATH` | Dashboard dist folder | `../dashboard/dist` |
+| `JWT_SECRET` | JWT signing key | - (auth disabled if not set) |
+| `AGENT_SECRET` | Agent authentication | - |
+| `ALLOWED_ORIGINS` | CORS origins | `localhost:3000,localhost:8443` |
+| `LOG_LEVEL` | Logging level | `info` |
 
 ---
 
-## API REST
+## Testing
 
-Base URL: `https://localhost:8443/api/v1`
-
-### Agents
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| `GET` | `/agents` | Liste tous les agents |
-| `GET` | `/agents/:paw` | Détails d'un agent |
-| `POST` | `/agents` | Enregistrer un agent |
-| `DELETE` | `/agents/:paw` | Supprimer un agent |
-| `POST` | `/agents/:paw/heartbeat` | Heartbeat |
-
-### Techniques
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| `GET` | `/techniques` | Liste techniques MITRE |
-| `GET` | `/techniques/:id` | Détails technique |
-| `GET` | `/techniques/tactic/:tactic` | Par tactique |
-| `GET` | `/techniques/coverage` | Statistiques couverture |
-| `POST` | `/techniques/import` | Import YAML |
-
-### Exécutions
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| `GET` | `/executions` | Exécutions récentes |
-| `GET` | `/executions/:id` | Détails exécution |
-| `GET` | `/executions/:id/results` | Résultats |
-| `POST` | `/executions` | Démarrer exécution |
-
----
-
-## WebSocket
-
-Endpoint: `wss://localhost:8443/ws/agent`
-
-### Protocole
-
-```json
-// Agent → Server : Enregistrement
-{"type": "register", "payload": {"paw": "...", "hostname": "...", "platform": "...", "executors": [...]}}
-
-// Agent → Server : Heartbeat
-{"type": "heartbeat", "payload": {"paw": "..."}}
-
-// Server → Agent : Tâche
-{"type": "task", "payload": {"id": "...", "technique_id": "T1082", "command": "...", "timeout": 300}}
-
-// Agent → Server : Résultat
-{"type": "task_result", "payload": {"task_id": "...", "success": true, "output": "...", "exit_code": 0}}
-```
-
----
-
-## Score de Sécurité
-
-**Formule** : `(blocked × 100 + detected × 50) / (total × 100) × 100`
-
-| Statut | Points | Description |
-|--------|--------|-------------|
-| Blocked | 100 | Technique bloquée par les défenses |
-| Detected | 50 | Technique détectée mais exécutée |
-| Successful | 0 | Technique exécutée sans détection |
-
----
-
-## Lancement
+Test coverage:
+- **application**: 100%
+- **entity**: 100%
+- **service**: 99.2%
+- **handlers**: 92.1%
+- **websocket**: 91.3%
+- **middleware**: 100%
 
 ```bash
-# Développement
+cd server
+go test ./...              # Run all tests
+go test ./... -cover       # With coverage
+go test ./... -v           # Verbose output
+```
+
+---
+
+## Running
+
+```bash
+# Development
 go run ./cmd/autostrike
 
-# Production
+# Production build
 go build -o autostrike ./cmd/autostrike
 ./autostrike
+
+# With environment
+JWT_SECRET=secret ./autostrike
 ```

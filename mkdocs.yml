@@ -110,6 +110,7 @@ nav:
       - guide/index.md
       - Installation: guide/installation.md
       - Démarrage rapide: guide/quickstart.md
+      - Déploiement: guide/deployment.md
   - Architecture:
       - architecture/index.md
       - Backend (Go): architecture/backend.md

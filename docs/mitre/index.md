@@ -10,36 +10,64 @@ MITRE ATT&CK (Adversarial Tactics, Techniques, and Common Knowledge) est une bas
 
 ---
 
-## Tactiques supportées
+## Tactiques implémentées
 
-| ID | Tactique | Description |
-|----|----------|-------------|
-| TA0001 | Initial Access | Accès initial au système |
-| TA0002 | Execution | Exécution de code |
-| TA0003 | Persistence | Maintien de l'accès |
-| TA0004 | Privilege Escalation | Élévation de privilèges |
-| TA0005 | Defense Evasion | Contournement des défenses |
-| TA0006 | Credential Access | Accès aux identifiants |
-| TA0007 | Discovery | Reconnaissance interne |
-| TA0008 | Lateral Movement | Mouvement latéral |
-| TA0009 | Collection | Collecte de données |
-| TA0010 | Exfiltration | Exfiltration de données |
-| TA0011 | Command and Control | Communication C2 |
+AutoStrike implémente actuellement **4 tactiques** avec **15 techniques** :
+
+| ID | Tactique | Techniques | Description |
+|----|----------|------------|-------------|
+| TA0007 | Discovery | 9 | Reconnaissance interne du système et réseau |
+| TA0002 | Execution | 3 | Exécution de commandes via shells |
+| TA0003 | Persistence | 2 | Maintien de l'accès |
+| TA0005 | Defense Evasion | 1 | Contournement des défenses |
 
 ---
 
-## Couverture MVP
+## Techniques par tactique
 
-Le MVP d'AutoStrike couvre environ **40%** des techniques MITRE ATT&CK, avec un focus sur :
+### Discovery (9 techniques)
+| ID | Nom |
+|----|-----|
+| T1082 | System Information Discovery |
+| T1083 | File and Directory Discovery |
+| T1057 | Process Discovery |
+| T1016 | System Network Configuration Discovery |
+| T1049 | System Network Connections Discovery |
+| T1087 | Account Discovery |
+| T1069 | Permission Groups Discovery |
+| T1018 | Remote System Discovery |
+| T1007 | System Service Discovery |
 
-- **Discovery** (T1082, T1083, T1057, T1012, T1016)
-- **Execution** (T1059, T1053)
-- **Defense Evasion** (T1070, T1027)
-- **Credential Access** (T1003, T1552)
+### Execution (3 techniques)
+| ID | Nom |
+|----|-----|
+| T1059.001 | PowerShell |
+| T1059.003 | Windows Command Shell |
+| T1059.004 | Unix Shell |
+
+### Persistence (2 techniques)
+| ID | Nom |
+|----|-----|
+| T1053.005 | Scheduled Task |
+| T1547.001 | Registry Run Keys |
+
+### Defense Evasion (1 technique)
+| ID | Nom |
+|----|-----|
+| T1070.004 | File Deletion |
+
+---
+
+## Safe Mode
+
+Toutes les techniques sont **Safe Mode compatible** (non-destructives). Elles se limitent à :
+- Lecture d'informations système
+- Requêtes read-only (registry, services, processes)
+- Simulations sans modification
 
 ---
 
 ## Voir aussi
 
-- [Liste des techniques](techniques.md)
+- [Liste détaillée des techniques](techniques.md)
 - [MITRE ATT&CK Official](https://attack.mitre.org/)

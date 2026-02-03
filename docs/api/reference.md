@@ -1,40 +1,41 @@
-# Référence API
+# API Reference
 
 Base URL: `https://localhost:8443/api/v1`
 
 ---
 
-## Authentification
+## Authentication
 
-### Tokens JWT
+### JWT Tokens (Optional)
 
-Toutes les requêtes API nécessitent un token JWT dans le header Authorization :
+Authentication is **disabled by default** in development mode. To enable it, set `JWT_SECRET` in your environment.
+
+When enabled, all API requests require a JWT token in the Authorization header:
 
 ```http
 Authorization: Bearer <token>
 ```
 
-Le token JWT est signé avec le secret défini dans `JWT_SECRET` et contient :
-- `sub` : ID de l'utilisateur
-- `role` : Rôle de l'utilisateur (admin, operator, viewer)
-- `exp` : Date d'expiration du token
+The JWT token is signed with the `JWT_SECRET` and contains:
+- `sub`: User ID
+- `role`: User role (admin, operator, viewer)
+- `exp`: Token expiration date
 
-### Authentification Agent
+### Agent Authentication
 
-Les agents utilisent un header spécifique :
+Agents use a specific header:
 
 ```http
 X-Agent-Key: <agent_secret>
 ```
 
-Le secret agent est défini dans la variable d'environnement `AGENT_SECRET`.
+The agent secret is defined in the `AGENT_SECRET` environment variable.
 
-### Génération de token (développement)
+### Token Generation (Development)
 
-Pour les tests, générer un token JWT avec :
+For testing, generate a JWT token with:
 
 ```bash
-# Générer un token avec openssl et jq
 SECRET="your-jwt-secret"
 HEADER=$(echo -n '{"alg":"HS256","typ":"JWT"}' | base64 -w0 | tr '/+' '_-' | tr -d '=')
 PAYLOAD=$(echo -n '{"sub":"admin","role":"admin","exp":'$(($(date +%s) + 86400))'}' | base64 -w0 | tr '/+' '_-' | tr -d '=')
@@ -44,15 +45,39 @@ echo "${HEADER}.${PAYLOAD}.${SIGNATURE}"
 
 ---
 
+## Health Check
+
+### Server Health
+
+```http
+GET /health
+```
+
+**Response:**
+
+```json
+{
+  "status": "ok"
+}
+```
+
+---
+
 ## Agents
 
-### Lister les agents
+### List Agents
 
 ```http
 GET /api/v1/agents
 ```
 
-**Réponse :**
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `all` | boolean | If `true`, returns all agents. Default: only online agents |
+
+**Response:**
 
 ```json
 [
@@ -69,19 +94,19 @@ GET /api/v1/agents
 ]
 ```
 
-### Obtenir un agent
+### Get Agent
 
 ```http
 GET /api/v1/agents/:paw
 ```
 
-### Enregistrer un agent
+### Register Agent
 
 ```http
 POST /api/v1/agents
 ```
 
-**Body :**
+**Body:**
 
 ```json
 {
@@ -93,7 +118,7 @@ POST /api/v1/agents
 }
 ```
 
-### Supprimer un agent
+### Delete Agent
 
 ```http
 DELETE /api/v1/agents/:paw
@@ -105,17 +130,19 @@ DELETE /api/v1/agents/:paw
 POST /api/v1/agents/:paw/heartbeat
 ```
 
+Updates the agent's `last_seen` timestamp.
+
 ---
 
 ## Techniques
 
-### Lister les techniques
+### List Techniques
 
 ```http
 GET /api/v1/techniques
 ```
 
-**Réponse :**
+**Response:**
 
 ```json
 [
@@ -124,7 +151,7 @@ GET /api/v1/techniques
     "name": "System Information Discovery",
     "description": "Adversaries may attempt to get detailed information...",
     "tactic": "discovery",
-    "platforms": ["windows", "linux", "darwin"],
+    "platforms": ["windows", "linux"],
     "executors": [
       {
         "type": "cmd",
@@ -144,66 +171,69 @@ GET /api/v1/techniques
 ]
 ```
 
-### Obtenir une technique
+### Get Technique
 
 ```http
 GET /api/v1/techniques/:id
 ```
 
-### Techniques par tactique
+### Techniques by Tactic
 
 ```http
 GET /api/v1/techniques/tactic/:tactic
 ```
 
-Tactiques MITRE disponibles :
-- `reconnaissance`
-- `resource-development`
-- `initial-access`
-- `execution`
-- `persistence`
-- `privilege-escalation`
-- `defense-evasion`
-- `credential-access`
-- `discovery`
-- `lateral-movement`
-- `collection`
-- `command-and-control`
-- `exfiltration`
-- `impact`
+Available MITRE tactics:
 
-### Techniques par plateforme
+| Tactic | Description |
+|--------|-------------|
+| `reconnaissance` | Gathering information |
+| `resource-development` | Establishing resources |
+| `initial-access` | Getting into the network |
+| `execution` | Running malicious code |
+| `persistence` | Maintaining presence |
+| `privilege-escalation` | Gaining higher permissions |
+| `defense-evasion` | Avoiding detection |
+| `credential-access` | Stealing credentials |
+| `discovery` | Exploring the environment |
+| `lateral-movement` | Moving through the network |
+| `collection` | Gathering target data |
+| `command-and-control` | Communicating with compromised systems |
+| `exfiltration` | Stealing data |
+| `impact` | Manipulating or destroying systems |
+
+### Techniques by Platform
 
 ```http
 GET /api/v1/techniques/platform/:platform
 ```
 
-Plateformes : `windows`, `linux`, `darwin`
+Platforms: `windows`, `linux`, `darwin`
 
-### Couverture MITRE
+### MITRE Coverage
 
 ```http
 GET /api/v1/techniques/coverage
 ```
 
-**Réponse :**
+**Response:**
 
 ```json
 {
-  "discovery": 15,
-  "execution": 8,
-  "persistence": 12,
-  "defense-evasion": 20
+  "discovery": 9,
+  "execution": 3,
+  "persistence": 2,
+  "defense-evasion": 1
 }
 ```
 
-### Importer des techniques
+### Import Techniques
 
 ```http
 POST /api/v1/techniques/import
 ```
 
-**Body :**
+**Body:**
 
 ```json
 {
@@ -213,22 +243,22 @@ POST /api/v1/techniques/import
 
 ---
 
-## Scénarios
+## Scenarios
 
-### Lister les scénarios
+### List Scenarios
 
 ```http
 GET /api/v1/scenarios
 ```
 
-**Réponse :**
+**Response:**
 
 ```json
 [
   {
     "id": "550e8400-e29b-41d4-a716-446655440000",
     "name": "APT29 Discovery",
-    "description": "Simulation des techniques de découverte APT29",
+    "description": "APT29 discovery techniques simulation",
     "phases": [
       {
         "name": "Initial Discovery",
@@ -243,30 +273,30 @@ GET /api/v1/scenarios
 ]
 ```
 
-### Obtenir un scénario
+### Get Scenario
 
 ```http
 GET /api/v1/scenarios/:id
 ```
 
-### Scénarios par tag
+### Scenarios by Tag
 
 ```http
 GET /api/v1/scenarios/tag/:tag
 ```
 
-### Créer un scénario
+### Create Scenario
 
 ```http
 POST /api/v1/scenarios
 ```
 
-**Body :**
+**Body:**
 
 ```json
 {
   "name": "APT29 Discovery",
-  "description": "Simulation des techniques de découverte APT29",
+  "description": "APT29 discovery techniques simulation",
   "phases": [
     {
       "name": "Initial Discovery",
@@ -278,38 +308,38 @@ POST /api/v1/scenarios
 }
 ```
 
-**Réponse (201) :**
+**Response (201):**
 
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "name": "APT29 Discovery",
-  "description": "Simulation des techniques de découverte APT29",
+  "description": "APT29 discovery techniques simulation",
   "phases": [...],
   "tags": ["apt29", "discovery"],
   "created_at": "2024-01-01T10:00:00Z"
 }
 ```
 
-**Erreurs :**
+**Errors:**
 
 | Code | Description |
 |------|-------------|
-| 400 | Champs requis manquants (name, phases) ou technique invalide |
-| 500 | Erreur serveur |
+| 400 | Missing required fields (name, phases) or invalid technique |
+| 500 | Server error |
 
-### Mettre à jour un scénario
+### Update Scenario
 
 ```http
 PUT /api/v1/scenarios/:id
 ```
 
-**Body :**
+**Body:**
 
 ```json
 {
   "name": "APT29 Discovery Updated",
-  "description": "Description mise à jour",
+  "description": "Updated description",
   "phases": [
     {
       "name": "Phase 1",
@@ -321,33 +351,35 @@ PUT /api/v1/scenarios/:id
 }
 ```
 
-**Erreurs :**
+**Errors:**
 
 | Code | Description |
 |------|-------------|
-| 400 | Champs requis manquants ou technique invalide |
-| 404 | Scénario non trouvé |
-| 500 | Erreur serveur |
+| 400 | Missing required fields or invalid technique |
+| 404 | Scenario not found |
+| 500 | Server error |
 
-### Supprimer un scénario
+### Delete Scenario
 
 ```http
 DELETE /api/v1/scenarios/:id
 ```
 
-**Réponse :** 204 No Content
+**Response:** 204 No Content
 
 ---
 
-## Exécutions
+## Executions
 
-### Lister les exécutions récentes
+### List Recent Executions
 
 ```http
 GET /api/v1/executions
 ```
 
-**Réponse :**
+Returns the 50 most recent executions.
+
+**Response:**
 
 ```json
 [
@@ -355,8 +387,8 @@ GET /api/v1/executions
     "id": "550e8400-e29b-41d4-a716-446655440000",
     "scenario_id": "scenario-001",
     "status": "completed",
-    "start_time": "2024-01-01T12:00:00Z",
-    "end_time": "2024-01-01T12:05:00Z",
+    "started_at": "2024-01-01T12:00:00Z",
+    "completed_at": "2024-01-01T12:05:00Z",
     "safe_mode": true,
     "score": {
       "overall": 75.0,
@@ -369,19 +401,29 @@ GET /api/v1/executions
 ]
 ```
 
-### Obtenir une exécution
+**Execution Status Values:**
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Execution created, not yet started |
+| `running` | Execution in progress |
+| `completed` | Execution finished successfully |
+| `failed` | Execution encountered an error |
+| `cancelled` | Execution was stopped by user |
+
+### Get Execution
 
 ```http
 GET /api/v1/executions/:id
 ```
 
-### Résultats d'une exécution
+### Execution Results
 
 ```http
 GET /api/v1/executions/:id/results
 ```
 
-**Réponse :**
+**Response:**
 
 ```json
 [
@@ -399,13 +441,26 @@ GET /api/v1/executions/:id/results
 ]
 ```
 
-### Démarrer une exécution
+**Result Status Values:**
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Task not yet executed |
+| `running` | Task currently executing |
+| `success` | Task executed, not detected (bad for defense) |
+| `blocked` | Task blocked by security controls (good for defense) |
+| `detected` | Task executed but detected (partial defense) |
+| `failed` | Task execution failed |
+| `skipped` | Task skipped (e.g., incompatible platform) |
+| `timeout` | Task timed out |
+
+### Start Execution
 
 ```http
 POST /api/v1/executions
 ```
 
-**Body :**
+**Body:**
 
 ```json
 {
@@ -415,33 +470,35 @@ POST /api/v1/executions
 }
 ```
 
-**Réponse :**
+**Response:**
 
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "scenario_id": "scenario-001",
   "status": "running",
-  "start_time": "2024-01-01T12:00:00Z",
+  "started_at": "2024-01-01T12:00:00Z",
   "safe_mode": true
 }
 ```
 
-### Terminer une exécution
+### Complete Execution
 
 ```http
 POST /api/v1/executions/:id/complete
 ```
 
-### Arrêter une exécution
+Manually marks an execution as completed and calculates the security score.
+
+### Stop Execution
 
 ```http
 POST /api/v1/executions/:id/stop
 ```
 
-Arrête une exécution en cours (status `running` ou `pending`).
+Stops a running or pending execution.
 
-**Réponse succès (200) :**
+**Success Response (200):**
 
 ```json
 {
@@ -449,64 +506,132 @@ Arrête une exécution en cours (status `running` ou `pending`).
 }
 ```
 
-**Erreurs possibles :**
+**Errors:**
 
 | Code | Description |
 |------|-------------|
-| 404 | Exécution non trouvée |
-| 409 | Exécution déjà terminée ou annulée |
-| 500 | Erreur serveur |
+| 404 | Execution not found |
+| 409 | Execution already completed or cancelled |
+| 500 | Server error |
+
+---
+
+## Security Score Calculation
+
+The security score is calculated using the formula:
+
+```
+score = (blocked * 100 + detected * 50) / (total * 100) * 100
+```
+
+| Result | Points | Description |
+|--------|--------|-------------|
+| Blocked | 100 | Full protection - attack was prevented |
+| Detected | 50 | Partial protection - attack was seen but not stopped |
+| Success | 0 | No protection - attack succeeded undetected |
+
+**Example:** 5 techniques tested, 2 blocked, 2 detected, 1 successful
+```
+score = (2*100 + 2*50) / (5*100) * 100 = 300/500 * 100 = 60%
+```
+
+---
+
+## WebSocket Protocol
+
+### Connection Endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `wss://localhost:8443/ws/agent` | Agent connections |
+| `wss://localhost:8443/ws/dashboard` | Dashboard real-time updates |
+
+### Message Format
+
+All WebSocket messages follow this JSON structure:
+
+```json
+{
+  "type": "message_type",
+  "payload": { ... }
+}
+```
+
+### Connection Parameters
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Ping interval | 54 seconds | Server sends ping frames |
+| Pong timeout | 60 seconds | Connection closed if no pong |
+| Max message size | 512 KB | Maximum frame size |
+| Write timeout | 10 seconds | Maximum write duration |
 
 ---
 
 ## WebSocket (Dashboard)
 
-### Connexion
+### Connection
 
 ```
 wss://localhost:8443/ws/dashboard
 ```
 
-Le dashboard se connecte pour recevoir des notifications en temps réel.
+The dashboard connects to receive real-time notifications.
 
-### Messages Server → Dashboard
+### Server -> Dashboard Messages
 
-**Exécution annulée :**
-```json
-{
-  "type": "execution_cancelled",
-  "payload": {
-    "execution_id": "550e8400-e29b-41d4-a716-446655440000",
-    "data": {}
-  }
-}
-```
-
-**Exécution terminée :**
-```json
-{
-  "type": "execution_completed",
-  "payload": {
-    "execution_id": "550e8400-e29b-41d4-a716-446655440000",
-    "data": {}
-  }
-}
-```
-
-**Exécution démarrée :**
+**Execution Started:**
 ```json
 {
   "type": "execution_started",
   "payload": {
     "execution_id": "550e8400-e29b-41d4-a716-446655440000",
-    "data": {}
+    "data": {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "scenario_id": "scenario-001",
+      "status": "running"
+    }
   }
 }
 ```
 
-### Messages Dashboard → Server
+**Execution Completed:**
+```json
+{
+  "type": "execution_completed",
+  "payload": {
+    "execution_id": "550e8400-e29b-41d4-a716-446655440000",
+    "data": {
+      "status": "completed"
+    }
+  }
+}
+```
 
-**Ping :**
+**Execution Cancelled:**
+```json
+{
+  "type": "execution_cancelled",
+  "payload": {
+    "execution_id": "550e8400-e29b-41d4-a716-446655440000",
+    "data": {
+      "status": "cancelled"
+    }
+  }
+}
+```
+
+**Pong (response to ping):**
+```json
+{
+  "type": "pong",
+  "payload": {}
+}
+```
+
+### Dashboard -> Server Messages
+
+**Ping:**
 ```json
 {
   "type": "ping",
@@ -518,15 +643,15 @@ Le dashboard se connecte pour recevoir des notifications en temps réel.
 
 ## WebSocket (Agents)
 
-### Connexion
+### Connection
 
 ```
 wss://localhost:8443/ws/agent
 ```
 
-### Messages Agent → Server
+### Agent -> Server Messages
 
-**Enregistrement :**
+**Registration (sent immediately after connection):**
 ```json
 {
   "type": "register",
@@ -540,7 +665,7 @@ wss://localhost:8443/ws/agent
 }
 ```
 
-**Heartbeat :**
+**Heartbeat (sent every 30 seconds by default):**
 ```json
 {
   "type": "heartbeat",
@@ -550,7 +675,7 @@ wss://localhost:8443/ws/agent
 }
 ```
 
-**Résultat de tâche :**
+**Task Result:**
 ```json
 {
   "type": "task_result",
@@ -559,14 +684,26 @@ wss://localhost:8443/ws/agent
     "technique_id": "T1082",
     "success": true,
     "output": "Host Name: WORKSTATION-01...",
-    "exit_code": 0
+    "exit_code": 0,
+    "error": ""
   }
 }
 ```
 
-### Messages Server → Agent
+### Server -> Agent Messages
 
-**Tâche à exécuter :**
+**Registration Acknowledgment:**
+```json
+{
+  "type": "registered",
+  "payload": {
+    "status": "ok",
+    "paw": "agent-001"
+  }
+}
+```
+
+**Task:**
 ```json
 {
   "type": "task",
@@ -581,7 +718,18 @@ wss://localhost:8443/ws/agent
 }
 ```
 
-**Ping :**
+**Task Acknowledgment:**
+```json
+{
+  "type": "task_ack",
+  "payload": {
+    "task_id": "task-uuid",
+    "status": "received"
+  }
+}
+```
+
+**Ping:**
 ```json
 {
   "type": "ping",
@@ -591,21 +739,58 @@ wss://localhost:8443/ws/agent
 
 ---
 
-## Codes d'erreur
+## Agent Connection Lifecycle
+
+```
+1. Agent connects to wss://server:8443/ws/agent
+2. Agent sends "register" message with system info
+3. Server responds with "registered" acknowledgment
+4. Agent starts sending "heartbeat" every 30 seconds
+5. Server sends "task" messages when execution starts
+6. Agent executes command and sends "task_result"
+7. Server sends "task_ack" acknowledgment
+8. On disconnect, server marks agent as "offline"
+```
+
+### Reconnection Strategy
+
+The agent uses exponential backoff for reconnection:
+
+- Initial delay: 1 second
+- Multiplier: 2x after each failure
+- Maximum delay: 60 seconds
+- Reset to 1 second after successful connection
+
+---
+
+## Error Codes
 
 | Code | Description |
 |------|-------------|
-| 400 | Requête invalide |
-| 401 | Non authentifié |
-| 403 | Accès refusé |
-| 404 | Ressource non trouvée |
-| 409 | Conflit (ex: exécution déjà terminée) |
-| 500 | Erreur serveur |
+| 400 | Invalid request |
+| 401 | Not authenticated |
+| 403 | Access denied |
+| 404 | Resource not found |
+| 409 | Conflict (e.g., execution already completed) |
+| 500 | Server error |
 
-**Format d'erreur :**
+**Error Response Format:**
 
 ```json
 {
-  "error": "description de l'erreur"
+  "error": "error description"
 }
 ```
+
+---
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `JWT_SECRET` | JWT signing secret (enables auth when set) | - |
+| `AGENT_SECRET` | Agent authentication secret | - |
+| `DATABASE_PATH` | SQLite database path | `./data/autostrike.db` |
+| `ALLOWED_ORIGINS` | CORS allowed origins | `localhost:3000,localhost:8443` |
+| `DASHBOARD_PATH` | Path to dashboard dist folder | - |
+| `LOG_LEVEL` | Logging level (debug, info, warn, error) | `info` |

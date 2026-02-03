@@ -1,223 +1,217 @@
 # Installation
 
-## Prérequis
+## Prerequisites
 
-### Serveur
+### Server
 
-| Composant | Version minimale | Recommandé |
-|-----------|------------------|------------|
+| Component | Minimum Version | Recommended |
+|-----------|-----------------|-------------|
 | Go | 1.21+ | 1.22+ |
-| Node.js | 20+ | 22 LTS |
+| Node.js | 18+ | 20 LTS |
 | SQLite | 3.35+ | 3.40+ |
-| PostgreSQL | 13+ (optionnel) | 16+ |
-| Docker | 24+ (optionnel) | 25+ |
-| Docker Compose | 2.20+ (optionnel) | 2.24+ |
+| Docker | 24+ (optional) | 25+ |
+| Docker Compose | 2.20+ (optional) | 2.24+ |
 
 ### Agent
 
-| OS | Version minimale | Architecture |
-|-----|------------------|--------------|
+| OS | Minimum Version | Architecture |
+|----|-----------------|--------------|
 | Windows | 10 (1809+) | x64, ARM64 |
 | Linux | Ubuntu 20.04+ / Debian 11+ | x64, ARM64 |
 | macOS | 12 (Monterey)+ | x64, ARM64 |
 
-**Privilèges requis :**
-- Windows : Droits administrateur (pour certaines techniques)
-- Linux : Accès root ou sudo (pour certaines techniques)
-- macOS : Droits administrateur (pour certaines techniques)
+**Required privileges:**
+- Windows: Administrator rights (for certain techniques)
+- Linux: Root or sudo access (for certain techniques)
+- macOS: Administrator rights (for certain techniques)
 
 ---
 
-## Installation du serveur
+## Server Installation
 
-### Option 1 : Installation manuelle
+### Option 1: Quick Start with Makefile
 
-#### 1. Cloner le repository
+```bash
+# Clone the repository
+git clone https://github.com/AutoStrike-EIP/AutoStrike.git
+cd AutoStrike
+
+# Install dependencies and build everything
+make install
+
+# Start the server (serves dashboard + API on port 8443)
+make run
+```
+
+The server starts on **https://localhost:8443** and serves:
+- Dashboard (React SPA)
+- REST API (`/api/v1/*`)
+- WebSocket (`/ws/*`)
+- Health check (`/health`)
+
+### Option 2: Manual Installation
+
+#### 1. Clone the repository
 
 ```bash
 git clone https://github.com/AutoStrike-EIP/AutoStrike.git
 cd AutoStrike
 ```
 
-#### 2. Configuration des variables d'environnement
+#### 2. Environment Configuration
 
-Créez un fichier `.env` à la racine du projet :
+Create a `.env` file in the server directory:
 
 ```bash
-# Copier le fichier d'exemple
+cd server
 cp .env.example .env
-
-# Éditer les variables
 nano .env
 ```
 
-Variables requises :
+Variables:
 
 ```env
-# JWT Configuration
-JWT_SECRET=votre-secret-jwt-securise-32-caracteres
-
-# Agent Authentication
-AGENT_SECRET=votre-secret-agent-securise
-
 # Database Configuration
-DATABASE_URL=./data/autostrike.db
+DATABASE_PATH=./data/autostrike.db
 
-# Server Configuration
-SERVER_HOST=0.0.0.0
-SERVER_PORT=8443
+# Dashboard Configuration (path to built dashboard)
+DASHBOARD_PATH=../dashboard/dist
 
-# TLS Configuration (production)
-TLS_CERT_PATH=/path/to/cert.pem
-TLS_KEY_PATH=/path/to/key.pem
+# JWT Configuration (optional - auth disabled if not set)
+JWT_SECRET=your-secure-jwt-secret-32-characters
+
+# Agent Authentication (optional)
+AGENT_SECRET=your-secure-agent-secret
+
+# CORS Origins
+ALLOWED_ORIGINS=localhost:3000,localhost:8443
 
 # Log Level (debug, info, warn, error)
 LOG_LEVEL=info
 ```
 
-#### 3. Backend (Go)
+!!! note "Authentication"
+    Authentication is **disabled** by default when `JWT_SECRET` is not set.
+    This is suitable for development. Set `JWT_SECRET` in production.
+
+#### 3. Build Backend (Go)
 
 ```bash
-# Aller dans le dossier serveur
 cd server
-
-# Télécharger les dépendances
 go mod download
-
-# Compiler le serveur
-go build -o autostrike-server ./cmd/autostrike
-
-# Lancer le serveur
-./autostrike-server
+go build -o autostrike ./cmd/autostrike
+./autostrike
 ```
 
-Le serveur démarre sur `https://localhost:8443` par défaut.
-
-#### 4. Frontend (React)
+#### 4. Build Frontend (React)
 
 ```bash
-# Aller dans le dossier dashboard
 cd dashboard
-
-# Installer les dépendances
 npm install
-
-# Construire le dashboard
 npm run build
-
-# Lancer en mode preview
-npm run preview
 ```
 
-Le dashboard est accessible sur `http://localhost:4173`.
+The built dashboard is served by the Go server on port 8443.
 
-### Option 2 : Installation avec Docker
-
-#### Pré-requis Docker
-
-Assurez-vous que Docker et Docker Compose sont installés :
+### Option 3: Docker Installation
 
 ```bash
-docker --version
-docker compose version
-```
-
-#### Lancement avec Docker Compose
-
-```bash
-# Construire et lancer les conteneurs
+# Build and start containers
 docker compose up -d
 
-# Voir les logs
+# View logs
 docker compose logs -f
 
-# Arrêter les conteneurs
+# Stop containers
 docker compose down
 ```
 
-Les services sont disponibles sur :
-- API : `https://localhost:8443`
-- Dashboard : `http://localhost:3000`
+### Verify Installation
 
-### Vérification de l'installation
-
-Testez que le serveur répond :
+Test that the server responds:
 
 ```bash
-# Test de santé du serveur
+# Health check
 curl -k https://localhost:8443/health
 
-# Réponse attendue
-{"status": "healthy"}
+# Expected response
+{"status": "ok"}
 ```
 
 ---
 
-## Installation de l'agent
+## Agent Installation
 
-### Compilation depuis les sources
+### Compile from Source
 
-#### Prérequis
+#### Prerequisites
 
-- Rust 1.75+ avec Cargo
+- Rust 1.75+ with Cargo
 - OpenSSL development libraries (Linux)
 
 ```bash
-# Installer Rust
+# Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-# Aller dans le dossier agent
+# Build the agent
 cd agent
-
-# Compiler en mode release
 cargo build --release
 
-# L'exécutable se trouve dans target/release/
+# Executable is in target/release/autostrike-agent
 ```
+
+### Quick Start (Makefile)
+
+```bash
+# From project root
+make agent
+```
+
+This compiles and runs the agent, connecting to `https://localhost:8443`.
 
 ### Windows (PowerShell Admin)
 
 ```powershell
-# Télécharger l'agent
-Invoke-WebRequest -Uri "https://server:8443/deploy/agent.exe" -OutFile "autostrike-agent.exe"
+# Navigate to agent directory
+cd agent
 
-# Vérifier le hash (optionnel mais recommandé)
-Get-FileHash -Path "autostrike-agent.exe" -Algorithm SHA256
+# Build
+cargo build --release
 
-# Lancer l'agent
-.\autostrike-agent.exe --server https://server:8443 --paw "agent-001"
+# Run the agent
+.\target\release\autostrike-agent.exe --server https://server:8443 --paw "agent-win-001"
 ```
 
-#### Installation en tant que service Windows
+#### Install as Windows Service
 
 ```powershell
-# Créer le service
-New-Service -Name "AutoStrike-Agent" -BinaryPathName "C:\Path\To\autostrike-agent.exe --server https://server:8443" -DisplayName "AutoStrike Agent" -StartupType Automatic
+# Create the service
+New-Service -Name "AutoStrike-Agent" `
+  -BinaryPathName "C:\Path\To\autostrike-agent.exe --server https://server:8443" `
+  -DisplayName "AutoStrike Agent" `
+  -StartupType Automatic
 
-# Démarrer le service
+# Start the service
 Start-Service -Name "AutoStrike-Agent"
 
-# Vérifier le statut
+# Check status
 Get-Service -Name "AutoStrike-Agent"
 ```
 
 ### Linux
 
 ```bash
-# Télécharger l'agent
-curl -o autostrike-agent https://server:8443/deploy/agent
-chmod +x autostrike-agent
+# Build
+cd agent
+cargo build --release
 
-# Vérifier le hash (optionnel mais recommandé)
-sha256sum autostrike-agent
-
-# Lancer l'agent
-sudo ./autostrike-agent --server https://server:8443 --paw "agent-001"
+# Run the agent
+sudo ./target/release/autostrike-agent --server https://server:8443 --paw "agent-lin-001"
 ```
 
-#### Installation en tant que service systemd
+#### Install as systemd Service
 
-Créez le fichier `/etc/systemd/system/autostrike-agent.service` :
+Create `/etc/systemd/system/autostrike-agent.service`:
 
 ```ini
 [Unit]
@@ -236,122 +230,136 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-Puis activez et démarrez le service :
+Enable and start:
 
 ```bash
-# Recharger systemd
 sudo systemctl daemon-reload
-
-# Activer le service au démarrage
 sudo systemctl enable autostrike-agent
-
-# Démarrer le service
 sudo systemctl start autostrike-agent
-
-# Vérifier le statut
 sudo systemctl status autostrike-agent
 ```
 
 ### macOS
 
 ```bash
-# Télécharger l'agent
-curl -o autostrike-agent https://server:8443/deploy/agent-darwin
-chmod +x autostrike-agent
+# Build
+cd agent
+cargo build --release
 
-# Lancer l'agent
-sudo ./autostrike-agent --server https://server:8443 --paw "agent-001"
+# Run the agent
+sudo ./target/release/autostrike-agent --server https://server:8443 --paw "agent-mac-001"
 ```
 
-### Options de l'agent
+### Agent CLI Options
 
-| Option | Description | Défaut |
-|--------|-------------|--------|
-| `--server` | URL du serveur AutoStrike | Requis |
-| `--paw` | Identifiant unique de l'agent | Généré automatiquement |
-| `--interval` | Intervalle de heartbeat (secondes) | 30 |
-| `--executors` | Exécuteurs à activer | Tous disponibles |
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-s, --server` | AutoStrike server URL | `https://localhost:8443` |
+| `-p, --paw` | Unique agent identifier | Auto-generated UUID |
+| `-c, --config` | Configuration file path | `agent.yaml` |
+| `-d, --debug` | Enable debug logging | `false` |
+
+### Agent Configuration File
+
+Create `agent.yaml`:
+
+```yaml
+server_url: "https://server:8443"
+paw: "agent-001"
+heartbeat_interval: 30  # seconds
+
+tls:
+  cert_file: "./certs/agent.crt"  # optional
+  key_file: "./certs/agent.key"   # optional
+  ca_file: "./certs/ca.crt"       # optional
+  verify: true
+```
 
 ---
 
-## Mise à jour
+## Update
 
-### Serveur
+### Server
 
 ```bash
-# Arrêter le serveur
-docker compose down
+# Stop the server
+make stop
 
-# Télécharger les mises à jour
+# Pull updates
 git pull origin main
 
-# Reconstruire et relancer
-docker compose up -d --build
+# Rebuild and restart
+make install
+make run
 ```
 
 ### Agent
 
 ```bash
-# Télécharger la nouvelle version
-curl -o autostrike-agent-new https://server:8443/deploy/agent
+# Pull updates
+git pull origin main
 
-# Remplacer l'ancien exécutable
-sudo systemctl stop autostrike-agent
-sudo mv autostrike-agent-new /opt/autostrike/autostrike-agent
-chmod +x /opt/autostrike/autostrike-agent
-sudo systemctl start autostrike-agent
+# Rebuild
+cd agent
+cargo build --release
+
+# Restart service
+sudo systemctl restart autostrike-agent
 ```
 
 ---
 
-## Dépannage
+## Troubleshooting
 
-### Le serveur ne démarre pas
+### Server won't start
 
-1. Vérifiez les variables d'environnement :
+1. Check environment variables:
    ```bash
-   cat .env
+   cat server/.env
    ```
 
-2. Vérifiez les permissions sur le fichier de base de données :
+2. Check database file permissions:
    ```bash
-   ls -la data/
+   ls -la server/data/
    ```
 
-3. Consultez les logs :
+3. Check logs:
    ```bash
-   docker compose logs server
+   make logs
    ```
 
-### L'agent ne se connecte pas
+### Agent won't connect
 
-1. Vérifiez la connectivité réseau :
+1. Verify network connectivity:
    ```bash
    curl -k https://server:8443/health
    ```
 
-2. Vérifiez le certificat TLS :
+2. Check TLS certificate:
    ```bash
    openssl s_client -connect server:8443
    ```
 
-3. Vérifiez les logs de l'agent :
+3. Check agent logs:
    ```bash
    journalctl -u autostrike-agent -f
    ```
 
-### Erreur "connection refused"
+### "Connection refused" error
 
-- Assurez-vous que le serveur écoute sur la bonne interface
-- Vérifiez les règles de firewall
-- Confirmez que le port 8443 est ouvert
+- Ensure the server is listening on the correct interface
+- Check firewall rules
+- Confirm port 8443 is open:
+  ```bash
+  sudo netstat -tlnp | grep 8443
+  ```
 
 ---
 
-## Configuration avancée
+## Advanced Configuration
 
-Consultez les sections suivantes pour plus de détails :
+See the following sections for more details:
 
-- [Architecture Backend](../architecture/backend.md)
-- [Guide de Déploiement](./deployment.md)
-- [Référence API](../api/reference.md)
+- [Backend Architecture](../architecture/backend.md)
+- [Deployment Guide](./deployment.md)
+- [API Reference](../api/reference.md)

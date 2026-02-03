@@ -6,3 +6,4 @@ Bienvenue dans le guide d'utilisation d'AutoStrike.
 
 - [Installation](installation.md) - Comment installer et configurer AutoStrike
 - [Démarrage rapide](quickstart.md) - Premiers pas avec la plateforme
+- [Déploiement](deployment.md) - Guide de déploiement en production

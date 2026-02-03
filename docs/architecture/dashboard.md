@@ -1,22 +1,22 @@
 # Dashboard (React)
 
-Le dashboard AutoStrike est développé en **React 18** avec **TypeScript** et **TailwindCSS**.
+The AutoStrike dashboard is built with **React 18**, **TypeScript**, and **TailwindCSS**.
 
 ---
 
-## Stack Technique
+## Tech Stack
 
-| Technologie | Version | Usage |
-|-------------|---------|-------|
-| React | 18.2 | Framework UI |
-| TypeScript | 5.3 | Typage statique |
+| Technology | Version | Usage |
+|------------|---------|-------|
+| React | 18.2 | UI Framework |
+| TypeScript | 5.3 | Static typing |
 | Vite | 5.0 | Build tool |
-| TailwindCSS | 3.4 | Styling utility-first |
+| TailwindCSS | 3.4 | Utility-first styling |
 | TanStack Query | 5.17 | Data fetching & caching |
-| React Router | 6.21 | Navigation SPA |
-| Chart.js | 4.4 | Graphiques (Doughnut) |
-| Axios | 1.6 | Client HTTP |
-| Zustand | 4.4 | State management |
+| React Router | 6.21 | SPA navigation |
+| Chart.js | 4.4 | Charts (Doughnut) |
+| Axios | 1.6 | HTTP client |
+| react-hot-toast | 2.4 | Notifications |
 
 ---
 
@@ -25,26 +25,37 @@ Le dashboard AutoStrike est développé en **React 18** avec **TypeScript** et *
 ```
 dashboard/
 ├── src/
-│   ├── main.tsx              # Point d'entrée React + providers
-│   ├── App.tsx               # Configuration des routes
-│   ├── index.css             # Styles globaux + directives Tailwind
+│   ├── main.tsx              # React entry + providers
+│   ├── App.tsx               # Route configuration
+│   ├── index.css             # Global styles + Tailwind directives
 │   ├── components/
-│   │   └── Layout.tsx        # Layout avec sidebar navigation
+│   │   ├── Layout.tsx        # Sidebar navigation layout
+│   │   ├── MitreMatrix.tsx   # Interactive MITRE ATT&CK matrix
+│   │   ├── RunExecutionModal.tsx  # Execution configuration modal
+│   │   ├── LoadingState.tsx  # Loading spinner component
+│   │   ├── EmptyState.tsx    # Empty state placeholder
+│   │   └── ErrorBoundary.tsx # Error boundary wrapper
+│   ├── hooks/
+│   │   └── useWebSocket.ts   # WebSocket connection hook
 │   ├── pages/
-│   │   ├── Dashboard.tsx     # Vue d'ensemble, KPIs, graphiques
-│   │   ├── Agents.tsx        # Liste et gestion des agents
-│   │   ├── Techniques.tsx    # Catalogue MITRE ATT&CK
-│   │   ├── Scenarios.tsx     # Scénarios d'attaque
-│   │   ├── Executions.tsx    # Historique des exécutions
-│   │   └── Settings.tsx      # Configuration application
-│   └── lib/
-│       └── api.ts            # Client Axios avec intercepteurs
+│   │   ├── Dashboard.tsx     # Overview, KPIs, charts
+│   │   ├── Agents.tsx        # Agent list and management
+│   │   ├── Techniques.tsx    # MITRE ATT&CK catalog
+│   │   ├── Matrix.tsx        # MITRE ATT&CK matrix page
+│   │   ├── Scenarios.tsx     # Attack scenarios
+│   │   ├── Executions.tsx    # Execution history
+│   │   ├── ExecutionDetails.tsx  # Detailed execution results
+│   │   └── Settings.tsx      # Application configuration
+│   ├── lib/
+│   │   └── api.ts            # Axios client with interceptors
+│   └── types/
+│       └── index.ts          # TypeScript type definitions
 ├── public/
 ├── package.json
-├── vite.config.ts            # Config Vite + proxy API
-├── tailwind.config.js        # Config Tailwind + couleurs custom
+├── vite.config.ts            # Vite config + API proxy
+├── tailwind.config.js        # Tailwind + custom colors
 ├── tsconfig.json
-└── Dockerfile                # Build multi-stage + nginx
+└── Dockerfile                # Multi-stage build + nginx
 ```
 
 ---
@@ -53,95 +64,182 @@ dashboard/
 
 ### Dashboard (`/dashboard`)
 
-Vue d'ensemble avec :
-- **Agents Online** : Nombre d'agents connectés
-- **Security Score** : Score global de la dernière exécution
-- **Techniques Tested** : Nombre de techniques testées
-- **Graphique Doughnut** : Répartition blocked/detected/successful
-- **Activité Récente** : 5 dernières exécutions
+Overview page with:
+- **Agents Online**: Connected agent count
+- **Security Score**: Latest execution score
+- **Techniques Tested**: Number of techniques executed
+- **Doughnut Chart**: Distribution of blocked/detected/successful
+- **Recent Activity**: Last 5 executions
 
 ### Agents (`/agents`)
 
-Gestion des agents :
-- Cartes avec statut (online/offline)
-- Informations : hostname, username, platform
-- Executors disponibles (badges)
-- Last seen avec formatage relatif
+Agent management:
+- Cards with status (online/offline badge)
+- Information: hostname, username, platform
+- Available executors (badges)
+- Last seen with relative time
 
 ### Techniques (`/techniques`)
 
-Catalogue MITRE ATT&CK :
-- Tableau avec ID, nom, description
-- Filtrage par tactique et plateforme
-- Badge safe/unsafe
-- Import depuis fichiers YAML
+MITRE ATT&CK catalog:
+- Table with ID, name, description
+- Tactic color coding (14 colors)
+- Platform badges
+- Safe/Unsafe badge
+
+### Matrix (`/matrix`)
+
+Interactive MITRE ATT&CK matrix:
+- 14 tactic columns
+- Technique cells with safety indicators
+- Platform filter dropdown
+- Click to view technique details
+- Coverage statistics
 
 ### Scenarios (`/scenarios`)
 
-Scénarios d'attaque :
-- Cartes avec phases numérotées
-- Nombre de techniques par phase
-- Tags de catégorie
-- Bouton Run
+Attack scenarios:
+- Cards with numbered phases
+- Technique count per phase
+- Category tags
+- **Run** button → Opens RunExecutionModal
 
 ### Executions (`/executions`)
 
-Historique :
-- Tableau avec score, statut, mode
-- Détails : blocked/detected/successful
-- Temps d'exécution
-- Lien vers les résultats détaillés
+Execution history:
+- Table with score, status, mode
+- Details: blocked/detected/successful counts
+- Stop button for running executions
+- **Real-time WebSocket updates**
+- Click row → ExecutionDetails page
+
+### ExecutionDetails (`/executions/:id`)
+
+Detailed results:
+- Execution summary header
+- Score breakdown (blocked/detected/successful/total)
+- Results table with technique, agent, status, output
+- Expandable output viewer
+- Real-time polling while running
 
 ### Settings (`/settings`)
 
-Configuration :
-- URL du serveur
-- Mode safe par défaut (toggle)
-- Paramètres agents (heartbeat, timeout)
-- Chemins certificats TLS
+Configuration:
+- Server URL
+- Default safe mode toggle
+- Agent settings (heartbeat, timeout)
+- TLS certificate paths
 
 ---
 
-## Composants UI
+## Components
 
-### Classes CSS Custom (Tailwind)
+### MitreMatrix
 
-```css
-.btn-primary    /* Bouton principal bleu */
-.btn-danger     /* Bouton danger rouge */
-.card           /* Carte avec ombre et bordure */
-.input          /* Champ de saisie stylé */
-.badge          /* Badge inline */
-.badge-success  /* Badge vert (online, safe) */
-.badge-danger   /* Badge rouge (offline, unsafe) */
-.badge-warning  /* Badge orange (running) */
+Interactive MITRE ATT&CK matrix visualization.
+
+**Props:**
+```typescript
+interface MitreMatrixProps {
+  techniques: Technique[];
+  onTechniqueClick?: (technique: Technique) => void;
+}
 ```
 
-### Palette Couleurs
+**Features:**
+- CSS Grid with 14 tactic columns
+- Platform filtering
+- Safety indicators (green/red dots)
+- Detail modal on click
 
-```javascript
-// tailwind.config.js
-colors: {
-  primary: { 50-950 },      // Bleu
-  danger: { 50, 500, 600 }, // Rouge
-  success: { 50, 500, 600 },// Vert
-  warning: { 50, 500, 600 } // Orange
+### RunExecutionModal
+
+Execution configuration modal.
+
+**Props:**
+```typescript
+interface RunExecutionModalProps {
+  scenario: Scenario;
+  onConfirm: (agentPaws: string[], safeMode: boolean) => void;
+  onCancel: () => void;
+  isLoading: boolean;
 }
+```
+
+**Features:**
+- Agent multi-select (online agents only)
+- Safe mode toggle
+- Scenario info display
+- Validation (requires at least one agent)
+
+---
+
+## Custom Hook: useWebSocket
+
+Real-time updates via WebSocket.
+
+```typescript
+interface UseWebSocketOptions {
+  onMessage?: (message: WebSocketMessage) => void;
+  onConnect?: () => void;
+  onDisconnect?: () => void;
+  reconnectInterval?: number;  // default: 3000ms
+  maxRetries?: number;         // default: 5
+}
+
+const { isConnected, send, lastMessage } = useWebSocket({
+  onMessage: (msg) => {
+    if (msg.type === 'execution_completed') {
+      queryClient.invalidateQueries(['executions']);
+    }
+  },
+});
+```
+
+**Features:**
+- Auto-reconnection with exponential backoff
+- Connection state tracking
+- JSON serialization
+
+---
+
+## CSS Classes (Tailwind)
+
+```css
+.btn-primary    /* Primary blue button */
+.btn-danger     /* Danger red button */
+.card           /* Card with shadow and border */
+.input          /* Styled input field */
+.badge          /* Inline badge */
+.badge-success  /* Green badge (online, safe) */
+.badge-danger   /* Red badge (offline, unsafe) */
+.badge-warning  /* Orange badge (running) */
 ```
 
 ---
 
 ## Data Fetching
 
-Utilisation de **TanStack Query** pour le fetching et le caching :
+Using **TanStack Query** for fetching and caching:
 
 ```typescript
-import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { api, executionApi } from '@/lib/api';
 
-const { data: agents, isLoading, isError } = useQuery({
+// Query
+const { data: agents, isLoading } = useQuery({
   queryKey: ['agents'],
   queryFn: () => api.get('/agents').then(res => res.data),
+});
+
+// Mutation
+const startMutation = useMutation({
+  mutationFn: ({ scenarioId, agentPaws, safeMode }) =>
+    executionApi.start(scenarioId, agentPaws, safeMode),
+  onSuccess: () => {
+    queryClient.invalidateQueries(['executions']);
+    toast.success('Execution started');
+  },
 });
 ```
 
@@ -149,83 +247,68 @@ const { data: agents, isLoading, isError } = useQuery({
 
 ## API Client
 
-Le client API (`src/lib/api.ts`) inclut :
-- Base URL configurable (`/api`)
-- Intercepteur pour injecter le token JWT
-- Gestion des erreurs 401 (redirection login)
+The API client (`src/lib/api.ts`) provides:
+- Configurable base URL (`/api/v1`)
+- JWT token injection via interceptor
+- 401 handling (removes invalid token)
+- Typed API methods
 
 ```typescript
-import { api } from '@/lib/api';
-
-// GET
-const response = await api.get('/agents');
-
-// POST
-await api.post('/executions', {
-  scenario_id: 'scn-001',
-  agent_paws: ['agent-001', 'agent-002'],
-  safe_mode: true
-});
+export const executionApi = {
+  list: () => api.get('/executions'),
+  get: (id: string) => api.get(`/executions/${id}`),
+  getResults: (id: string) => api.get(`/executions/${id}/results`),
+  start: (scenarioId, agentPaws, safeMode) => api.post('/executions', {...}),
+  stop: (id: string) => api.post(`/executions/${id}/stop`),
+};
 ```
 
 ---
 
-## Configuration Vite
-
-```typescript
-// vite.config.ts
-export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: { '@': path.resolve(__dirname, './src') }
-  },
-  server: {
-    port: 3000,
-    proxy: {
-      '/api': {
-        target: 'https://localhost:8443',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/ws': {
-        target: 'wss://localhost:8443',
-        ws: true,
-        secure: false,
-      },
-    },
-  },
-});
-```
-
----
-
-## Développement
+## Development
 
 ```bash
 cd dashboard
-npm install       # Installer les dépendances
-npm run dev       # Serveur de développement (port 3000)
-npm run build     # Build production
-npm run preview   # Preview du build
-npm run lint      # Vérification ESLint
-npm run test      # Tests Vitest
+npm install       # Install dependencies
+npm run dev       # Development server (port 3000)
+npm run build     # Production build
+npm run preview   # Preview build
+npm run lint      # ESLint check
+npm run type-check # TypeScript check
+npm test          # Vitest tests (193 tests)
+```
+
+---
+
+## Testing
+
+193 tests across 15 test files:
+
+- Component tests (Layout, MitreMatrix, RunExecutionModal)
+- Page tests (Dashboard, Agents, Techniques, Scenarios, Executions, etc.)
+- Hook tests (useWebSocket)
+- API client tests
+
+```bash
+npm test -- --run        # Run once
+npm test -- --coverage   # With coverage
 ```
 
 ---
 
 ## Docker
 
-Le Dockerfile utilise un build multi-stage :
-1. **Builder** : Node 20 Alpine pour le build
-2. **Runtime** : Nginx Alpine pour servir les fichiers
+Multi-stage Dockerfile:
+1. **Builder**: Node 20 Alpine for build
+2. **Runtime**: Nginx Alpine for serving
 
 ```bash
 docker build -t autostrike-dashboard .
 docker run -p 3000:80 autostrike-dashboard
 ```
 
-Nginx est configuré pour :
-- Proxy `/api/` vers le backend
-- Proxy `/ws/` pour WebSocket
-- Fallback SPA (`try_files`)
-- Cache des assets statiques
+Nginx configuration:
+- Proxy `/api/` to backend
+- Proxy `/ws/` for WebSocket
+- SPA fallback (`try_files`)
+- Static asset caching
