@@ -279,6 +279,10 @@ func (s *ExecutionService) checkAndCompleteExecution(ctx context.Context, execut
 
 // CompleteExecution marks an execution as completed and calculates score
 func (s *ExecutionService) CompleteExecution(ctx context.Context, executionID string) error {
+	if s.calculator == nil {
+		return fmt.Errorf("cannot complete execution: score calculator is not configured")
+	}
+
 	execution, err := s.resultRepo.FindExecutionByID(ctx, executionID)
 	if err != nil {
 		return err

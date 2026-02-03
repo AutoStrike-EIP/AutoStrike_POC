@@ -1178,7 +1178,8 @@ func TestExecutionHandler_CompleteExecution(t *testing.T) {
 	}
 	resultRepo.results["e1"] = []*entity.ExecutionResult{}
 
-	svc := application.NewExecutionService(resultRepo, nil, nil, nil, nil, nil)
+	calculator := service.NewScoreCalculator()
+	svc := application.NewExecutionService(resultRepo, nil, nil, nil, nil, calculator)
 	handler := NewExecutionHandler(svc)
 
 	router := gin.New()
@@ -1527,7 +1528,8 @@ func TestExecutionHandler_CompleteExecution_WithHub(t *testing.T) {
 	}
 	resultRepo.results["e1"] = []*entity.ExecutionResult{}
 
-	svc := application.NewExecutionService(resultRepo, nil, nil, nil, nil, nil)
+	calculator := service.NewScoreCalculator()
+	svc := application.NewExecutionService(resultRepo, nil, nil, nil, nil, calculator)
 
 	logger := zap.NewNop()
 	hub := websocket.NewHub(logger)

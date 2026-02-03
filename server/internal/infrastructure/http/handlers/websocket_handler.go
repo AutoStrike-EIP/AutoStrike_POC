@@ -49,6 +49,7 @@ type WebSocketHandler struct {
 	agentService     *application.AgentService
 	executionService *application.ExecutionService
 	logger           *zap.Logger
+	agentSecret      string
 }
 
 // NewWebSocketHandler creates a new WebSocket handler
@@ -57,6 +58,7 @@ func NewWebSocketHandler(hub *websocket.Hub, agentService *application.AgentServ
 		hub:          hub,
 		agentService: agentService,
 		logger:       logger,
+		agentSecret:  os.Getenv("AGENT_SECRET"),
 	}
 }
 
@@ -67,6 +69,16 @@ func (h *WebSocketHandler) SetExecutionService(svc *application.ExecutionService
 
 // HandleAgentConnection handles WebSocket connections from agents
 func (h *WebSocketHandler) HandleAgentConnection(c *gin.Context) {
+	// Validate agent secret if configured
+	if h.agentSecret != "" {
+		agentKey := c.GetHeader("X-Agent-Key")
+		if agentKey != h.agentSecret {
+			h.logger.Warn("Agent connection rejected: invalid or missing X-Agent-Key")
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid agent key"})
+			return
+		}
+	}
+
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		h.logger.Error("Failed to upgrade WebSocket", zap.Error(err))
