@@ -82,6 +82,12 @@ func NewServerWithConfig(
 	logger *zap.Logger,
 	config *ServerConfig,
 ) *Server {
+	// Fail fast if auth is explicitly enabled but JWT_SECRET is missing
+	if config.EnableAuth && config.JWTSecret == "" {
+		logger.Fatal("Configuration error: ENABLE_AUTH=true but JWT_SECRET is not set. " +
+			"Either set JWT_SECRET or set ENABLE_AUTH=false for development mode.")
+	}
+
 	gin.SetMode(gin.ReleaseMode)
 
 	router := gin.New()

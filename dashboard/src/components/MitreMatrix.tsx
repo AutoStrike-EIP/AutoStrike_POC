@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Technique, TacticType } from '../types';
 
 /**
@@ -97,6 +97,20 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
     setSelectedTechnique(null);
   };
 
+  // Handle Escape key to close modal at document level
+  useEffect(() => {
+    if (!selectedTechnique) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleCloseDetail();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedTechnique]);
+
   // Get unique platforms from techniques
   const platforms = [...new Set(techniques.flatMap(t => t.platforms))].sort((a, b) => a.localeCompare(b));
 
@@ -177,7 +191,6 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
               type="button"
               className="fixed inset-0 bg-gray-500 bg-opacity-75 cursor-default border-none"
               onClick={handleCloseDetail}
-              onKeyDown={(e) => e.key === 'Escape' && handleCloseDetail()}
               aria-label="Close modal"
             />
             <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
