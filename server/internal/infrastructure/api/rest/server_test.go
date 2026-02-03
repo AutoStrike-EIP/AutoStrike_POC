@@ -402,8 +402,12 @@ func TestServer_NoRoute_APIPath(t *testing.T) {
 	// Create temp directory with index.html for dashboard
 	tmpDir := t.TempDir()
 	indexFile := tmpDir + "/index.html"
-	os.WriteFile(indexFile, []byte("<html></html>"), 0644)
-	os.MkdirAll(tmpDir+"/assets", 0755)
+	if err := os.WriteFile(indexFile, []byte("<html></html>"), 0644); err != nil {
+		t.Fatalf("Failed to write index.html: %v", err)
+	}
+	if err := os.MkdirAll(tmpDir+"/assets", 0755); err != nil {
+		t.Fatalf("Failed to create assets dir: %v", err)
+	}
 
 	config := &ServerConfig{
 		EnableAuth:    false,
@@ -432,8 +436,12 @@ func TestServer_NoRoute_NonAPIPath(t *testing.T) {
 	// Create temp directory with index.html for dashboard
 	tmpDir := t.TempDir()
 	indexFile := tmpDir + "/index.html"
-	os.WriteFile(indexFile, []byte("<html>Dashboard</html>"), 0644)
-	os.MkdirAll(tmpDir+"/assets", 0755)
+	if err := os.WriteFile(indexFile, []byte("<html>Dashboard</html>"), 0644); err != nil {
+		t.Fatalf("Failed to write index.html: %v", err)
+	}
+	if err := os.MkdirAll(tmpDir+"/assets", 0755); err != nil {
+		t.Fatalf("Failed to create assets dir: %v", err)
+	}
 
 	config := &ServerConfig{
 		EnableAuth:    false,
