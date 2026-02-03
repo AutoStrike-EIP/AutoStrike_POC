@@ -121,15 +121,14 @@ func (c *Client) handleOutgoingMessage(message []byte, ok bool) bool {
 // writeMessageWithQueue writes a message and any queued messages as separate frames
 func (c *Client) writeMessageWithQueue(message []byte) bool {
 	// Write first message
-	if err := c.conn.WriteMessage(websocket.TextMessage, message); err != nil {
+	if c.conn.WriteMessage(websocket.TextMessage, message) != nil {
 		return false
 	}
 
 	// Write any queued messages as separate frames
 	n := len(c.send)
 	for i := 0; i < n; i++ {
-		msg := <-c.send
-		if err := c.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+		if c.conn.WriteMessage(websocket.TextMessage, <-c.send) != nil {
 			return false
 		}
 	}

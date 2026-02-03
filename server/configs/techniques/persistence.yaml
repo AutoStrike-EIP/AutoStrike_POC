@@ -27,7 +27,7 @@
       command: "reg query HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run"
       platform: "windows"
       timeout: 60
-    - type: "psh"
+    - type: "powershell"
       command: "Get-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'"
       platform: "windows"
       timeout: 60
