@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -165,11 +166,25 @@ func (h *ExecutionHandler) dispatchTasksToAgents(tasks []application.TaskDispatc
 
 		msgBytes, err := json.Marshal(taskMsg)
 		if err != nil {
+			// Mark result as failed if we can't serialize the message
+			h.markResultAsFailed(task.ResultID, "failed to serialize task message")
 			continue
 		}
 
-		h.hub.SendToAgent(task.AgentPaw, msgBytes)
+		if !h.hub.SendToAgent(task.AgentPaw, msgBytes) {
+			// Mark result as failed if agent is disconnected or channel is full
+			h.markResultAsFailed(task.ResultID, "agent disconnected or unavailable")
+		}
 	}
+}
+
+// markResultAsFailed marks a result as failed when dispatch fails
+func (h *ExecutionHandler) markResultAsFailed(resultID string, reason string) {
+	if h.service == nil {
+		return
+	}
+	// Use background context since this may be called after the request ends
+	_ = h.service.UpdateResultByID(context.Background(), resultID, entity.StatusFailed, reason, -1)
 }
 
 // CompleteExecution marks an execution as completed

@@ -173,12 +173,11 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
       {selectedTechnique && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen p-4">
-            <div
-              className="fixed inset-0 bg-gray-500 bg-opacity-75"
+            <button
+              type="button"
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 cursor-default border-none"
               onClick={handleCloseDetail}
               onKeyDown={(e) => e.key === 'Escape' && handleCloseDetail()}
-              role="button"
-              tabIndex={0}
               aria-label="Close modal"
             />
             <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">

@@ -13,6 +13,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// SQL column constants for techniques
+const (
+	techniqueColumns = "id, name, description, tactic, platforms, executors, detection, is_safe"
+)
+
 // TechniqueRepository implements repository.TechniqueRepository using SQLite
 type TechniqueRepository struct {
 	db *sql.DB
@@ -80,10 +85,9 @@ func (r *TechniqueRepository) FindByID(ctx context.Context, id string) (*entity.
 	technique := &entity.Technique{}
 	var platforms, executors, detection string
 
-	err := r.db.QueryRowContext(ctx, `
-		SELECT id, name, description, tactic, platforms, executors, detection, is_safe
-		FROM techniques WHERE id = ?
-	`, id).Scan(&technique.ID, &technique.Name, &technique.Description, &technique.Tactic, &platforms, &executors, &detection, &technique.IsSafe)
+	err := r.db.QueryRowContext(ctx,
+		fmt.Sprintf("SELECT %s FROM techniques WHERE id = ?", techniqueColumns),
+		id).Scan(&technique.ID, &technique.Name, &technique.Description, &technique.Tactic, &platforms, &executors, &detection, &technique.IsSafe)
 
 	if err != nil {
 		return nil, err
@@ -105,10 +109,8 @@ func (r *TechniqueRepository) FindByID(ctx context.Context, id string) (*entity.
 
 // FindAll finds all techniques
 func (r *TechniqueRepository) FindAll(ctx context.Context) ([]*entity.Technique, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, name, description, tactic, platforms, executors, detection, is_safe
-		FROM techniques ORDER BY id
-	`)
+	rows, err := r.db.QueryContext(ctx,
+		fmt.Sprintf("SELECT %s FROM techniques ORDER BY id", techniqueColumns))
 	if err != nil {
 		return nil, err
 	}
@@ -119,10 +121,9 @@ func (r *TechniqueRepository) FindAll(ctx context.Context) ([]*entity.Technique,
 
 // FindByTactic finds techniques by tactic
 func (r *TechniqueRepository) FindByTactic(ctx context.Context, tactic entity.TacticType) ([]*entity.Technique, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, name, description, tactic, platforms, executors, detection, is_safe
-		FROM techniques WHERE tactic = ? ORDER BY id
-	`, tactic)
+	rows, err := r.db.QueryContext(ctx,
+		fmt.Sprintf("SELECT %s FROM techniques WHERE tactic = ? ORDER BY id", techniqueColumns),
+		tactic)
 	if err != nil {
 		return nil, err
 	}
@@ -133,10 +134,9 @@ func (r *TechniqueRepository) FindByTactic(ctx context.Context, tactic entity.Ta
 
 // FindByPlatform finds techniques by platform
 func (r *TechniqueRepository) FindByPlatform(ctx context.Context, platform string) ([]*entity.Technique, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, name, description, tactic, platforms, executors, detection, is_safe
-		FROM techniques WHERE platforms LIKE ? ORDER BY id
-	`, "%"+platform+"%")
+	rows, err := r.db.QueryContext(ctx,
+		fmt.Sprintf("SELECT %s FROM techniques WHERE platforms LIKE ? ORDER BY id", techniqueColumns),
+		"%"+platform+"%")
 	if err != nil {
 		return nil, err
 	}

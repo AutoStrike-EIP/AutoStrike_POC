@@ -13,6 +13,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// SQL column constants for scenarios
+const (
+	scenarioColumns = "id, name, description, phases, tags, created_at, updated_at"
+)
+
 // ScenarioRepository implements repository.ScenarioRepository using SQLite
 type ScenarioRepository struct {
 	db *sql.DB
@@ -72,10 +77,9 @@ func (r *ScenarioRepository) FindByID(ctx context.Context, id string) (*entity.S
 	scenario := &entity.Scenario{}
 	var phases, tags string
 
-	err := r.db.QueryRowContext(ctx, `
-		SELECT id, name, description, phases, tags, created_at, updated_at
-		FROM scenarios WHERE id = ?
-	`, id).Scan(&scenario.ID, &scenario.Name, &scenario.Description, &phases, &tags, &scenario.CreatedAt, &scenario.UpdatedAt)
+	err := r.db.QueryRowContext(ctx,
+		fmt.Sprintf("SELECT %s FROM scenarios WHERE id = ?", scenarioColumns),
+		id).Scan(&scenario.ID, &scenario.Name, &scenario.Description, &phases, &tags, &scenario.CreatedAt, &scenario.UpdatedAt)
 
 	if err != nil {
 		return nil, err
@@ -94,10 +98,8 @@ func (r *ScenarioRepository) FindByID(ctx context.Context, id string) (*entity.S
 
 // FindAll finds all scenarios
 func (r *ScenarioRepository) FindAll(ctx context.Context) ([]*entity.Scenario, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, name, description, phases, tags, created_at, updated_at
-		FROM scenarios ORDER BY updated_at DESC
-	`)
+	rows, err := r.db.QueryContext(ctx,
+		fmt.Sprintf("SELECT %s FROM scenarios ORDER BY updated_at DESC", scenarioColumns))
 	if err != nil {
 		return nil, err
 	}
@@ -108,10 +110,9 @@ func (r *ScenarioRepository) FindAll(ctx context.Context) ([]*entity.Scenario, e
 
 // FindByTag finds scenarios by tag
 func (r *ScenarioRepository) FindByTag(ctx context.Context, tag string) ([]*entity.Scenario, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, name, description, phases, tags, created_at, updated_at
-		FROM scenarios WHERE tags LIKE ? ORDER BY updated_at DESC
-	`, "%"+tag+"%")
+	rows, err := r.db.QueryContext(ctx,
+		fmt.Sprintf("SELECT %s FROM scenarios WHERE tags LIKE ? ORDER BY updated_at DESC", scenarioColumns),
+		"%"+tag+"%")
 	if err != nil {
 		return nil, err
 	}

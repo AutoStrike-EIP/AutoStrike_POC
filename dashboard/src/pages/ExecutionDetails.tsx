@@ -8,17 +8,27 @@ import { formatDistanceToNow, format } from 'date-fns';
 
 /**
  * Returns the appropriate badge class and icon for a result status.
+ *
+ * Status meanings:
+ * - success/successful: technique executed successfully (attack worked - bad for security)
+ * - failed: technique execution failed (technical error - neutral)
+ * - blocked: technique was blocked by security controls (good for security)
+ * - detected: technique was detected by security tools (good for security)
  */
 function getResultStatusInfo(status: string): { badgeClass: string; Icon: React.ElementType } {
   switch (status) {
     case 'success':
     case 'successful':
-      return { badgeClass: 'badge-danger', Icon: XCircleIcon };
+      // Attack succeeded = security vulnerability = danger (red)
+      return { badgeClass: 'badge-danger', Icon: ExclamationTriangleIcon };
     case 'failed':
-      return { badgeClass: 'badge-success', Icon: CheckCircleIcon };
+      // Technique execution failed (technical error) = neutral warning
+      return { badgeClass: 'badge-warning', Icon: XCircleIcon };
     case 'detected':
-      return { badgeClass: 'badge-warning', Icon: ExclamationTriangleIcon };
+      // Attack detected = security working = success (green)
+      return { badgeClass: 'badge-success', Icon: CheckCircleIcon };
     case 'blocked':
+      // Attack blocked = security working = success (green)
       return { badgeClass: 'badge-success', Icon: CheckCircleIcon };
     case 'pending':
     case 'running':
@@ -37,7 +47,7 @@ function getStatusLabel(status: string): string {
     case 'successful':
       return 'Attack Succeeded';
     case 'failed':
-      return 'Attack Blocked';
+      return 'Execution Failed';
     case 'detected':
       return 'Detected';
     case 'blocked':

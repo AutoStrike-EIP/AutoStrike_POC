@@ -22,7 +22,8 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === HttpStatusCode.Unauthorized) {
       localStorage.removeItem('token');
-      // TODO: Redirect to login page when implemented (Phase 3)
+      // Auth redirect will be implemented in Phase 3
+      console.warn('Unauthorized - token cleared');
     }
     return Promise.reject(error);
   }

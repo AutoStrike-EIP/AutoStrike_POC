@@ -65,42 +65,21 @@ func (s *ExecutionService) StartExecution(
 	agentPaws []string,
 	safeMode bool,
 ) (*ExecutionWithTasks, error) {
-	// Load scenario
 	scenario, err := s.scenarioRepo.FindByID(ctx, scenarioID)
 	if err != nil {
 		return nil, fmt.Errorf("scenario not found: %w", err)
 	}
 
-	// Load agents in batch (single query instead of N+1)
-	agents, err := s.agentRepo.FindByPaws(ctx, agentPaws)
+	agentMap, agents, err := s.loadAndValidateAgents(ctx, agentPaws)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load agents: %w", err)
+		return nil, err
 	}
 
-	// Build a map for quick lookup and validate all agents exist
-	agentMap := make(map[string]*entity.Agent, len(agents))
-	for _, agent := range agents {
-		agentMap[agent.Paw] = agent
-	}
-
-	// Verify all requested agents were found and are online
-	for _, paw := range agentPaws {
-		agent, found := agentMap[paw]
-		if !found {
-			return nil, fmt.Errorf("agent %s not found", paw)
-		}
-		if agent.Status != entity.AgentOnline {
-			return nil, fmt.Errorf("agent %s is not online", paw)
-		}
-	}
-
-	// Create execution plan
 	plan, err := s.orchestrator.PlanExecution(ctx, scenario, agents, safeMode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to plan execution: %w", err)
 	}
 
-	// Create execution record
 	execution := &entity.Execution{
 		ID:         uuid.New().String(),
 		ScenarioID: scenarioID,
@@ -114,12 +93,58 @@ func (s *ExecutionService) StartExecution(
 		return nil, fmt.Errorf("failed to create execution: %w", err)
 	}
 
-	// Create pending results for each task and collect dispatch info
-	tasks := make([]TaskDispatchInfo, 0, len(plan.Tasks))
-	for _, task := range plan.Tasks {
+	tasks, err := s.createTasksForExecution(ctx, execution.ID, plan.Tasks, agentMap)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ExecutionWithTasks{
+		Execution: execution,
+		Tasks:     tasks,
+	}, nil
+}
+
+// loadAndValidateAgents loads agents and validates they exist and are online
+func (s *ExecutionService) loadAndValidateAgents(
+	ctx context.Context,
+	agentPaws []string,
+) (map[string]*entity.Agent, []*entity.Agent, error) {
+	agents, err := s.agentRepo.FindByPaws(ctx, agentPaws)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to load agents: %w", err)
+	}
+
+	agentMap := make(map[string]*entity.Agent, len(agents))
+	for _, agent := range agents {
+		agentMap[agent.Paw] = agent
+	}
+
+	for _, paw := range agentPaws {
+		agent, found := agentMap[paw]
+		if !found {
+			return nil, nil, fmt.Errorf("agent %s not found", paw)
+		}
+		if agent.Status != entity.AgentOnline {
+			return nil, nil, fmt.Errorf("agent %s is not online", paw)
+		}
+	}
+
+	return agentMap, agents, nil
+}
+
+// createTasksForExecution creates task results and dispatch info for each planned task
+func (s *ExecutionService) createTasksForExecution(
+	ctx context.Context,
+	executionID string,
+	planTasks []service.PlannedTask,
+	agentMap map[string]*entity.Agent,
+) ([]TaskDispatchInfo, error) {
+	tasks := make([]TaskDispatchInfo, 0, len(planTasks))
+
+	for _, task := range planTasks {
 		result := &entity.ExecutionResult{
 			ID:          uuid.New().String(),
-			ExecutionID: execution.ID,
+			ExecutionID: executionID,
 			TechniqueID: task.TechniqueID,
 			AgentPaw:    task.AgentPaw,
 			Status:      entity.StatusPending,
@@ -130,17 +155,7 @@ func (s *ExecutionService) StartExecution(
 			return nil, fmt.Errorf("failed to create result: %w", err)
 		}
 
-		// Get the technique to determine the executor
-		technique, _ := s.techniqueRepo.FindByID(ctx, task.TechniqueID)
-		executor := "sh" // default
-		if technique != nil {
-			agent := agentMap[task.AgentPaw]
-			if agent != nil {
-				if exec := technique.GetExecutorForPlatform(agent.Platform, agent.Executors); exec != nil {
-					executor = exec.Type
-				}
-			}
-		}
+		executor := s.determineExecutor(ctx, task.TechniqueID, agentMap[task.AgentPaw])
 
 		tasks = append(tasks, TaskDispatchInfo{
 			ResultID:    result.ID,
@@ -153,10 +168,19 @@ func (s *ExecutionService) StartExecution(
 		})
 	}
 
-	return &ExecutionWithTasks{
-		Execution: execution,
-		Tasks:     tasks,
-	}, nil
+	return tasks, nil
+}
+
+// determineExecutor finds the appropriate executor for a technique on an agent
+func (s *ExecutionService) determineExecutor(ctx context.Context, techniqueID string, agent *entity.Agent) string {
+	technique, _ := s.techniqueRepo.FindByID(ctx, techniqueID)
+	if technique == nil || agent == nil {
+		return "sh"
+	}
+	if exec := technique.GetExecutorForPlatform(agent.Platform, agent.Executors); exec != nil {
+		return exec.Type
+	}
+	return "sh"
 }
 
 // UpdateResult updates an execution result

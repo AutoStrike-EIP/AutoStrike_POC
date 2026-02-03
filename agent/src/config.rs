@@ -1,6 +1,6 @@
 //! Agent configuration management.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -48,12 +48,9 @@ impl AgentConfig {
     pub fn load(path: &str, server: &str, paw: Option<String>) -> Result<Self> {
         // Try to load from file first
         let file_config = if std::path::Path::new(path).exists() {
-            let settings = config::Config::builder()
-                .add_source(config::File::with_name(path))
-                .build()
-                .context("Failed to load config file")?;
-
-            Some(settings.try_deserialize::<AgentConfig>()?)
+            let mut settings = config::Config::default();
+            settings.merge(config::File::with_name(path))?;
+            Some(settings.try_into::<AgentConfig>()?)
         } else {
             None
         };

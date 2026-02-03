@@ -1,7 +1,7 @@
 //! System information gathering for agent registration.
 
 use serde::{Deserialize, Serialize};
-use sysinfo::System;
+use sysinfo::{System, SystemExt};
 use which::which;
 
 /// System information collected from the host machine.
@@ -38,12 +38,14 @@ impl SystemInfo {
         // Detect available executors
         let executors = Self::detect_executors();
 
+        let sys = System::new();
+
         SystemInfo {
-            hostname: System::host_name().unwrap_or_else(|| "unknown".to_string()),
+            hostname: sys.host_name().unwrap_or_else(|| "unknown".to_string()),
             username: whoami::username(),
             platform: platform.to_string(),
             executors,
-            os_version: System::os_version().unwrap_or_else(|| "unknown".to_string()),
+            os_version: sys.os_version().unwrap_or_else(|| "unknown".to_string()),
             architecture: std::env::consts::ARCH.to_string(),
         }
     }

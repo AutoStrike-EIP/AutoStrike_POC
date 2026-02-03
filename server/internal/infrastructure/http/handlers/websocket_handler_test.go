@@ -1207,3 +1207,277 @@ func TestWebSocketHandler_HandleTaskResult_WithErrorOutput(t *testing.T) {
 	// Error and output should be combined
 	handler.handleTaskResult(client, payloadBytes)
 }
+
+// Mock result repository for testing handleTaskResult with real execution service
+type wsTestResultRepo struct {
+	results    map[string]*entity.ExecutionResult
+	executions map[string]*entity.Execution
+	updateErr  error
+}
+
+func newWSTestResultRepo() *wsTestResultRepo {
+	return &wsTestResultRepo{
+		results:    make(map[string]*entity.ExecutionResult),
+		executions: make(map[string]*entity.Execution),
+	}
+}
+
+func (m *wsTestResultRepo) CreateExecution(ctx context.Context, exec *entity.Execution) error {
+	m.executions[exec.ID] = exec
+	return nil
+}
+
+func (m *wsTestResultRepo) UpdateExecution(ctx context.Context, exec *entity.Execution) error {
+	m.executions[exec.ID] = exec
+	return nil
+}
+
+func (m *wsTestResultRepo) FindExecutionByID(ctx context.Context, id string) (*entity.Execution, error) {
+	if exec, ok := m.executions[id]; ok {
+		return exec, nil
+	}
+	return nil, errors.New("execution not found")
+}
+
+func (m *wsTestResultRepo) FindExecutionsByScenario(ctx context.Context, scenarioID string) ([]*entity.Execution, error) {
+	return []*entity.Execution{}, nil
+}
+
+func (m *wsTestResultRepo) FindRecentExecutions(ctx context.Context, limit int) ([]*entity.Execution, error) {
+	return []*entity.Execution{}, nil
+}
+
+func (m *wsTestResultRepo) CreateResult(ctx context.Context, result *entity.ExecutionResult) error {
+	m.results[result.ID] = result
+	return nil
+}
+
+func (m *wsTestResultRepo) UpdateResult(ctx context.Context, result *entity.ExecutionResult) error {
+	if m.updateErr != nil {
+		return m.updateErr
+	}
+	m.results[result.ID] = result
+	return nil
+}
+
+func (m *wsTestResultRepo) FindResultByID(ctx context.Context, id string) (*entity.ExecutionResult, error) {
+	if r, ok := m.results[id]; ok {
+		return r, nil
+	}
+	return nil, errors.New("result not found")
+}
+
+func (m *wsTestResultRepo) FindResultsByExecution(ctx context.Context, executionID string) ([]*entity.ExecutionResult, error) {
+	var results []*entity.ExecutionResult
+	for _, r := range m.results {
+		if r.ExecutionID == executionID {
+			results = append(results, r)
+		}
+	}
+	return results, nil
+}
+
+func (m *wsTestResultRepo) FindResultsByTechnique(ctx context.Context, techniqueID string) ([]*entity.ExecutionResult, error) {
+	return []*entity.ExecutionResult{}, nil
+}
+
+// Mock scenario repository
+type wsTestScenarioRepo struct{}
+
+func (m *wsTestScenarioRepo) Create(ctx context.Context, s *entity.Scenario) error  { return nil }
+func (m *wsTestScenarioRepo) Update(ctx context.Context, s *entity.Scenario) error  { return nil }
+func (m *wsTestScenarioRepo) Delete(ctx context.Context, id string) error           { return nil }
+func (m *wsTestScenarioRepo) FindByID(ctx context.Context, id string) (*entity.Scenario, error) {
+	return &entity.Scenario{ID: id}, nil
+}
+func (m *wsTestScenarioRepo) FindAll(ctx context.Context) ([]*entity.Scenario, error) {
+	return []*entity.Scenario{}, nil
+}
+func (m *wsTestScenarioRepo) FindByTag(ctx context.Context, tag string) ([]*entity.Scenario, error) {
+	return []*entity.Scenario{}, nil
+}
+func (m *wsTestScenarioRepo) ImportFromYAML(ctx context.Context, path string) error { return nil }
+
+// Mock technique repository
+type wsTestTechniqueRepo struct{}
+
+func (m *wsTestTechniqueRepo) Create(ctx context.Context, t *entity.Technique) error  { return nil }
+func (m *wsTestTechniqueRepo) Update(ctx context.Context, t *entity.Technique) error  { return nil }
+func (m *wsTestTechniqueRepo) Delete(ctx context.Context, id string) error            { return nil }
+func (m *wsTestTechniqueRepo) FindByID(ctx context.Context, id string) (*entity.Technique, error) {
+	return &entity.Technique{ID: id}, nil
+}
+func (m *wsTestTechniqueRepo) FindAll(ctx context.Context) ([]*entity.Technique, error) {
+	return []*entity.Technique{}, nil
+}
+func (m *wsTestTechniqueRepo) FindByTactic(ctx context.Context, tactic entity.TacticType) ([]*entity.Technique, error) {
+	return []*entity.Technique{}, nil
+}
+func (m *wsTestTechniqueRepo) FindByPlatform(ctx context.Context, platform string) ([]*entity.Technique, error) {
+	return []*entity.Technique{}, nil
+}
+func (m *wsTestTechniqueRepo) ImportFromYAML(ctx context.Context, path string) error { return nil }
+
+func TestWebSocketHandler_HandleTaskResult_WithRealExecutionService(t *testing.T) {
+	logger := zap.NewNop()
+	hub := websocket.NewHub(logger)
+	go hub.Run()
+
+	agentRepo := newWSTestAgentRepo()
+	agentService := application.NewAgentService(agentRepo)
+	handler := NewWebSocketHandler(hub, agentService, logger)
+
+	// Create mock repositories
+	resultRepo := newWSTestResultRepo()
+	scenarioRepo := &wsTestScenarioRepo{}
+	techniqueRepo := &wsTestTechniqueRepo{}
+
+	// Create real execution with a pending result
+	resultRepo.executions["exec-1"] = &entity.Execution{
+		ID:     "exec-1",
+		Status: entity.ExecutionRunning,
+	}
+	resultRepo.results["task-result-test"] = &entity.ExecutionResult{
+		ID:          "task-result-test",
+		ExecutionID: "exec-1",
+		Status:      entity.StatusPending,
+	}
+
+	// Create execution service
+	execService := application.NewExecutionService(
+		resultRepo,
+		scenarioRepo,
+		techniqueRepo,
+		agentRepo,
+		nil, // orchestrator not needed for UpdateResultByID
+		nil, // calculator - need it for checkAndCompleteExecution
+	)
+
+	handler.SetExecutionService(execService)
+
+	client := websocket.NewClient(hub, nil, "test-agent", logger)
+
+	// Test successful result
+	payload := TaskResultPayload{
+		TaskID:      "task-result-test",
+		TechniqueID: "T1082",
+		Success:     true,
+		ExitCode:    0,
+		Output:      "System info collected successfully",
+	}
+	payloadBytes, _ := json.Marshal(payload)
+
+	handler.handleTaskResult(client, payloadBytes)
+
+	// Verify result was updated
+	result, err := resultRepo.FindResultByID(context.Background(), "task-result-test")
+	if err != nil {
+		t.Fatalf("Result not found after update: %v", err)
+	}
+	if result.Status != entity.StatusSuccess {
+		t.Errorf("Expected status 'success', got '%s'", result.Status)
+	}
+}
+
+func TestWebSocketHandler_HandleTaskResult_WithExecutionServiceError(t *testing.T) {
+	logger := zap.NewNop()
+	hub := websocket.NewHub(logger)
+	go hub.Run()
+
+	agentRepo := newWSTestAgentRepo()
+	agentService := application.NewAgentService(agentRepo)
+	handler := NewWebSocketHandler(hub, agentService, logger)
+
+	// Create mock repositories
+	resultRepo := newWSTestResultRepo()
+	scenarioRepo := &wsTestScenarioRepo{}
+	techniqueRepo := &wsTestTechniqueRepo{}
+
+	// Create execution service (result doesn't exist so FindResultByID will fail)
+	execService := application.NewExecutionService(
+		resultRepo,
+		scenarioRepo,
+		techniqueRepo,
+		agentRepo,
+		nil,
+		nil,
+	)
+
+	handler.SetExecutionService(execService)
+
+	client := websocket.NewClient(hub, nil, "test-agent", logger)
+
+	// Test with non-existent result (should trigger error path)
+	payload := TaskResultPayload{
+		TaskID:      "non-existent-task",
+		TechniqueID: "T1082",
+		Success:     true,
+		ExitCode:    0,
+		Output:      "Output",
+	}
+	payloadBytes, _ := json.Marshal(payload)
+
+	// Should not panic, just log error
+	handler.handleTaskResult(client, payloadBytes)
+}
+
+func TestWebSocketHandler_HandleTaskResult_FailedResultWithError(t *testing.T) {
+	logger := zap.NewNop()
+	hub := websocket.NewHub(logger)
+	go hub.Run()
+
+	agentRepo := newWSTestAgentRepo()
+	agentService := application.NewAgentService(agentRepo)
+	handler := NewWebSocketHandler(hub, agentService, logger)
+
+	// Create mock repositories
+	resultRepo := newWSTestResultRepo()
+	scenarioRepo := &wsTestScenarioRepo{}
+	techniqueRepo := &wsTestTechniqueRepo{}
+
+	// Create real execution with a pending result
+	resultRepo.executions["exec-2"] = &entity.Execution{
+		ID:     "exec-2",
+		Status: entity.ExecutionRunning,
+	}
+	resultRepo.results["task-failed-test"] = &entity.ExecutionResult{
+		ID:          "task-failed-test",
+		ExecutionID: "exec-2",
+		Status:      entity.StatusPending,
+	}
+
+	execService := application.NewExecutionService(
+		resultRepo,
+		scenarioRepo,
+		techniqueRepo,
+		agentRepo,
+		nil,
+		nil,
+	)
+
+	handler.SetExecutionService(execService)
+
+	client := websocket.NewClient(hub, nil, "test-agent", logger)
+
+	// Test failed result with error message
+	payload := TaskResultPayload{
+		TaskID:      "task-failed-test",
+		TechniqueID: "T1059",
+		Success:     false,
+		ExitCode:    127,
+		Output:      "partial output",
+		Error:       "command not found",
+	}
+	payloadBytes, _ := json.Marshal(payload)
+
+	handler.handleTaskResult(client, payloadBytes)
+
+	// Verify result was updated with failed status
+	result, err := resultRepo.FindResultByID(context.Background(), "task-failed-test")
+	if err != nil {
+		t.Fatalf("Result not found after update: %v", err)
+	}
+	if result.Status != entity.StatusFailed {
+		t.Errorf("Expected status 'failed', got '%s'", result.Status)
+	}
+}

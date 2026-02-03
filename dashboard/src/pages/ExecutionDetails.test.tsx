@@ -209,7 +209,7 @@ describe('ExecutionDetails Page', () => {
 
     renderWithRouter('exec-failed');
 
-    expect(await screen.findByText('Attack Blocked')).toBeInTheDocument();
+    expect(await screen.findByText('Execution Failed')).toBeInTheDocument();
   });
 
   it('renders result with detected status', async () => {

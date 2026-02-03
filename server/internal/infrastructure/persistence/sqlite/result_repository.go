@@ -115,9 +115,9 @@ func (r *ResultRepository) CreateResult(ctx context.Context, result *entity.Exec
 // UpdateResult updates an existing execution result
 func (r *ResultRepository) UpdateResult(ctx context.Context, result *entity.ExecutionResult) error {
 	_, err := r.db.ExecContext(ctx, `
-		UPDATE execution_results SET status = ?, output = ?, detected = ?, completed_at = ?
+		UPDATE execution_results SET status = ?, output = ?, exit_code = ?, detected = ?, completed_at = ?
 		WHERE id = ?
-	`, result.Status, result.Output, result.Detected, result.CompletedAt, result.ID)
+	`, result.Status, result.Output, result.ExitCode, result.Detected, result.CompletedAt, result.ID)
 
 	return err
 }
@@ -125,7 +125,7 @@ func (r *ResultRepository) UpdateResult(ctx context.Context, result *entity.Exec
 // FindResultByID finds a result by its ID
 func (r *ResultRepository) FindResultByID(ctx context.Context, id string) (*entity.ExecutionResult, error) {
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, execution_id, technique_id, agent_paw, status, output, detected, started_at, completed_at
+		SELECT id, execution_id, technique_id, agent_paw, status, output, exit_code, detected, started_at, completed_at
 		FROM execution_results WHERE id = ?
 	`, id)
 
@@ -140,6 +140,7 @@ func (r *ResultRepository) FindResultByID(ctx context.Context, id string) (*enti
 		&result.AgentPaw,
 		&result.Status,
 		&output,
+		&result.ExitCode,
 		&result.Detected,
 		&result.StartedAt,
 		&completedAt,
@@ -161,7 +162,7 @@ func (r *ResultRepository) FindResultByID(ctx context.Context, id string) (*enti
 // FindResultsByExecution finds results by execution ID
 func (r *ResultRepository) FindResultsByExecution(ctx context.Context, executionID string) ([]*entity.ExecutionResult, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, execution_id, technique_id, agent_paw, status, output, detected, started_at, completed_at
+		SELECT id, execution_id, technique_id, agent_paw, status, output, exit_code, detected, started_at, completed_at
 		FROM execution_results WHERE execution_id = ? ORDER BY started_at
 	`, executionID)
 	if err != nil {
@@ -175,7 +176,7 @@ func (r *ResultRepository) FindResultsByExecution(ctx context.Context, execution
 // FindResultsByTechnique finds results by technique ID
 func (r *ResultRepository) FindResultsByTechnique(ctx context.Context, techniqueID string) ([]*entity.ExecutionResult, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, execution_id, technique_id, agent_paw, status, output, detected, started_at, completed_at
+		SELECT id, execution_id, technique_id, agent_paw, status, output, exit_code, detected, started_at, completed_at
 		FROM execution_results WHERE technique_id = ? ORDER BY started_at DESC
 	`, techniqueID)
 	if err != nil {
@@ -225,7 +226,7 @@ func (r *ResultRepository) scanResults(rows *sql.Rows) ([]*entity.ExecutionResul
 		var completedAt sql.NullTime
 
 		err := rows.Scan(&result.ID, &result.ExecutionID, &result.TechniqueID, &result.AgentPaw,
-			&result.Status, &output, &result.Detected, &result.StartedAt, &completedAt)
+			&result.Status, &output, &result.ExitCode, &result.Detected, &result.StartedAt, &completedAt)
 		if err != nil {
 			return nil, err
 		}

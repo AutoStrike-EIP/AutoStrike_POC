@@ -46,11 +46,17 @@ func NewServerConfig() *ServerConfig {
 		enableAuth = false
 	}
 
+	// Default dashboard path to ../dashboard/dist relative to working directory
+	dashboardPath := os.Getenv("DASHBOARD_PATH")
+	if dashboardPath == "" {
+		dashboardPath = "../dashboard/dist"
+	}
+
 	return &ServerConfig{
 		JWTSecret:     jwtSecret,
 		AgentSecret:   os.Getenv("AGENT_SECRET"),
 		EnableAuth:    enableAuth,
-		DashboardPath: os.Getenv("DASHBOARD_PATH"),
+		DashboardPath: dashboardPath,
 	}
 }
 

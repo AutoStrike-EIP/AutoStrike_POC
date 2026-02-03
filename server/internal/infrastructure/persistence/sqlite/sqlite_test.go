@@ -1405,3 +1405,369 @@ func TestResultRepository_FindExecutionsByScenario_WithResults(t *testing.T) {
 		t.Errorf("Expected 3 executions, got %d", len(executions))
 	}
 }
+
+// Scenario ImportFromYAML tests
+func TestScenarioRepository_ImportFromYAML(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewScenarioRepository(db)
+	ctx := context.Background()
+
+	// Create a temporary YAML file
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "scenarios.yaml")
+	yamlContent := `
+- id: "scenario-1"
+  name: "Test Scenario 1"
+  description: "A test scenario"
+  phases:
+    - name: "Phase 1"
+      techniques:
+        - "T1059"
+        - "T1082"
+  tags:
+    - "test"
+    - "discovery"
+- id: "scenario-2"
+  name: "Test Scenario 2"
+  description: "Another test scenario"
+  phases:
+    - name: "Initial"
+      techniques:
+        - "T1016"
+  tags:
+    - "quick"
+`
+	err := os.WriteFile(yamlPath, []byte(yamlContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write YAML file: %v", err)
+	}
+
+	err = repo.ImportFromYAML(ctx, yamlPath)
+	if err != nil {
+		t.Fatalf("ImportFromYAML failed: %v", err)
+	}
+
+	// Verify scenarios were imported
+	scenarios, err := repo.FindAll(ctx)
+	if err != nil {
+		t.Fatalf("FindAll failed: %v", err)
+	}
+	if len(scenarios) != 2 {
+		t.Errorf("Expected 2 scenarios, got %d", len(scenarios))
+	}
+}
+
+func TestScenarioRepository_ImportFromYAML_FileNotFound(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewScenarioRepository(db)
+	ctx := context.Background()
+
+	err := repo.ImportFromYAML(ctx, "/nonexistent/path/scenarios.yaml")
+	if err == nil {
+		t.Error("Expected error for non-existent file")
+	}
+}
+
+func TestScenarioRepository_ImportFromYAML_InvalidYAML(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewScenarioRepository(db)
+	ctx := context.Background()
+
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "invalid.yaml")
+	err := os.WriteFile(yamlPath, []byte("not: valid: yaml: ["), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write file: %v", err)
+	}
+
+	err = repo.ImportFromYAML(ctx, yamlPath)
+	if err == nil {
+		t.Error("Expected error for invalid YAML")
+	}
+}
+
+func TestScenarioRepository_ImportFromYAML_Upsert(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewScenarioRepository(db)
+	ctx := context.Background()
+
+	// First import
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "scenarios.yaml")
+	yamlContent := `
+- id: "upsert-test"
+  name: "Original Name"
+  description: "Original description"
+  phases:
+    - name: "Phase 1"
+      techniques:
+        - "T1059"
+  tags:
+    - "original"
+`
+	err := os.WriteFile(yamlPath, []byte(yamlContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write YAML: %v", err)
+	}
+
+	err = repo.ImportFromYAML(ctx, yamlPath)
+	if err != nil {
+		t.Fatalf("First import failed: %v", err)
+	}
+
+	// Verify original
+	scenario, err := repo.FindByID(ctx, "upsert-test")
+	if err != nil {
+		t.Fatalf("FindByID failed: %v", err)
+	}
+	if scenario.Name != "Original Name" {
+		t.Errorf("Expected 'Original Name', got '%s'", scenario.Name)
+	}
+
+	// Second import with updated data
+	yamlContent2 := `
+- id: "upsert-test"
+  name: "Updated Name"
+  description: "Updated description"
+  phases:
+    - name: "Phase 1"
+      techniques:
+        - "T1059"
+        - "T1082"
+  tags:
+    - "updated"
+`
+	yamlPath2 := filepath.Join(tmpDir, "scenarios2.yaml")
+	err = os.WriteFile(yamlPath2, []byte(yamlContent2), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write YAML: %v", err)
+	}
+
+	err = repo.ImportFromYAML(ctx, yamlPath2)
+	if err != nil {
+		t.Fatalf("Second import failed: %v", err)
+	}
+
+	// Verify update
+	scenario, err = repo.FindByID(ctx, "upsert-test")
+	if err != nil {
+		t.Fatalf("FindByID after update failed: %v", err)
+	}
+	if scenario.Name != "Updated Name" {
+		t.Errorf("Expected 'Updated Name', got '%s'", scenario.Name)
+	}
+
+	// Should still be only 1 scenario
+	scenarios, err := repo.FindAll(ctx)
+	if err != nil {
+		t.Fatalf("FindAll failed: %v", err)
+	}
+	if len(scenarios) != 1 {
+		t.Errorf("Expected 1 scenario after upsert, got %d", len(scenarios))
+	}
+}
+
+func TestScenarioRepository_ImportFromYAML_EmptyFile(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewScenarioRepository(db)
+	ctx := context.Background()
+
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "empty.yaml")
+	err := os.WriteFile(yamlPath, []byte(""), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write file: %v", err)
+	}
+
+	// Empty file should not cause error (just imports nothing)
+	err = repo.ImportFromYAML(ctx, yamlPath)
+	if err != nil {
+		t.Fatalf("ImportFromYAML with empty file failed: %v", err)
+	}
+
+	scenarios, err := repo.FindAll(ctx)
+	if err != nil {
+		t.Fatalf("FindAll failed: %v", err)
+	}
+	if len(scenarios) != 0 {
+		t.Errorf("Expected 0 scenarios from empty file, got %d", len(scenarios))
+	}
+}
+
+func TestScenarioRepository_ImportFromYAML_WithTimestamps(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewScenarioRepository(db)
+	ctx := context.Background()
+
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "scenarios.yaml")
+	// Scenario without timestamps (should be filled in)
+	yamlContent := `
+- id: "no-timestamps"
+  name: "No Timestamps"
+  description: "Test"
+  phases:
+    - name: "P1"
+      techniques: ["T1"]
+  tags: []
+`
+	err := os.WriteFile(yamlPath, []byte(yamlContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write YAML: %v", err)
+	}
+
+	err = repo.ImportFromYAML(ctx, yamlPath)
+	if err != nil {
+		t.Fatalf("ImportFromYAML failed: %v", err)
+	}
+
+	scenario, err := repo.FindByID(ctx, "no-timestamps")
+	if err != nil {
+		t.Fatalf("FindByID failed: %v", err)
+	}
+	if scenario.CreatedAt.IsZero() {
+		t.Error("Expected CreatedAt to be set")
+	}
+	if scenario.UpdatedAt.IsZero() {
+		t.Error("Expected UpdatedAt to be set")
+	}
+}
+
+// Result repository FindResultByID tests
+func TestResultRepository_FindResultByID(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewResultRepository(db)
+	ctx := context.Background()
+
+	now := time.Now()
+	result := &entity.ExecutionResult{
+		ID:          "find-result-test",
+		ExecutionID: "exec-1",
+		TechniqueID: "T1059",
+		AgentPaw:    "agent-1",
+		Status:      entity.StatusPending,
+		StartedAt:   now,
+	}
+	err := repo.CreateResult(ctx, result)
+	if err != nil {
+		t.Fatalf("CreateResult failed: %v", err)
+	}
+
+	// Update result with output (CreateResult doesn't insert output)
+	result.Status = entity.StatusSuccess
+	result.Output = "test output"
+	result.CompletedAt = &now
+	err = repo.UpdateResult(ctx, result)
+	if err != nil {
+		t.Fatalf("UpdateResult failed: %v", err)
+	}
+
+	found, err := repo.FindResultByID(ctx, "find-result-test")
+	if err != nil {
+		t.Fatalf("FindResultByID failed: %v", err)
+	}
+	if found.Output != "test output" {
+		t.Errorf("Expected output 'test output', got '%s'", found.Output)
+	}
+	if found.Status != entity.StatusSuccess {
+		t.Errorf("Expected status 'success', got '%s'", found.Status)
+	}
+}
+
+func TestResultRepository_FindResultByID_NotFound(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewResultRepository(db)
+	ctx := context.Background()
+
+	_, err := repo.FindResultByID(ctx, "nonexistent")
+	if err == nil {
+		t.Error("Expected error for nonexistent result")
+	}
+}
+
+// Technique repository upsert tests
+func TestTechniqueRepository_ImportFromYAML_Upsert(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	// First import
+	tmpDir := t.TempDir()
+	yamlPath := filepath.Join(tmpDir, "techniques.yaml")
+	yamlContent := `
+- id: "T-UPSERT"
+  name: "Original Technique"
+  description: "Original description"
+  tactic: "execution"
+  platforms:
+    - "linux"
+  executors:
+    - type: "sh"
+      command: "echo original"
+  is_safe: true
+`
+	err := os.WriteFile(yamlPath, []byte(yamlContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write YAML: %v", err)
+	}
+
+	err = repo.ImportFromYAML(ctx, yamlPath)
+	if err != nil {
+		t.Fatalf("First import failed: %v", err)
+	}
+
+	// Verify original
+	tech, err := repo.FindByID(ctx, "T-UPSERT")
+	if err != nil {
+		t.Fatalf("FindByID failed: %v", err)
+	}
+	if tech.Name != "Original Technique" {
+		t.Errorf("Expected 'Original Technique', got '%s'", tech.Name)
+	}
+
+	// Second import with updated data
+	yamlContent2 := `
+- id: "T-UPSERT"
+  name: "Updated Technique"
+  description: "Updated description"
+  tactic: "execution"
+  platforms:
+    - "linux"
+    - "windows"
+  executors:
+    - type: "sh"
+      command: "echo updated"
+  is_safe: false
+`
+	yamlPath2 := filepath.Join(tmpDir, "techniques2.yaml")
+	err = os.WriteFile(yamlPath2, []byte(yamlContent2), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write YAML: %v", err)
+	}
+
+	err = repo.ImportFromYAML(ctx, yamlPath2)
+	if err != nil {
+		t.Fatalf("Second import failed: %v", err)
+	}
+
+	// Verify update
+	tech, err = repo.FindByID(ctx, "T-UPSERT")
+	if err != nil {
+		t.Fatalf("FindByID after update failed: %v", err)
+	}
+	if tech.Name != "Updated Technique" {
+		t.Errorf("Expected 'Updated Technique', got '%s'", tech.Name)
+	}
+	if tech.IsSafe {
+		t.Error("Expected is_safe to be false after update")
+	}
+}

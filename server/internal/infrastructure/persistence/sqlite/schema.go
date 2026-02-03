@@ -67,6 +67,7 @@ func InitSchema(db *sql.DB) error {
 		agent_paw TEXT NOT NULL,
 		status TEXT NOT NULL,
 		output TEXT,
+		exit_code INTEGER DEFAULT 0,
 		detected BOOLEAN DEFAULT 0,
 		started_at DATETIME NOT NULL,
 		completed_at DATETIME,
