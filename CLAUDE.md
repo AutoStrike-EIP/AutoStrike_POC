@@ -230,10 +230,10 @@ All techniques are **safe mode compatible** (non-destructive).
   - application: 100%
   - entity: 100%
   - service: 99.2%
-  - handlers: 92.1%
-  - websocket: 91.3%
+  - handlers: 97.2%
+  - websocket: 91.6%
   - middleware: 100%
-- **Agent**: 68 unit tests (`cargo test`)
+- **Agent**: 61 unit tests (`cargo test`)
 - **Dashboard**: 193 tests across 15 files (`npm test`)
 
 ```bash

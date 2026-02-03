@@ -293,8 +293,8 @@ Test coverage:
 - **application**: 100%
 - **entity**: 100%
 - **service**: 99.2%
-- **handlers**: 92.1%
-- **websocket**: 91.3%
+- **handlers**: 97.2%
+- **websocket**: 91.6%
 - **middleware**: 100%
 
 ```bash

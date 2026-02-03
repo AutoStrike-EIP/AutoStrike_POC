@@ -107,8 +107,8 @@ Ouvrir **https://localhost:8443** (accepter le certificat auto-signé)
 make test
 
 # Par composant
-cd server && go test ./...      # 100% coverage
-cd agent && cargo test          # 68 tests
+cd server && go test ./...      # 84-100% coverage
+cd agent && cargo test          # 61 tests
 cd dashboard && npm test        # 193 tests
 ```
 
