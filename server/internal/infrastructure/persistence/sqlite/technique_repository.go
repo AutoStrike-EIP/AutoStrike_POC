@@ -158,12 +158,43 @@ func (r *TechniqueRepository) ImportFromYAML(ctx context.Context, path string) e
 	}
 
 	for _, t := range techniques {
-		if err := r.Create(ctx, t); err != nil {
+		if err := r.upsert(ctx, t); err != nil {
 			return fmt.Errorf("failed to import technique %s: %w", t.ID, err)
 		}
 	}
 
 	return nil
+}
+
+// upsert inserts or updates a technique
+func (r *TechniqueRepository) upsert(ctx context.Context, technique *entity.Technique) error {
+	platforms, err := json.Marshal(technique.Platforms)
+	if err != nil {
+		return fmt.Errorf("failed to marshal platforms: %w", err)
+	}
+	executors, err := json.Marshal(technique.Executors)
+	if err != nil {
+		return fmt.Errorf("failed to marshal executors: %w", err)
+	}
+	detection, err := json.Marshal(technique.Detection)
+	if err != nil {
+		return fmt.Errorf("failed to marshal detection: %w", err)
+	}
+
+	_, err = r.db.ExecContext(ctx, `
+		INSERT INTO techniques (id, name, description, tactic, platforms, executors, detection, is_safe, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(id) DO UPDATE SET
+			name = excluded.name,
+			description = excluded.description,
+			tactic = excluded.tactic,
+			platforms = excluded.platforms,
+			executors = excluded.executors,
+			detection = excluded.detection,
+			is_safe = excluded.is_safe
+	`, technique.ID, technique.Name, technique.Description, technique.Tactic, platforms, executors, detection, technique.IsSafe, time.Now())
+
+	return err
 }
 
 func (r *TechniqueRepository) scanTechniques(rows *sql.Rows) ([]*entity.Technique, error) {
