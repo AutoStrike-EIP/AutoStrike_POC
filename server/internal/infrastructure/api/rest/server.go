@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"autostrike/internal/application"
 	"autostrike/internal/infrastructure/http/handlers"
@@ -180,8 +181,9 @@ func setupDashboardRoutes(router *gin.Engine, dashboardPath string, logger *zap.
 
 	// SPA fallback: serve index.html for all other routes
 	router.NoRoute(func(c *gin.Context) {
-		// Don't serve index.html for API routes
-		if len(c.Request.URL.Path) >= 4 && c.Request.URL.Path[:4] == "/api" {
+		path := c.Request.URL.Path
+		// Don't serve index.html for API or WebSocket routes
+		if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/ws/") {
 			c.JSON(http.StatusNotFound, gin.H{"error": "endpoint not found"})
 			return
 		}
