@@ -13,7 +13,12 @@ vi.mock('../lib/api', () => ({
     logout: vi.fn(),
     refresh: vi.fn(),
   },
+  healthApi: {
+    check: vi.fn(),
+  },
 }));
+
+import { healthApi } from '../lib/api';
 
 // Mock localStorage
 const localStorageMock = {
@@ -48,6 +53,10 @@ describe('Login Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorageMock.getItem.mockReturnValue(null);
+    // Default: auth is enabled
+    vi.mocked(healthApi.check).mockResolvedValue({
+      data: { status: 'ok', auth_enabled: true },
+    } as never);
   });
 
   it('renders login form', () => {
@@ -182,5 +191,36 @@ describe('Login Page', () => {
     renderLogin();
     expect(screen.getByLabelText('Username')).toHaveAttribute('type', 'text');
     expect(screen.getByLabelText('Password')).toHaveAttribute('type', 'password');
+  });
+
+  it('redirects to dashboard when auth is disabled', async () => {
+    vi.mocked(healthApi.check).mockResolvedValue({
+      data: { status: 'ok', auth_enabled: false },
+    } as never);
+
+    renderLogin();
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+    });
+  });
+
+  it('does not redirect when auth is enabled', async () => {
+    vi.mocked(healthApi.check).mockResolvedValue({
+      data: { status: 'ok', auth_enabled: true },
+    } as never);
+
+    renderLogin();
+
+    // Wait for auth check to complete
+    await waitFor(() => {
+      expect(healthApi.check).toHaveBeenCalled();
+    });
+
+    // Give it some time to potentially redirect
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Should not have navigated to dashboard
+    expect(mockNavigate).not.toHaveBeenCalledWith('/dashboard', { replace: true });
   });
 });
