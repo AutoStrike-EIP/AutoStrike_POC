@@ -8,7 +8,7 @@ import {
   DocumentTextIcon,
   PlayIcon,
   Cog6ToothIcon,
-  ArrowRightOnRectangleIcon,
+  ArrowLeftStartOnRectangleIcon,
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import { useAuth } from '../contexts/AuthContext';
@@ -87,7 +87,7 @@ export default function Layout({ children }: LayoutProps) {
               className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
               title="Logout"
             >
-              <ArrowRightOnRectangleIcon className="h-5 w-5" />
+              <ArrowLeftStartOnRectangleIcon className="h-5 w-5" />
             </button>
           </div>
         </div>
