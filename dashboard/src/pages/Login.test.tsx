@@ -223,4 +223,32 @@ describe('Login Page', () => {
     // Should not have navigated to dashboard
     expect(mockNavigate).not.toHaveBeenCalledWith('/dashboard', { replace: true });
   });
+
+  it('redirects to dashboard when user is already authenticated', async () => {
+    // Mock user already logged in with valid token
+    localStorageMock.getItem.mockImplementation((key: string) => {
+      if (key === 'token') return 'valid-token';
+      if (key === 'refreshToken') return 'valid-refresh';
+      return null;
+    });
+
+    vi.mocked(healthApi.check).mockResolvedValue({
+      data: { status: 'ok', auth_enabled: true },
+    } as never);
+
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: {
+        id: 'user-1',
+        username: 'testuser',
+        email: 'test@example.com',
+        role: 'admin',
+      },
+    } as never);
+
+    renderLogin();
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+    });
+  });
 });

@@ -12,18 +12,18 @@ export default function Login() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const { login, authEnabled, isLoading: authLoading } = useAuth();
+  const { login, authEnabled, isLoading: authLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const from = (location.state as LocationState)?.from?.pathname || '/dashboard';
 
-  // Redirect to dashboard if auth is disabled
+  // Redirect if auth is disabled or user is already authenticated
   useEffect(() => {
-    if (!authLoading && !authEnabled) {
-      navigate('/dashboard', { replace: true });
+    if (!authLoading && (!authEnabled || isAuthenticated)) {
+      navigate(from, { replace: true });
     }
-  }, [authEnabled, authLoading, navigate]);
+  }, [authEnabled, authLoading, isAuthenticated, navigate, from]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
