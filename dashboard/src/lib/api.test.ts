@@ -385,6 +385,42 @@ describe('Token Refresh Interceptor Logic', () => {
     expect(localStorage.removeItem).toHaveBeenCalledWith('token');
     expect(global.location.href).toBe('/login');
   });
+
+  it('resets isRefreshing flag when no refresh token, allowing subsequent 401s to be handled', async () => {
+    store['token'] = 'expired-token';
+    // No refreshToken in store
+
+    vi.resetModules();
+    const { api } = await import('./api');
+
+    const interceptors = api.interceptors.response as unknown as {
+      handlers: Array<{
+        fulfilled: (response: unknown) => unknown;
+        rejected: (error: unknown) => Promise<unknown>;
+      }>;
+    };
+    const errorHandler = interceptors.handlers[0].rejected;
+
+    const error1 = {
+      config: { url: '/endpoint-1', _retry: false, headers: {} },
+      response: { status: HttpStatusCode.Unauthorized },
+    };
+
+    // First 401 - no refresh token
+    await expect(errorHandler(error1)).rejects.toThrow('No refresh token');
+
+    // Reset location for second test
+    global.location.href = 'http://localhost:3000/dashboard';
+
+    const error2 = {
+      config: { url: '/endpoint-2', _retry: false, headers: {} },
+      response: { status: HttpStatusCode.Unauthorized },
+    };
+
+    // Second 401 should also be handled (not hang) because isRefreshing was reset
+    await expect(errorHandler(error2)).rejects.toThrow('No refresh token');
+    expect(global.location.href).toBe('/login');
+  });
 });
 
 describe('API exports', () => {

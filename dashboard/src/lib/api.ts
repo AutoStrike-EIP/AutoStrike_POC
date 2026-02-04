@@ -69,6 +69,7 @@ const attemptTokenRefresh = async (
 ): Promise<unknown> => {
   const refreshToken = localStorage.getItem('refreshToken');
   if (!refreshToken) {
+    isRefreshing = false; // Reset flag to prevent hanging on subsequent 401s
     localStorage.removeItem('token');
     if (globalThis.location?.pathname !== '/login') {
       globalThis.location.href = '/login';
