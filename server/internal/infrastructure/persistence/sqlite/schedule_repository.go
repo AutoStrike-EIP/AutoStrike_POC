@@ -75,7 +75,7 @@ func (r *ScheduleRepository) Delete(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Delete associated runs first
 	_, err = tx.ExecContext(ctx, "DELETE FROM schedule_runs WHERE schedule_id = ?", id)

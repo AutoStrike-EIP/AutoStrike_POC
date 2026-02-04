@@ -170,7 +170,7 @@ func (r *NotificationRepository) FindNotificationByID(ctx context.Context, id st
 	}
 
 	if dataJSON != "" {
-		json.Unmarshal([]byte(dataJSON), &notification.Data)
+		_ = json.Unmarshal([]byte(dataJSON), &notification.Data)
 	}
 	if sentAt.Valid {
 		notification.SentAt = &sentAt.Time
@@ -240,7 +240,7 @@ func (r *NotificationRepository) scanNotifications(rows *sql.Rows) ([]*entity.No
 		}
 
 		if dataJSON != "" {
-			json.Unmarshal([]byte(dataJSON), &notification.Data)
+			_ = json.Unmarshal([]byte(dataJSON), &notification.Data)
 		}
 		if sentAt.Valid {
 			notification.SentAt = &sentAt.Time
