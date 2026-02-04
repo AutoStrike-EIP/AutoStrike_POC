@@ -24,8 +24,8 @@ export default function Agents() {
 
   const serverUrl = window.location.origin.replace('http:', 'https:');
   const commands = {
-    linux: `./autostrike-agent --server ${serverUrl}`,
-    windows: `.\\autostrike-agent.exe --server ${serverUrl}`,
+    linux: `./dist/autostrike-agent --server ${serverUrl}`,
+    windows: `.\\dist\\autostrike-agent.exe --server ${serverUrl}`,
     docker: `docker run autostrike-agent --server ${serverUrl}`,
   };
 
