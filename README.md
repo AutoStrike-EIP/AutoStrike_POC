@@ -109,7 +109,7 @@ make test
 # Par composant
 cd server && go test ./...      # 74-100% coverage
 cd agent && cargo test          # 61 tests
-cd dashboard && npm test        # 278 tests
+cd dashboard && npm test        # 280 tests
 ```
 
 ## Documentation

@@ -246,7 +246,7 @@ All techniques are **safe mode compatible** (non-destructive).
   - rest/server: 90.0%
   - sqlite: 74.2%
 - **Agent**: 61 unit tests (`cargo test`)
-- **Dashboard**: 278 tests across 21 files (`npm test`)
+- **Dashboard**: 280 tests across 21 files (`npm test`)
 
 ```bash
 # Run all tests
