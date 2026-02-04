@@ -283,7 +283,7 @@ func TestPermissionHandler_GetRoles_PermissionCounts(t *testing.T) {
 	var result struct {
 		Roles []RoleInfo `json:"roles"`
 	}
-	json.Unmarshal(w.Body.Bytes(), &result)
+	_ = json.Unmarshal(w.Body.Bytes(), &result)
 
 	// Admin should have most permissions
 	adminPerms := 0

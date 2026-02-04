@@ -922,7 +922,7 @@ func TestScenarioHandler_ExportScenarios_WithIDs(t *testing.T) {
 	}
 
 	var export ScenarioExport
-	json.Unmarshal(w.Body.Bytes(), &export)
+	_ = json.Unmarshal(w.Body.Bytes(), &export)
 
 	if len(export.Scenarios) != 1 {
 		t.Errorf("Expected 1 scenario, got %d", len(export.Scenarios))
@@ -972,7 +972,7 @@ func TestScenarioHandler_ExportScenario(t *testing.T) {
 	}
 
 	var export ScenarioExport
-	json.Unmarshal(w.Body.Bytes(), &export)
+	_ = json.Unmarshal(w.Body.Bytes(), &export)
 
 	if len(export.Scenarios) != 1 {
 		t.Errorf("Expected 1 scenario, got %d", len(export.Scenarios))
@@ -1041,7 +1041,7 @@ func TestScenarioHandler_ImportScenarios(t *testing.T) {
 	}
 
 	var response ImportScenariosResponse
-	json.Unmarshal(w.Body.Bytes(), &response)
+	_ = json.Unmarshal(w.Body.Bytes(), &response)
 
 	if response.Imported != 1 {
 		t.Errorf("Expected 1 imported, got %d", response.Imported)
@@ -1140,7 +1140,7 @@ func TestScenarioHandler_ImportScenarios_PartialFailure(t *testing.T) {
 	}
 
 	var response ImportScenariosResponse
-	json.Unmarshal(w.Body.Bytes(), &response)
+	_ = json.Unmarshal(w.Body.Bytes(), &response)
 
 	if response.Imported != 1 {
 		t.Errorf("Expected 1 imported, got %d", response.Imported)
@@ -1192,7 +1192,7 @@ func TestScenarioHandler_ImportScenarios_AllFailed(t *testing.T) {
 	}
 
 	var response ImportScenariosResponse
-	json.Unmarshal(w.Body.Bytes(), &response)
+	_ = json.Unmarshal(w.Body.Bytes(), &response)
 
 	if response.Imported != 0 {
 		t.Errorf("Expected 0 imported, got %d", response.Imported)
