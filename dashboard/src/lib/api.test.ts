@@ -438,3 +438,86 @@ describe('healthApi', () => {
     expect(typeof healthApi.check).toBe('function');
   });
 });
+
+describe('Token Refresh Queue and Success Flow', () => {
+  const originalLocalStorage = global.localStorage;
+  const originalLocation = global.location;
+  let store: Record<string, string> = {};
+
+  beforeEach(() => {
+    store = {};
+    const mockLocalStorage = {
+      getItem: vi.fn((key: string) => store[key] || null),
+      setItem: vi.fn((key: string, value: string) => {
+        store[key] = value;
+      }),
+      removeItem: vi.fn((key: string) => {
+        delete store[key];
+      }),
+      clear: vi.fn(),
+      length: 0,
+      key: vi.fn(),
+    };
+    Object.defineProperty(global, 'localStorage', {
+      value: mockLocalStorage,
+      writable: true,
+    });
+    Object.defineProperty(global, 'location', {
+      value: { href: 'http://localhost:3000/dashboard', pathname: '/dashboard' },
+      writable: true,
+    });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(global, 'localStorage', {
+      value: originalLocalStorage,
+      writable: true,
+    });
+    Object.defineProperty(global, 'location', {
+      value: originalLocation,
+      writable: true,
+    });
+  });
+
+  it('skips refresh when _retry flag is already set', async () => {
+    vi.resetModules();
+    const { api } = await import('./api');
+
+    const interceptors = api.interceptors.response as unknown as {
+      handlers: Array<{
+        fulfilled: (response: unknown) => unknown;
+        rejected: (error: unknown) => Promise<unknown>;
+      }>;
+    };
+    const errorHandler = interceptors.handlers[0].rejected;
+
+    const error = {
+      config: { url: '/some-endpoint', _retry: true, headers: {} },
+      response: { status: HttpStatusCode.Unauthorized },
+    };
+
+    await expect(errorHandler(error)).rejects.toBe(error);
+    expect(localStorage.removeItem).toHaveBeenCalledWith('token');
+    expect(localStorage.removeItem).toHaveBeenCalledWith('refreshToken');
+  });
+
+  it('throws error when originalRequest is undefined after all checks', async () => {
+    vi.resetModules();
+    const { api } = await import('./api');
+
+    const interceptors = api.interceptors.response as unknown as {
+      handlers: Array<{
+        fulfilled: (response: unknown) => unknown;
+        rejected: (error: unknown) => Promise<unknown>;
+      }>;
+    };
+    const errorHandler = interceptors.handlers[0].rejected;
+
+    // Error with no config at all
+    const error = {
+      response: { status: HttpStatusCode.Unauthorized },
+    };
+
+    await expect(errorHandler(error)).rejects.toBe(error);
+  });
+});
