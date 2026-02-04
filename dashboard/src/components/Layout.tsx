@@ -29,7 +29,7 @@ const navigation = [
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, authEnabled } = useAuth();
 
   const handleLogout = async () => {
     await logout();
@@ -82,13 +82,15 @@ export default function Layout({ children }: LayoutProps) {
                 </p>
               </div>
             </div>
-            <button
-              onClick={handleLogout}
-              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
-              title="Logout"
-            >
-              <ArrowLeftStartOnRectangleIcon className="h-5 w-5" />
-            </button>
+            {authEnabled && (
+              <button
+                onClick={handleLogout}
+                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+                title="Logout"
+              >
+                <ArrowLeftStartOnRectangleIcon className="h-5 w-5" />
+              </button>
+            )}
           </div>
         </div>
       </div>
