@@ -111,6 +111,12 @@ func (m *mockResultRepo) FindResultsByExecution(ctx context.Context, executionID
 func (m *mockResultRepo) FindResultsByTechnique(ctx context.Context, techniqueID string) ([]*entity.ExecutionResult, error) {
 	return []*entity.ExecutionResult{}, nil
 }
+func (m *mockResultRepo) FindExecutionsByDateRange(ctx context.Context, start, end time.Time) ([]*entity.Execution, error) {
+	return []*entity.Execution{}, nil
+}
+func (m *mockResultRepo) FindCompletedExecutionsByDateRange(ctx context.Context, start, end time.Time) ([]*entity.Execution, error) {
+	return []*entity.Execution{}, nil
+}
 
 func TestNewServerConfig_Default(t *testing.T) {
 	// Clear environment variables

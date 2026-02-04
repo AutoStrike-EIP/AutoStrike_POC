@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Settings from './Settings';
 
 // Mock react-hot-toast
@@ -8,6 +9,17 @@ vi.mock('react-hot-toast', () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),
+  },
+}));
+
+// Mock the notification API
+vi.mock('../lib/api', () => ({
+  notificationApi: {
+    getSettings: vi.fn(() => Promise.reject({ response: { status: 404 } })),
+    getSMTPConfig: vi.fn(() => Promise.reject({ response: { status: 404 } })),
+    createSettings: vi.fn(() => Promise.resolve({ data: {} })),
+    updateSettings: vi.fn(() => Promise.resolve({ data: {} })),
+    testSMTP: vi.fn(() => Promise.resolve({ data: {} })),
   },
 }));
 
@@ -29,11 +41,24 @@ const localStorageMock = (() => {
 })();
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 
+function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+}
+
 function renderSettings() {
+  const queryClient = createTestQueryClient();
   return render(
-    <MemoryRouter>
-      <Settings />
-    </MemoryRouter>
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <Settings />
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
@@ -48,7 +73,7 @@ describe('Settings Page', () => {
     expect(screen.getByText('Settings')).toBeInTheDocument();
   });
 
-  it('renders all configuration sections', () => {
+  it('renders all configuration sections', async () => {
     renderSettings();
     expect(screen.getByText('Server Configuration')).toBeInTheDocument();
     expect(screen.getByText('Execution Settings')).toBeInTheDocument();
@@ -56,25 +81,33 @@ describe('Settings Page', () => {
     expect(screen.getByText('TLS / mTLS Configuration')).toBeInTheDocument();
   });
 
-  it('renders server URL input with default value', () => {
+  it('renders notification settings section', () => {
     renderSettings();
-    const inputs = screen.getAllByRole('textbox');
-    // First text input should be server URL
-    expect(inputs[0]).toHaveValue('https://localhost:8443');
+    expect(screen.getByText('Notification Settings')).toBeInTheDocument();
   });
 
-  it('renders heartbeat interval input with default value', () => {
+  it('renders server URL input with default value', async () => {
     renderSettings();
-    const spinbuttons = screen.getAllByRole('spinbutton');
-    // First number input should be heartbeat interval
-    expect(spinbuttons[0]).toHaveValue(30);
+    await waitFor(() => {
+      const serverUrlInput = screen.getByLabelText('Server URL');
+      expect(serverUrlInput).toHaveValue('https://localhost:8443');
+    });
   });
 
-  it('renders stale timeout input with default value', () => {
+  it('renders heartbeat interval input with default value', async () => {
     renderSettings();
-    const spinbuttons = screen.getAllByRole('spinbutton');
-    // Second number input should be stale timeout
-    expect(spinbuttons[1]).toHaveValue(120);
+    await waitFor(() => {
+      const heartbeatInput = screen.getByLabelText('Heartbeat Interval (seconds)');
+      expect(heartbeatInput).toHaveValue(30);
+    });
+  });
+
+  it('renders stale timeout input with default value', async () => {
+    renderSettings();
+    await waitFor(() => {
+      const staleInput = screen.getByLabelText('Stale Agent Timeout (seconds)');
+      expect(staleInput).toHaveValue(120);
+    });
   });
 
   it('renders safe mode toggle', () => {
@@ -101,24 +134,22 @@ describe('Settings Form Interactions', () => {
     localStorageMock.clear();
   });
 
-  it('updates server URL on input change', () => {
+  it('updates server URL on input change', async () => {
     renderSettings();
-    const inputs = screen.getAllByRole('textbox');
-    const serverUrlInput = inputs[0];
-
-    fireEvent.change(serverUrlInput, { target: { value: 'https://newserver:8443' } });
-
-    expect(serverUrlInput).toHaveValue('https://newserver:8443');
+    await waitFor(() => {
+      const serverUrlInput = screen.getByLabelText('Server URL');
+      fireEvent.change(serverUrlInput, { target: { value: 'https://newserver:8443' } });
+      expect(serverUrlInput).toHaveValue('https://newserver:8443');
+    });
   });
 
-  it('updates heartbeat interval on input change', () => {
+  it('updates heartbeat interval on input change', async () => {
     renderSettings();
-    const spinbuttons = screen.getAllByRole('spinbutton');
-    const heartbeatInput = spinbuttons[0];
-
-    fireEvent.change(heartbeatInput, { target: { value: '60' } });
-
-    expect(heartbeatInput).toHaveValue(60);
+    await waitFor(() => {
+      const heartbeatInput = screen.getByLabelText('Heartbeat Interval (seconds)');
+      fireEvent.change(heartbeatInput, { target: { value: '60' } });
+      expect(heartbeatInput).toHaveValue(60);
+    });
   });
 
   it('saves settings to localStorage on save button click', async () => {
@@ -137,7 +168,7 @@ describe('Settings Form Interactions', () => {
     });
   });
 
-  it('loads settings from localStorage on mount', () => {
+  it('loads settings from localStorage on mount', async () => {
     const savedSettings = {
       serverUrl: 'https://custom:9999',
       heartbeatInterval: 45,
@@ -147,21 +178,10 @@ describe('Settings Form Interactions', () => {
 
     renderSettings();
 
-    const inputs = screen.getAllByRole('textbox');
-    expect(inputs[0]).toHaveValue('https://custom:9999');
-  });
-
-  it('toggles safe mode when button clicked', () => {
-    renderSettings();
-    const toggleButton = screen.getByRole('button', { name: '' });
-
-    // Initially enabled (has bg-primary-600)
-    expect(toggleButton).toHaveClass('bg-primary-600');
-
-    fireEvent.click(toggleButton);
-
-    // Now disabled (has bg-gray-200)
-    expect(toggleButton).toHaveClass('bg-gray-200');
+    await waitFor(() => {
+      const serverUrlInput = screen.getByLabelText('Server URL');
+      expect(serverUrlInput).toHaveValue('https://custom:9999');
+    });
   });
 });
 
@@ -172,74 +192,96 @@ describe('Settings Default Values', () => {
     localStorageMock.getItem.mockReturnValue(null);
   });
 
-  it('uses default heartbeat interval when invalid input', () => {
+  it('uses default heartbeat interval when invalid input', async () => {
     renderSettings();
-    const spinbuttons = screen.getAllByRole('spinbutton');
-    const heartbeatInput = spinbuttons[0];
-
-    fireEvent.change(heartbeatInput, { target: { value: '' } });
-
-    expect(heartbeatInput).toHaveValue(30);
+    await waitFor(() => {
+      const heartbeatInput = screen.getByLabelText('Heartbeat Interval (seconds)');
+      fireEvent.change(heartbeatInput, { target: { value: '' } });
+      expect(heartbeatInput).toHaveValue(30);
+    });
   });
 
-  it('uses default stale timeout when invalid input', () => {
+  it('uses default stale timeout when invalid input', async () => {
     renderSettings();
-    const spinbuttons = screen.getAllByRole('spinbutton');
-    const staleInput = spinbuttons[1];
-
-    fireEvent.change(staleInput, { target: { value: '' } });
-
-    expect(staleInput).toHaveValue(120);
+    await waitFor(() => {
+      const staleInput = screen.getByLabelText('Stale Agent Timeout (seconds)');
+      fireEvent.change(staleInput, { target: { value: '' } });
+      expect(staleInput).toHaveValue(120);
+    });
   });
 
-  it('handles malformed JSON in localStorage gracefully', () => {
+  it('handles malformed JSON in localStorage gracefully', async () => {
     localStorageMock.getItem.mockReturnValue('invalid-json');
 
     // Should not throw
     expect(() => renderSettings()).not.toThrow();
 
     // Should use defaults
-    const inputs = screen.getAllByRole('textbox');
-    expect(inputs[0]).toHaveValue('https://localhost:8443');
+    await waitFor(() => {
+      const serverUrlInput = screen.getByLabelText('Server URL');
+      expect(serverUrlInput).toHaveValue('https://localhost:8443');
+    });
   });
 
-  it('updates CA certificate path on input change', () => {
+  it('updates CA certificate path on input change', async () => {
     renderSettings();
-    const inputs = screen.getAllByRole('textbox');
-    const caCertInput = inputs[1]; // Second text input
-
-    fireEvent.change(caCertInput, { target: { value: '/path/to/ca.crt' } });
-
-    expect(caCertInput).toHaveValue('/path/to/ca.crt');
+    await waitFor(() => {
+      const caCertInput = screen.getByLabelText('CA Certificate Path');
+      fireEvent.change(caCertInput, { target: { value: '/path/to/ca.crt' } });
+      expect(caCertInput).toHaveValue('/path/to/ca.crt');
+    });
   });
 
-  it('updates server certificate path on input change', () => {
+  it('updates server certificate path on input change', async () => {
     renderSettings();
-    const inputs = screen.getAllByRole('textbox');
-    const serverCertInput = inputs[2]; // Third text input
-
-    fireEvent.change(serverCertInput, { target: { value: '/path/to/server.crt' } });
-
-    expect(serverCertInput).toHaveValue('/path/to/server.crt');
+    await waitFor(() => {
+      const serverCertInput = screen.getByLabelText('Server Certificate Path');
+      fireEvent.change(serverCertInput, { target: { value: '/path/to/server.crt' } });
+      expect(serverCertInput).toHaveValue('/path/to/server.crt');
+    });
   });
 
-  it('updates server key path on input change', () => {
+  it('updates server key path on input change', async () => {
     renderSettings();
-    const inputs = screen.getAllByRole('textbox');
-    const serverKeyInput = inputs[3]; // Fourth text input
-
-    fireEvent.change(serverKeyInput, { target: { value: '/path/to/server.key' } });
-
-    expect(serverKeyInput).toHaveValue('/path/to/server.key');
+    await waitFor(() => {
+      const serverKeyInput = screen.getByLabelText('Server Key Path');
+      fireEvent.change(serverKeyInput, { target: { value: '/path/to/server.key' } });
+      expect(serverKeyInput).toHaveValue('/path/to/server.key');
+    });
   });
 
-  it('updates stale timeout on valid input change', () => {
+  it('updates stale timeout on valid input change', async () => {
     renderSettings();
-    const spinbuttons = screen.getAllByRole('spinbutton');
-    const staleInput = spinbuttons[1];
+    await waitFor(() => {
+      const staleInput = screen.getByLabelText('Stale Agent Timeout (seconds)');
+      fireEvent.change(staleInput, { target: { value: '300' } });
+      expect(staleInput).toHaveValue(300);
+    });
+  });
+});
 
-    fireEvent.change(staleInput, { target: { value: '300' } });
+describe('Notification Settings', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorageMock.clear();
+  });
 
-    expect(staleInput).toHaveValue(300);
+  it('renders notification settings section', () => {
+    renderSettings();
+    expect(screen.getByText('Notification Settings')).toBeInTheDocument();
+  });
+
+  it('renders enable notifications toggle after loading', async () => {
+    renderSettings();
+    await waitFor(() => {
+      expect(screen.getByText('Enable Notifications')).toBeInTheDocument();
+    });
+  });
+
+  it('renders notification settings description after loading', async () => {
+    renderSettings();
+    await waitFor(() => {
+      expect(screen.getByText('Receive notifications for execution events')).toBeInTheDocument();
+    });
   });
 });

@@ -7,8 +7,12 @@ import {
   Squares2X2Icon,
   DocumentTextIcon,
   PlayIcon,
+  ChartBarIcon,
+  CalendarIcon,
   Cog6ToothIcon,
   ArrowLeftStartOnRectangleIcon,
+  UsersIcon,
+  ShieldCheckIcon,
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,13 +21,24 @@ interface LayoutProps {
   readonly children: ReactNode;
 }
 
-const navigation = [
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  adminOnly?: boolean;
+}
+
+const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   { name: 'Agents', href: '/agents', icon: ComputerDesktopIcon },
   { name: 'Techniques', href: '/techniques', icon: ShieldExclamationIcon },
   { name: 'ATT&CK Matrix', href: '/matrix', icon: Squares2X2Icon },
   { name: 'Scenarios', href: '/scenarios', icon: DocumentTextIcon },
   { name: 'Executions', href: '/executions', icon: PlayIcon },
+  { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
+  { name: 'Scheduler', href: '/scheduler', icon: CalendarIcon },
+  { name: 'Users', href: '/admin/users', icon: UsersIcon, adminOnly: true },
+  { name: 'Permissions', href: '/admin/permissions', icon: ShieldCheckIcon, adminOnly: true },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon },
 ];
 
@@ -45,24 +60,26 @@ export default function Layout({ children }: LayoutProps) {
         </div>
 
         <nav className="flex-1 px-4 space-y-1">
-          {navigation.map((item) => {
-            const isActive = location.pathname === item.href;
-            return (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={clsx(
-                  'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
-                  isActive
-                    ? 'bg-primary-600 text-white'
-                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                {item.name}
-              </Link>
-            );
-          })}
+          {navigation
+            .filter((item) => !item.adminOnly || user?.role === 'admin')
+            .map((item) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={clsx(
+                    'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
+                    isActive
+                      ? 'bg-primary-600 text-white'
+                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                  {item.name}
+                </Link>
+              );
+            })}
         </nav>
 
         <div className="p-4 border-t border-gray-800">

@@ -31,11 +31,14 @@ type ServerConfig struct {
 
 // Services groups all application services for dependency injection
 type Services struct {
-	Agent     *application.AgentService
-	Scenario  *application.ScenarioService
-	Execution *application.ExecutionService
-	Technique *application.TechniqueService
-	Auth      *application.AuthService
+	Agent        *application.AgentService
+	Scenario     *application.ScenarioService
+	Execution    *application.ExecutionService
+	Technique    *application.TechniqueService
+	Auth         *application.AuthService
+	Analytics    *application.AnalyticsService
+	Notification *application.NotificationService
+	Schedule     *application.ScheduleService
 }
 
 // NewServerConfig creates a server config from environment variables
@@ -141,7 +144,15 @@ func NewServerWithConfig(
 		if services.Auth != nil {
 			authHandler := handlers.NewAuthHandler(services.Auth)
 			authHandler.RegisterProtectedRoutes(api)
+
+			// Admin routes (requires admin role)
+			adminHandler := handlers.NewAdminHandler(services.Auth)
+			adminHandler.RegisterRoutes(api)
 		}
+
+		// Permission routes
+		permissionHandler := handlers.NewPermissionHandler()
+		permissionHandler.RegisterRoutes(api)
 
 		// Agents
 		agentHandler := handlers.NewAgentHandler(services.Agent)
@@ -163,6 +174,24 @@ func NewServerWithConfig(
 		// Scenarios
 		scenarioHandler := handlers.NewScenarioHandler(services.Scenario)
 		scenarioHandler.RegisterRoutes(api)
+
+		// Analytics
+		if services.Analytics != nil {
+			analyticsHandler := handlers.NewAnalyticsHandler(services.Analytics)
+			analyticsHandler.RegisterRoutes(api)
+		}
+
+		// Notifications
+		if services.Notification != nil {
+			notificationHandler := handlers.NewNotificationHandler(services.Notification)
+			notificationHandler.RegisterRoutes(api)
+		}
+
+		// Schedules
+		if services.Schedule != nil {
+			scheduleHandler := handlers.NewScheduleHandler(services.Schedule)
+			scheduleHandler.RegisterRoutes(api)
+		}
 	}
 
 	// Serve dashboard static files if path is configured

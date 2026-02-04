@@ -6,10 +6,13 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
 	"autostrike/internal/application"
+	"autostrike/internal/domain/entity"
+	"autostrike/internal/domain/repository"
 	"autostrike/internal/domain/service"
 	"autostrike/internal/infrastructure/api/rest"
 	"autostrike/internal/infrastructure/persistence/sqlite"
@@ -59,6 +62,8 @@ func main() {
 	techniqueRepo := sqlite.NewTechniqueRepository(db)
 	resultRepo := sqlite.NewResultRepository(db)
 	userRepo := sqlite.NewUserRepository(db)
+	notificationRepo := sqlite.NewNotificationRepository(db)
+	scheduleRepo := sqlite.NewScheduleRepository(db)
 
 	// Initialize domain services
 	validator := service.NewTechniqueValidator()
@@ -77,6 +82,13 @@ func main() {
 		calculator,
 	)
 	techniqueService := application.NewTechniqueService(techniqueRepo)
+	analyticsService := application.NewAnalyticsService(resultRepo)
+
+	// Initialize notification service with SMTP config from environment
+	notificationService := initNotificationService(notificationRepo, userRepo, logger)
+
+	// Initialize schedule service
+	scheduleService := application.NewScheduleService(scheduleRepo, executionService, logger)
 
 	// Initialize auth service (JWT secret from environment)
 	jwtSecret := os.Getenv("JWT_SECRET")
@@ -126,13 +138,19 @@ func main() {
 
 	// Initialize HTTP server
 	services := &rest.Services{
-		Agent:     agentService,
-		Scenario:  scenarioService,
-		Execution: executionService,
-		Technique: techniqueService,
-		Auth:      authService,
+		Agent:        agentService,
+		Scenario:     scenarioService,
+		Execution:    executionService,
+		Technique:    techniqueService,
+		Auth:         authService,
+		Analytics:    analyticsService,
+		Notification: notificationService,
+		Schedule:     scheduleService,
 	}
 	server := rest.NewServer(services, hub, logger)
+
+	// Start the scheduler
+	scheduleService.Start()
 
 	// Start server
 	go func() {
@@ -149,6 +167,9 @@ func main() {
 	<-quit
 
 	logger.Info("Shutting down server...")
+
+	// Stop the scheduler
+	scheduleService.Stop()
 }
 
 func autoImportTechniques(service *application.TechniqueService, logger *zap.Logger) {
@@ -220,4 +241,59 @@ func loadConfig() error {
 		}
 	}
 	return nil
+}
+
+// initNotificationService initializes the notification service with SMTP config from environment
+func initNotificationService(
+	notificationRepo repository.NotificationRepository,
+	userRepo repository.UserRepository,
+	logger *zap.Logger,
+) *application.NotificationService {
+	// Get SMTP config from environment variables
+	smtpHost := os.Getenv("SMTP_HOST")
+	smtpPortStr := os.Getenv("SMTP_PORT")
+	smtpUsername := os.Getenv("SMTP_USERNAME")
+	smtpPassword := os.Getenv("SMTP_PASSWORD")
+	smtpFrom := os.Getenv("SMTP_FROM")
+	smtpUseTLS := os.Getenv("SMTP_USE_TLS") == "true"
+	dashboardURL := os.Getenv("DASHBOARD_URL")
+
+	if dashboardURL == "" {
+		dashboardURL = "https://localhost:8443"
+	}
+
+	var smtpConfig *entity.SMTPConfig
+	if smtpHost != "" {
+		smtpPort := 587 // Default SMTP port
+		if smtpPortStr != "" {
+			if p, err := strconv.Atoi(smtpPortStr); err == nil {
+				smtpPort = p
+			}
+		}
+
+		smtpConfig = &entity.SMTPConfig{
+			Host:     smtpHost,
+			Port:     smtpPort,
+			Username: smtpUsername,
+			Password: smtpPassword,
+			From:     smtpFrom,
+			UseTLS:   smtpUseTLS,
+		}
+
+		if smtpConfig.IsValid() {
+			logger.Info("SMTP configuration loaded",
+				zap.String("host", smtpHost),
+				zap.Int("port", smtpPort),
+				zap.String("from", smtpFrom),
+				zap.Bool("use_tls", smtpUseTLS),
+			)
+		} else {
+			logger.Warn("SMTP configuration incomplete - email notifications disabled")
+			smtpConfig = nil
+		}
+	} else {
+		logger.Info("SMTP not configured - email notifications disabled")
+	}
+
+	return application.NewNotificationService(notificationRepo, userRepo, smtpConfig, dashboardURL, logger)
 }

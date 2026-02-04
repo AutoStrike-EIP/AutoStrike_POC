@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"autostrike/internal/application"
 	"autostrike/internal/domain/entity"
@@ -91,6 +92,57 @@ func (m *mockUserRepo) FindAll(ctx context.Context) ([]*entity.User, error) {
 	return result, nil
 }
 
+func (m *mockUserRepo) FindActive(ctx context.Context) ([]*entity.User, error) {
+	if m.findErr != nil {
+		return nil, m.findErr
+	}
+	result := make([]*entity.User, 0)
+	for _, user := range m.users {
+		if user.IsActive {
+			result = append(result, user)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockUserRepo) UpdateLastLogin(ctx context.Context, id string) error {
+	user, ok := m.users[id]
+	if !ok {
+		return sql.ErrNoRows
+	}
+	now := time.Now()
+	user.LastLoginAt = &now
+	return nil
+}
+
+func (m *mockUserRepo) Deactivate(ctx context.Context, id string) error {
+	user, ok := m.users[id]
+	if !ok {
+		return sql.ErrNoRows
+	}
+	user.IsActive = false
+	return nil
+}
+
+func (m *mockUserRepo) Reactivate(ctx context.Context, id string) error {
+	user, ok := m.users[id]
+	if !ok {
+		return sql.ErrNoRows
+	}
+	user.IsActive = true
+	return nil
+}
+
+func (m *mockUserRepo) CountByRole(ctx context.Context, role entity.UserRole) (int, error) {
+	count := 0
+	for _, user := range m.users {
+		if user.Role == role && user.IsActive {
+			count++
+		}
+	}
+	return count, nil
+}
+
 func TestNewAuthHandler(t *testing.T) {
 	repo := newMockUserRepo()
 	service := application.NewAuthService(repo, "test-secret")
@@ -143,6 +195,7 @@ func TestAuthHandler_Login_Success(t *testing.T) {
 		Username:     "testuser",
 		PasswordHash: string(hashedPassword),
 		Role:         entity.RoleAdmin,
+		IsActive:     true,
 	}
 
 	router := gin.New()
@@ -186,6 +239,7 @@ func TestAuthHandler_Login_InvalidCredentials(t *testing.T) {
 		ID:           "user-1",
 		Username:     "testuser",
 		PasswordHash: string(hashedPassword),
+		IsActive:     true,
 	}
 
 	router := gin.New()
@@ -281,6 +335,7 @@ func TestAuthHandler_Refresh_Success(t *testing.T) {
 		Username:     "testuser",
 		PasswordHash: string(hashedPassword),
 		Role:         entity.RoleAdmin,
+		IsActive:     true,
 	}
 
 	// Login first to get tokens

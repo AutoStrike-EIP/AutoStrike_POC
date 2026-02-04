@@ -86,6 +86,57 @@ func (m *mockUserRepo) FindAll(ctx context.Context) ([]*entity.User, error) {
 	return result, nil
 }
 
+func (m *mockUserRepo) FindActive(ctx context.Context) ([]*entity.User, error) {
+	if m.findErr != nil {
+		return nil, m.findErr
+	}
+	result := make([]*entity.User, 0)
+	for _, user := range m.users {
+		if user.IsActive {
+			result = append(result, user)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockUserRepo) UpdateLastLogin(ctx context.Context, id string) error {
+	user, ok := m.users[id]
+	if !ok {
+		return sql.ErrNoRows
+	}
+	now := time.Now()
+	user.LastLoginAt = &now
+	return nil
+}
+
+func (m *mockUserRepo) Deactivate(ctx context.Context, id string) error {
+	user, ok := m.users[id]
+	if !ok {
+		return sql.ErrNoRows
+	}
+	user.IsActive = false
+	return nil
+}
+
+func (m *mockUserRepo) Reactivate(ctx context.Context, id string) error {
+	user, ok := m.users[id]
+	if !ok {
+		return sql.ErrNoRows
+	}
+	user.IsActive = true
+	return nil
+}
+
+func (m *mockUserRepo) CountByRole(ctx context.Context, role entity.UserRole) (int, error) {
+	count := 0
+	for _, user := range m.users {
+		if user.Role == role && user.IsActive {
+			count++
+		}
+	}
+	return count, nil
+}
+
 func TestNewAuthService(t *testing.T) {
 	repo := newMockUserRepo()
 	service := NewAuthService(repo, "test-secret")
@@ -107,6 +158,7 @@ func TestAuthService_Login_Success(t *testing.T) {
 		Email:        "test@example.com",
 		PasswordHash: string(hashedPassword),
 		Role:         entity.RoleAdmin,
+		IsActive:     true,
 	}
 
 	ctx := context.Background()
@@ -141,6 +193,7 @@ func TestAuthService_Login_InvalidPassword(t *testing.T) {
 		ID:           "user-1",
 		Username:     "testuser",
 		PasswordHash: string(hashedPassword),
+		IsActive:     true,
 	}
 
 	ctx := context.Background()
@@ -148,6 +201,26 @@ func TestAuthService_Login_InvalidPassword(t *testing.T) {
 
 	if err != ErrInvalidCredentials {
 		t.Errorf("Expected ErrInvalidCredentials, got %v", err)
+	}
+}
+
+func TestAuthService_Login_InactiveUser(t *testing.T) {
+	repo := newMockUserRepo()
+	service := NewAuthService(repo, "test-secret")
+
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), 10)
+	repo.users["user-1"] = &entity.User{
+		ID:           "user-1",
+		Username:     "testuser",
+		PasswordHash: string(hashedPassword),
+		IsActive:     false,
+	}
+
+	ctx := context.Background()
+	_, err := service.Login(ctx, "testuser", "password123")
+
+	if err != ErrUserInactive {
+		t.Errorf("Expected ErrUserInactive, got %v", err)
 	}
 }
 
@@ -174,6 +247,7 @@ func TestAuthService_Refresh_Success(t *testing.T) {
 		Username:     "testuser",
 		PasswordHash: string(hashedPassword),
 		Role:         entity.RoleAdmin,
+		IsActive:     true,
 	}
 
 	ctx := context.Background()
@@ -216,6 +290,7 @@ func TestAuthService_Refresh_WrongTokenType(t *testing.T) {
 		ID:           "user-1",
 		Username:     "testuser",
 		PasswordHash: string(hashedPassword),
+		IsActive:     true,
 	}
 
 	ctx := context.Background()
@@ -389,6 +464,7 @@ func TestAuthService_ValidateToken_Success(t *testing.T) {
 		Username:     "testuser",
 		PasswordHash: string(hashedPassword),
 		Role:         entity.RoleAdmin,
+		IsActive:     true,
 	}
 
 	ctx := context.Background()
@@ -468,6 +544,7 @@ func TestAuthService_Refresh_UserDeleted(t *testing.T) {
 		ID:           "user-1",
 		Username:     "testuser",
 		PasswordHash: string(hashedPassword),
+		IsActive:     true,
 	}
 
 	ctx := context.Background()
@@ -492,6 +569,7 @@ func TestAuthService_TokenExpiry(t *testing.T) {
 		ID:           "user-1",
 		Username:     "testuser",
 		PasswordHash: string(hashedPassword),
+		IsActive:     true,
 	}
 
 	ctx := context.Background()

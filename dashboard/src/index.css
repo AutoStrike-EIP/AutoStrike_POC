@@ -23,6 +23,10 @@ body {
     @apply bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors font-medium;
   }
 
+  .btn-secondary {
+    @apply bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors font-medium;
+  }
+
   .btn-danger {
     @apply bg-danger-600 text-white px-4 py-2 rounded-lg hover:bg-danger-500 transition-colors font-medium;
   }
