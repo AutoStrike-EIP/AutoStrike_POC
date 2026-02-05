@@ -63,13 +63,21 @@ export default function Scenarios() {
     errors?: string[];
   } | null>(null);
 
-  // Create scenario form state
-  const [newScenario, setNewScenario] = useState({
+  // Create scenario form initial state
+  const initialScenarioForm = {
     name: '',
     description: '',
     tags: '',
     phases: [{ name: 'Phase 1', techniques: [] as string[] }],
-  });
+  };
+
+  // Create scenario form state
+  const [newScenario, setNewScenario] = useState(initialScenarioForm);
+
+  // Reset form helper
+  const resetCreateForm = () => {
+    setNewScenario({ ...initialScenarioForm, phases: [{ name: 'Phase 1', techniques: [] }] });
+  };
 
   const { data: scenarios, isLoading } = useQuery<Scenario[]>({
     queryKey: ['scenarios'],
@@ -128,7 +136,7 @@ export default function Scenarios() {
       queryClient.invalidateQueries({ queryKey: ['scenarios'] });
       toast.success('Scenario created successfully');
       setShowCreateModal(false);
-      setNewScenario({ name: '', description: '', tags: '', phases: [{ name: 'Phase 1', techniques: [] }] });
+      resetCreateForm();
     },
     onError: (error: { response?: { data?: { error?: string } } }) => {
       toast.error(error.response?.data?.error || 'Failed to create scenario');
@@ -218,7 +226,13 @@ export default function Scenarios() {
   };
 
   const handleCreateClick = () => {
+    resetCreateForm();
     setShowCreateModal(true);
+  };
+
+  const handleCloseCreateModal = () => {
+    setShowCreateModal(false);
+    resetCreateForm();
   };
 
   const handleAddPhase = () => {
@@ -242,19 +256,23 @@ export default function Scenarios() {
     }));
   };
 
+  const toggleTechniqueInPhase = (
+    phase: { name: string; techniques: string[] },
+    techniqueId: string
+  ): { name: string; techniques: string[] } => {
+    const hasTechnique = phase.techniques.includes(techniqueId);
+    const updatedTechniques = hasTechnique
+      ? phase.techniques.filter(t => t !== techniqueId)
+      : [...phase.techniques, techniqueId];
+    return { ...phase, techniques: updatedTechniques };
+  };
+
   const handleTechniqueToggle = (phaseIndex: number, techniqueId: string) => {
     setNewScenario(prev => ({
       ...prev,
-      phases: prev.phases.map((p, i) => {
-        if (i !== phaseIndex) return p;
-        const hasTechnique = p.techniques.includes(techniqueId);
-        return {
-          ...p,
-          techniques: hasTechnique
-            ? p.techniques.filter(t => t !== techniqueId)
-            : [...p.techniques, techniqueId],
-        };
-      }),
+      phases: prev.phases.map((p, i) =>
+        i === phaseIndex ? toggleTechniqueInPhase(p, techniqueId) : p
+      ),
     }));
   };
 
@@ -477,7 +495,7 @@ export default function Scenarios() {
             <div className="flex items-center justify-between p-6 border-b">
               <h2 className="text-xl font-semibold">Create Scenario</h2>
               <button
-                onClick={() => setShowCreateModal(false)}
+                onClick={handleCloseCreateModal}
                 className="p-2 hover:bg-gray-100 rounded-lg"
               >
                 <XMarkIcon className="h-5 w-5" />
@@ -488,8 +506,9 @@ export default function Scenarios() {
                 {/* Name & Description */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                    <label htmlFor="scenario-name" className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                     <input
+                      id="scenario-name"
                       type="text"
                       value={newScenario.name}
                       onChange={(e) => setNewScenario(prev => ({ ...prev, name: e.target.value }))}
@@ -498,8 +517,9 @@ export default function Scenarios() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tags (comma-separated)</label>
+                    <label htmlFor="scenario-tags" className="block text-sm font-medium text-gray-700 mb-1">Tags (comma-separated)</label>
                     <input
+                      id="scenario-tags"
                       type="text"
                       value={newScenario.tags}
                       onChange={(e) => setNewScenario(prev => ({ ...prev, tags: e.target.value }))}
@@ -509,8 +529,9 @@ export default function Scenarios() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label htmlFor="scenario-description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                   <textarea
+                    id="scenario-description"
                     value={newScenario.description}
                     onChange={(e) => setNewScenario(prev => ({ ...prev, description: e.target.value }))}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -522,7 +543,7 @@ export default function Scenarios() {
                 {/* Phases */}
                 <div>
                   <div className="flex justify-between items-center mb-3">
-                    <label className="block text-sm font-medium text-gray-700">Phases</label>
+                    <span className="block text-sm font-medium text-gray-700">Phases</span>
                     <button
                       type="button"
                       onClick={handleAddPhase}
@@ -533,9 +554,11 @@ export default function Scenarios() {
                   </div>
                   <div className="space-y-4">
                     {newScenario.phases.map((phase, phaseIndex) => (
-                      <div key={phaseIndex} className="border rounded-lg p-4">
+                      <div key={`phase-${phaseIndex}`} className="border rounded-lg p-4">
                         <div className="flex justify-between items-center mb-3">
+                          <label className="sr-only" htmlFor={`phase-name-${phaseIndex}`}>Phase name</label>
                           <input
+                            id={`phase-name-${phaseIndex}`}
                             type="text"
                             value={phase.name}
                             onChange={(e) => handlePhaseNameChange(phaseIndex, e.target.value)}
@@ -583,7 +606,7 @@ export default function Scenarios() {
             </div>
             <div className="flex justify-end gap-3 p-6 border-t">
               <button
-                onClick={() => setShowCreateModal(false)}
+                onClick={handleCloseCreateModal}
                 className="btn-secondary"
               >
                 Cancel

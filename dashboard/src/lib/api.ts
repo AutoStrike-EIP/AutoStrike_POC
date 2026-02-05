@@ -280,7 +280,7 @@ export interface TechniqueDetection {
 }
 
 export interface ImportTechniquesRequest {
-  techniques: Omit<Technique, 'id'>[];
+  techniques: Technique[];
 }
 
 export interface ImportTechniquesResponse {

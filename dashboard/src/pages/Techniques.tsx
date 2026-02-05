@@ -41,6 +41,32 @@ interface ImportResult {
 }
 
 /**
+ * Returns the appropriate icon for an import result.
+ */
+function ImportResultIcon({ importResult }: { readonly importResult: ImportResult }) {
+  if (importResult.failed === 0) {
+    return <CheckCircleIcon className="h-8 w-8 text-green-500" />;
+  }
+  if (importResult.imported === 0) {
+    return <ExclamationTriangleIcon className="h-8 w-8 text-red-500" />;
+  }
+  return <ExclamationTriangleIcon className="h-8 w-8 text-yellow-500" />;
+}
+
+/**
+ * Returns the appropriate title for an import result.
+ */
+function getImportResultTitle(importResult: ImportResult): string {
+  if (importResult.failed === 0) {
+    return 'Import Successful';
+  }
+  if (importResult.imported === 0) {
+    return 'Import Failed';
+  }
+  return 'Partial Import';
+}
+
+/**
  * Techniques page component.
  * Displays a table of available MITRE ATT&CK techniques.
  *
@@ -229,20 +255,10 @@ export default function Techniques() {
                 <div className="space-y-4">
                   {/* Import Results */}
                   <div className="flex items-center gap-3">
-                    {importResult.failed === 0 ? (
-                      <CheckCircleIcon className="h-8 w-8 text-green-500" />
-                    ) : importResult.imported === 0 ? (
-                      <ExclamationTriangleIcon className="h-8 w-8 text-red-500" />
-                    ) : (
-                      <ExclamationTriangleIcon className="h-8 w-8 text-yellow-500" />
-                    )}
+                    <ImportResultIcon importResult={importResult} />
                     <div>
                       <p className="font-medium">
-                        {importResult.failed === 0
-                          ? 'Import Successful'
-                          : importResult.imported === 0
-                          ? 'Import Failed'
-                          : 'Partial Import'}
+                        {getImportResultTitle(importResult)}
                       </p>
                       <p className="text-sm text-gray-600">
                         {importResult.imported} imported, {importResult.failed} failed
@@ -255,7 +271,7 @@ export default function Techniques() {
                       <p className="text-sm font-medium text-red-700 mb-2">Errors:</p>
                       <ul className="text-xs text-red-600 space-y-1">
                         {importResult.errors.map((error, idx) => (
-                          <li key={`error-${idx}`}>{error}</li>
+                          <li key={`error-${idx}-${error.slice(0, 20)}`}>{error}</li>
                         ))}
                       </ul>
                     </div>
