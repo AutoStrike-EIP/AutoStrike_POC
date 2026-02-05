@@ -16,6 +16,11 @@ import (
 	"go.uber.org/zap"
 )
 
+// Route path constants to avoid duplication
+const (
+	routeUserByID = "/users/:id"
+)
+
 // Server represents the HTTP REST server
 type Server struct {
 	router *gin.Engine
@@ -208,13 +213,13 @@ func registerRoutesWithPermissions(api *gin.RouterGroup, services *Services, hub
 		admin.Use(adminOnly)
 		{
 			admin.GET("/users", adminHandler.ListUsers)
-			admin.GET("/users/:id", adminHandler.GetUser)
+			admin.GET(routeUserByID, adminHandler.GetUser)
 			admin.POST("/users", adminHandler.CreateUser)
-			admin.PUT("/users/:id", adminHandler.UpdateUser)
-			admin.PUT("/users/:id/role", adminHandler.UpdateUserRole)
-			admin.DELETE("/users/:id", adminHandler.DeactivateUser)
-			admin.POST("/users/:id/reactivate", adminHandler.ReactivateUser)
-			admin.POST("/users/:id/reset-password", adminHandler.ResetPassword)
+			admin.PUT(routeUserByID, adminHandler.UpdateUser)
+			admin.PUT(routeUserByID+"/role", adminHandler.UpdateUserRole)
+			admin.DELETE(routeUserByID, adminHandler.DeactivateUser)
+			admin.POST(routeUserByID+"/reactivate", adminHandler.ReactivateUser)
+			admin.POST(routeUserByID+"/reset-password", adminHandler.ResetPassword)
 		}
 	}
 
