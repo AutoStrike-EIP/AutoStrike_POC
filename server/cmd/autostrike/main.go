@@ -193,6 +193,9 @@ func autoImportTechniques(service *application.TechniqueService, logger *zap.Log
 		"./configs/techniques/execution.yaml",
 		"./configs/techniques/persistence.yaml",
 		"./configs/techniques/defense-evasion.yaml",
+		"./configs/techniques/credential-access.yaml",
+		"./configs/techniques/collection.yaml",
+		"./configs/techniques/lateral-movement.yaml",
 	}
 
 	imported := 0

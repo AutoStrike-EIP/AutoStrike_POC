@@ -1,3 +1,6 @@
+# Defense Evasion techniques - MITRE ATT&CK
+# All techniques are safe/read-only (checking security status, not disabling)
+
 - id: "T1070.004"
   name: "File Deletion"
   description: "Adversaries may delete files left behind by the actions of their intrusion activity."
@@ -19,4 +22,50 @@
       indicator: "File deletion events in sensitive directories"
     - source: "Process Creation"
       indicator: "del.exe or rm execution"
+  is_safe: true
+
+- id: "T1562.001"
+  name: "Disable or Modify Tools"
+  description: "Adversaries may modify and/or disable security tools to avoid possible detection of their malware/tools and activities."
+  tactic: "defense-evasion"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "powershell"
+      command: "Get-MpComputerStatus | Select-Object AntivirusEnabled,RealTimeProtectionEnabled,AMServiceEnabled"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "systemctl status apparmor 2>/dev/null || systemctl status selinux 2>/dev/null || getenforce 2>/dev/null || echo 'No security service found'"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Windows Event Log"
+      indicator: "Event ID 5001 - Real-time protection disabled"
+    - source: "Process Creation"
+      indicator: "Security tool modification commands"
+  is_safe: true
+
+- id: "T1027"
+  name: "Obfuscated Files or Information"
+  description: "Adversaries may attempt to make an executable or file difficult to discover or analyze by encrypting, encoding, or otherwise obfuscating its contents."
+  tactic: "defense-evasion"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "cmd"
+      command: "where certutil && where base64 2>nul || echo Encoding tools check complete"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "which base64 && which openssl && which xxd || echo 'Encoding tools check complete'"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "certutil.exe or base64 encoding/decoding activity"
+    - source: "File System"
+      indicator: "Creation of encoded or encrypted files"
   is_safe: true

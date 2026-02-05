@@ -12,7 +12,7 @@ AutoStrike est une plateforme open-source de validation continue des défenses d
 
 ## Fonctionnalités
 
-- **15 techniques MITRE ATT&CK** - Discovery, Execution, Persistence, Defense Evasion
+- **30 techniques MITRE ATT&CK** - Discovery, Execution, Persistence, Defense Evasion, Credential Access, Collection, Lateral Movement
 - **Matrice MITRE interactive** - Visualisation de la couverture de détection
 - **Scénarios d'attaque** - Exécution automatisée de techniques
 - **Agents multi-plateformes** - Windows, Linux et macOS
@@ -91,14 +91,17 @@ Ouvrir **https://localhost:8443** (accepter le certificat auto-signé)
 
 ## Techniques MITRE ATT&CK
 
-15 techniques implémentées :
+30 techniques implémentées :
 
 | Tactique | Techniques |
 |----------|------------|
 | **Discovery** (9) | T1082, T1083, T1057, T1016, T1049, T1087, T1069, T1018, T1007 |
 | **Execution** (3) | T1059.001, T1059.003, T1059.004 |
-| **Persistence** (2) | T1053.005, T1547.001 |
-| **Defense Evasion** (1) | T1070.004 |
+| **Persistence** (4) | T1053.005, T1547.001, T1053.003, T1543.002 |
+| **Defense Evasion** (3) | T1070.004, T1562.001, T1027 |
+| **Credential Access** (4) | T1552.001, T1555.003, T1003.008, T1552.004 |
+| **Collection** (4) | T1005, T1039, T1074.001, T1119 |
+| **Lateral Movement** (3) | T1021.001, T1021.002, T1021.004 |
 
 ## Tests
 

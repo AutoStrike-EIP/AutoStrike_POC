@@ -1,0 +1,98 @@
+# Collection techniques - MITRE ATT&CK
+# All techniques are safe/read-only (enumeration only, no data exfiltration)
+
+- id: "T1005"
+  name: "Data from Local System"
+  description: "Adversaries may search local system sources, such as file systems and configuration files or local databases, to find files of interest and sensitive data."
+  tactic: "collection"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "powershell"
+      command: "Get-ChildItem -Path \"$env:USERPROFILE\\Documents\" -Recurse -Include *.docx,*.xlsx,*.pdf -ErrorAction SilentlyContinue | Select-Object -First 15 Name,Length"
+      platform: "windows"
+      timeout: 120
+    - type: "bash"
+      command: "find ~/Documents -type f \\( -name '*.pdf' -o -name '*.doc*' -o -name '*.xls*' \\) 2>/dev/null | head -15"
+      platform: "linux"
+      timeout: 120
+  detection:
+    - source: "File System"
+      indicator: "Bulk file enumeration in document directories"
+    - source: "Process Creation"
+      indicator: "Scripted access to user document folders"
+  is_safe: true
+
+- id: "T1039"
+  name: "Data from Network Shared Drive"
+  description: "Adversaries may search network shares on computers they have compromised to find files of interest."
+  tactic: "collection"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "cmd"
+      command: "net share"
+      platform: "windows"
+      timeout: 60
+    - type: "powershell"
+      command: "Get-SmbShare | Select-Object Name,Path,Description"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "showmount -e localhost 2>/dev/null || cat /etc/exports 2>/dev/null || echo 'No NFS exports found'"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "net share or showmount execution"
+    - source: "Network Traffic"
+      indicator: "SMB or NFS enumeration activity"
+  is_safe: true
+
+- id: "T1074.001"
+  name: "Local Data Staging"
+  description: "Adversaries may stage collected data in a central location or directory on the local system prior to Exfiltration."
+  tactic: "collection"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "cmd"
+      command: "dir %TEMP% && dir %USERPROFILE%\\AppData\\Local\\Temp"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "ls -la /tmp && ls -la /var/tmp 2>/dev/null | head -20"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "File System"
+      indicator: "Large file creation in temp directories"
+    - source: "Process Creation"
+      indicator: "Archive utilities creating files in staging locations"
+  is_safe: true
+
+- id: "T1119"
+  name: "Automated Collection"
+  description: "Adversaries may use automated techniques for collecting internal data."
+  tactic: "collection"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "powershell"
+      command: "Get-ChildItem -Path C:\\ -Recurse -Include *.txt,*.doc*,*.xls* -ErrorAction SilentlyContinue | Measure-Object | Select-Object Count"
+      platform: "windows"
+      timeout: 180
+    - type: "bash"
+      command: "find / -type f \\( -name '*.txt' -o -name '*.doc' -o -name '*.pdf' \\) 2>/dev/null | wc -l"
+      platform: "linux"
+      timeout: 180
+  detection:
+    - source: "File System"
+      indicator: "Rapid file enumeration across multiple directories"
+    - source: "Process Creation"
+      indicator: "Automated file discovery scripts"
+  is_safe: true

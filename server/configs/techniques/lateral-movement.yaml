@@ -1,0 +1,69 @@
+# Lateral Movement techniques - MITRE ATT&CK
+# All techniques are safe/read-only (checking configurations, not performing lateral movement)
+
+- id: "T1021.001"
+  name: "Remote Desktop Protocol"
+  description: "Adversaries may use valid accounts to log into a computer using the Remote Desktop Protocol (RDP)."
+  tactic: "lateral-movement"
+  platforms:
+    - "windows"
+  executors:
+    - type: "cmd"
+      command: "reg query \"HKLM\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server\" /v fDenyTSConnections"
+      platform: "windows"
+      timeout: 60
+    - type: "powershell"
+      command: "Get-ItemProperty -Path 'HKLM:\\System\\CurrentControlSet\\Control\\Terminal Server' -Name 'fDenyTSConnections' | Select-Object fDenyTSConnections"
+      platform: "windows"
+      timeout: 60
+  detection:
+    - source: "Windows Event Log"
+      indicator: "Event ID 4624 Type 10 - Remote Desktop logon"
+    - source: "Network Traffic"
+      indicator: "RDP connections on port 3389"
+  is_safe: true
+
+- id: "T1021.002"
+  name: "SMB/Windows Admin Shares"
+  description: "Adversaries may use valid accounts to interact with a remote network share using Server Message Block (SMB)."
+  tactic: "lateral-movement"
+  platforms:
+    - "windows"
+  executors:
+    - type: "cmd"
+      command: "net share && net use"
+      platform: "windows"
+      timeout: 60
+    - type: "powershell"
+      command: "Get-SmbShare | Where-Object { $_.Name -like '*$' } | Select-Object Name,Path"
+      platform: "windows"
+      timeout: 60
+  detection:
+    - source: "Windows Event Log"
+      indicator: "Event ID 5140 - Network share access"
+    - source: "Network Traffic"
+      indicator: "SMB traffic on port 445"
+  is_safe: true
+
+- id: "T1021.004"
+  name: "SSH"
+  description: "Adversaries may use valid accounts to log into remote machines using Secure Shell (SSH)."
+  tactic: "lateral-movement"
+  platforms:
+    - "linux"
+    - "windows"
+  executors:
+    - type: "bash"
+      command: "cat /etc/ssh/sshd_config 2>/dev/null | grep -E '^(Port|PermitRootLogin|PasswordAuthentication|PubkeyAuthentication)' || echo 'SSH config not found'"
+      platform: "linux"
+      timeout: 60
+    - type: "powershell"
+      command: "Get-Service sshd -ErrorAction SilentlyContinue | Select-Object Status,Name; Get-Content $env:ProgramData\\ssh\\sshd_config -ErrorAction SilentlyContinue | Select-String 'Port','PermitRootLogin'"
+      platform: "windows"
+      timeout: 60
+  detection:
+    - source: "Authentication Logs"
+      indicator: "SSH login events in /var/log/auth.log"
+    - source: "Network Traffic"
+      indicator: "SSH connections on port 22"
+  is_safe: true

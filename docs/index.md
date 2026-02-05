@@ -98,7 +98,7 @@ See the [Quick Start Guide](guide/quickstart.md) for detailed instructions.
 
 ---
 
-## Current Techniques (15 total)
+## Current Techniques (30 total)
 
 ### Discovery (9)
 T1082, T1083, T1057, T1016, T1049, T1087, T1069, T1018, T1007
@@ -106,11 +106,20 @@ T1082, T1083, T1057, T1016, T1049, T1087, T1069, T1018, T1007
 ### Execution (3)
 T1059.001, T1059.003, T1059.004
 
-### Persistence (2)
-T1053.005, T1547.001
+### Persistence (4)
+T1053.005, T1547.001, T1053.003, T1543.002
 
-### Defense Evasion (1)
-T1070.004
+### Defense Evasion (3)
+T1070.004, T1562.001, T1027
+
+### Credential Access (4)
+T1552.001, T1555.003, T1003.008, T1552.004
+
+### Collection (4)
+T1005, T1039, T1074.001, T1119
+
+### Lateral Movement (3)
+T1021.001, T1021.002, T1021.004
 
 All techniques support **Safe Mode** for production-safe testing.
 

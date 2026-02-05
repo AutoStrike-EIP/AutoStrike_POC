@@ -1,3 +1,6 @@
+# Persistence techniques - MITRE ATT&CK
+# All techniques are safe/read-only (enumeration only, no persistence creation)
+
 - id: "T1053.005"
   name: "Scheduled Task"
   description: "Adversaries may abuse the Windows Task Scheduler to perform task scheduling for initial or recurring execution."
@@ -36,4 +39,40 @@
       indicator: "Modification to Run keys"
     - source: "Process Creation"
       indicator: "reg.exe query on Run keys"
+  is_safe: true
+
+- id: "T1053.003"
+  name: "Cron"
+  description: "Adversaries may abuse the cron utility to perform task scheduling for initial or recurring execution of malicious code."
+  tactic: "persistence"
+  platforms:
+    - "linux"
+  executors:
+    - type: "bash"
+      command: "crontab -l 2>/dev/null; cat /etc/crontab 2>/dev/null; ls -la /etc/cron.d/ 2>/dev/null"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "File System"
+      indicator: "Modification to cron files or directories"
+    - source: "Process Creation"
+      indicator: "crontab command execution"
+  is_safe: true
+
+- id: "T1543.002"
+  name: "Systemd Service"
+  description: "Adversaries may create or modify systemd services to repeatedly execute malicious payloads as part of persistence."
+  tactic: "persistence"
+  platforms:
+    - "linux"
+  executors:
+    - type: "bash"
+      command: "systemctl list-unit-files --type=service --state=enabled | head -20; ls -la /etc/systemd/system/*.service 2>/dev/null | head -10"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "File System"
+      indicator: "New or modified service files in /etc/systemd/system"
+    - source: "Process Creation"
+      indicator: "systemctl enable or daemon-reload commands"
   is_safe: true

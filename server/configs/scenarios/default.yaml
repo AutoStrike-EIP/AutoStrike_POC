@@ -90,3 +90,75 @@
         - "T1057"
         - "T1007"
         - "T1059.004"
+
+- id: "scenario-attacker-kill-chain"
+  name: "Attacker Kill Chain Simulation"
+  description: "Comprehensive attack simulation covering discovery, credential access, lateral movement preparation, and data collection. Tests defense-in-depth across multiple MITRE ATT&CK tactics."
+  tags:
+    - "advanced"
+    - "kill-chain"
+    - "comprehensive"
+    - "safe"
+  author: "AutoStrike"
+  phases:
+    - name: "Initial Reconnaissance"
+      order: 1
+      techniques:
+        - "T1082"
+        - "T1016"
+        - "T1057"
+        - "T1007"
+    - name: "Credential Hunting"
+      order: 2
+      techniques:
+        - "T1552.001"
+        - "T1552.004"
+        - "T1555.003"
+    - name: "Lateral Movement Preparation"
+      order: 3
+      techniques:
+        - "T1021.001"
+        - "T1021.002"
+        - "T1021.004"
+    - name: "Data Collection"
+      order: 4
+      techniques:
+        - "T1005"
+        - "T1039"
+        - "T1074.001"
+    - name: "Defense Evasion Check"
+      order: 5
+      techniques:
+        - "T1562.001"
+        - "T1027"
+
+- id: "scenario-credential-exposure"
+  name: "Credential Exposure Assessment"
+  description: "Focused assessment on credential security - checks for exposed credentials in files, browser data, SSH keys, and system password files. Essential for compliance audits."
+  tags:
+    - "credentials"
+    - "compliance"
+    - "audit"
+    - "safe"
+  author: "AutoStrike"
+  phases:
+    - name: "User Enumeration"
+      order: 1
+      techniques:
+        - "T1087"
+        - "T1069"
+        - "T1003.008"
+    - name: "Credential File Discovery"
+      order: 2
+      techniques:
+        - "T1552.001"
+        - "T1552.004"
+    - name: "Browser Credential Check"
+      order: 3
+      techniques:
+        - "T1555.003"
+    - name: "Data Staging Analysis"
+      order: 4
+      techniques:
+        - "T1074.001"
+        - "T1119"
