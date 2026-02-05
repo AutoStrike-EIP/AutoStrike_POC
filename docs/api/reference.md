@@ -18,7 +18,7 @@ Authorization: Bearer <token>
 
 The JWT token is signed with the `JWT_SECRET` and contains:
 - `sub`: User ID
-- `role`: User role (admin, operator, viewer)
+- `role`: User role (admin, rssi, operator, analyst, viewer)
 - `exp`: Token expiration date
 
 ### Auth Endpoints (Public)

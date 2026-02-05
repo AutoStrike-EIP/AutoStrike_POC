@@ -288,16 +288,16 @@ All techniques are **safe mode compatible** (non-destructive).
 
 **Test coverage (Phase 3):**
 - **Server**: 200+ tests
-  - application: 57.8%
-  - entity: 73.9%
+  - application: 83.0%
+  - entity: 95.0%
   - service: 99.2%
-  - handlers: 66.6%
+  - handlers: 87.5%
   - websocket: 91.6%
-  - middleware: 97.5%
-  - rest/server: 81.9%
-  - sqlite: 53.3%
-- **Agent**: 61 unit tests (`cargo test`)
-- **Dashboard**: 298 tests across 22 files (`npm test`)
+  - middleware: 94.3%
+  - rest/server: 87.9%
+  - sqlite: 85.0%
+- **Agent**: 67 unit tests (`cargo test`)
+- **Dashboard**: 513 tests across 25 files (`npm test`)
 
 ```bash
 # Run all tests
