@@ -105,8 +105,8 @@ describe('ThemeToggle', () => {
       </ThemeProvider>
     );
 
-    const darkButton = screen.getByText('Dark').closest('button');
-    expect(darkButton).toHaveAttribute('aria-checked', 'true');
+    const darkRadio = screen.getByText('Dark').closest('label')?.querySelector('input[type="radio"]');
+    expect(darkRadio).toBeChecked();
   });
 
   it('sets theme when clicking option in full variant', () => {

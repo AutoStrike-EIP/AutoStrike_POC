@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, ReactNode, useCallback } from 'react';
 
 /**
  * Available theme options
@@ -27,15 +27,15 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
  * Get system color scheme preference
  */
 function getSystemTheme(): 'light' | 'dark' {
-  if (typeof window === 'undefined') return 'light';
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  if (typeof globalThis.window === 'undefined') return 'light';
+  return globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 /**
  * Get stored theme from localStorage
  */
 function getStoredTheme(): Theme {
-  if (typeof window === 'undefined') return 'system';
+  if (typeof globalThis.window === 'undefined') return 'system';
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored === 'light' || stored === 'dark' || stored === 'system') {
     return stored;
@@ -52,7 +52,7 @@ interface ThemeProviderProps {
  * with persistence and system preference detection.
  */
 export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<Theme>(getStoredTheme);
+  const [theme, setTheme] = useState<Theme>(getStoredTheme);
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
     const stored = getStoredTheme();
     return stored === 'system' ? getSystemTheme() : stored;
@@ -77,25 +77,32 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
     // Listen for system theme changes when in system mode
     if (theme === 'system') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const mediaQuery = globalThis.matchMedia('(prefers-color-scheme: dark)');
       const handler = () => applyTheme('system');
       mediaQuery.addEventListener('change', handler);
       return () => mediaQuery.removeEventListener('change', handler);
     }
   }, [theme, applyTheme]);
 
-  const setTheme = useCallback((newTheme: Theme) => {
-    setThemeState(newTheme);
+  const handleSetTheme = useCallback((newTheme: Theme) => {
+    setTheme(newTheme);
     localStorage.setItem(STORAGE_KEY, newTheme);
     applyTheme(newTheme);
-  }, [applyTheme]);
+  }, [applyTheme, setTheme]);
 
   const toggleTheme = useCallback(() => {
-    setTheme(resolvedTheme === 'light' ? 'dark' : 'light');
-  }, [resolvedTheme, setTheme]);
+    handleSetTheme(resolvedTheme === 'light' ? 'dark' : 'light');
+  }, [resolvedTheme, handleSetTheme]);
+
+  const value = useMemo(() => ({
+    theme,
+    resolvedTheme,
+    setTheme: handleSetTheme,
+    toggleTheme,
+  }), [theme, resolvedTheme, handleSetTheme, toggleTheme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );

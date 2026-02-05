@@ -107,12 +107,13 @@ describe('SecurityScore', () => {
   });
 
   it('has correct ARIA attributes', () => {
-    render(<SecurityScore score={75.5} animated={false} />);
+    const { container } = render(<SecurityScore score={75.5} animated={false} />);
 
-    const meter = screen.getByRole('meter');
-    expect(meter).toHaveAttribute('aria-valuenow', '75.5');
-    expect(meter).toHaveAttribute('aria-valuemin', '0');
-    expect(meter).toHaveAttribute('aria-valuemax', '100');
+    const meter = container.querySelector('meter');
+    expect(meter).toBeInTheDocument();
+    expect(meter).toHaveAttribute('value', '75.5');
+    expect(meter).toHaveAttribute('min', '0');
+    expect(meter).toHaveAttribute('max', '100');
     expect(meter).toHaveAttribute('aria-label', 'Security score: 75.5%');
   });
 
@@ -131,10 +132,10 @@ describe('SecurityScore', () => {
   });
 
   it('clamps score to 0-100 range', () => {
-    render(<SecurityScore score={150} animated={false} />);
+    const { container } = render(<SecurityScore score={150} animated={false} />);
 
-    const meter = screen.getByRole('meter');
-    expect(meter).toHaveAttribute('aria-valuenow', '100');
+    const meter = container.querySelector('meter');
+    expect(meter).toHaveAttribute('value', '100');
   });
 
   it('applies custom className', () => {

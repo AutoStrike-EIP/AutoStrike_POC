@@ -83,7 +83,7 @@ export function SecurityScore({
     }
 
     // Check for reduced motion preference
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersReducedMotion = globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) {
       setDisplayScore(normalizedScore);
       return;
@@ -94,6 +94,7 @@ export function SecurityScore({
     const startTime = performance.now();
     const startValue = 0;
     const endValue = normalizedScore;
+    let animationId: number;
 
     function animate(currentTime: number) {
       const elapsed = currentTime - startTime;
@@ -104,25 +105,29 @@ export function SecurityScore({
       setDisplayScore(current);
 
       if (progress < 1) {
-        requestAnimationFrame(animate);
+        animationId = requestAnimationFrame(animate);
       }
     }
 
-    requestAnimationFrame(animate);
+    animationId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationId);
   }, [animated, normalizedScore]);
 
   return (
     <div className={`flex flex-col items-center ${className}`}>
       {/* SVG Gauge */}
       <div className={`relative ${config.container}`}>
+        <meter
+          value={normalizedScore}
+          min={0}
+          max={100}
+          aria-label={`Security score: ${normalizedScore.toFixed(1)}%`}
+          className="sr-only"
+        />
         <svg
           viewBox="0 0 100 100"
           className="transform -rotate-90 w-full h-full"
-          role="meter"
-          aria-valuenow={normalizedScore}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={`Security score: ${normalizedScore.toFixed(1)}%`}
+          aria-hidden="true"
         >
           {/* Background circle */}
           <circle
