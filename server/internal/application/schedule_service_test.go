@@ -897,3 +897,145 @@ func TestScheduleService_Create_PastStartAt(t *testing.T) {
 		t.Error("NextRunAt should be in the future when StartAt is in the past")
 	}
 }
+
+func TestScheduleService_RunNow_FindError(t *testing.T) {
+	repo := newMockScheduleRepo()
+	repo.findErr = errors.New("database error")
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	_, err := service.RunNow(context.Background(), "sched-1")
+	if err == nil {
+		t.Error("RunNow should fail with find error")
+	}
+}
+
+func TestScheduleService_GetRuns_Error(t *testing.T) {
+	repo := newMockScheduleRepo()
+	repo.findErr = errors.New("database error")
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	_, err := service.GetRuns(context.Background(), "sched-1", 10)
+	if err == nil {
+		t.Error("GetRuns should fail with find error")
+	}
+}
+
+func TestScheduleService_GetAll_Error(t *testing.T) {
+	repo := newMockScheduleRepo()
+	repo.findErr = errors.New("database error")
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	_, err := service.GetAll(context.Background())
+	if err == nil {
+		t.Error("GetAll should fail with find error")
+	}
+}
+
+func TestScheduleService_GetByStatus_Error(t *testing.T) {
+	repo := newMockScheduleRepo()
+	repo.findErr = errors.New("database error")
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	_, err := service.GetByStatus(context.Background(), entity.ScheduleStatusActive)
+	if err == nil {
+		t.Error("GetByStatus should fail with find error")
+	}
+}
+
+func TestScheduleService_Delete_Error(t *testing.T) {
+	repo := newMockScheduleRepo()
+	repo.deleteErr = errors.New("database error")
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	err := service.Delete(context.Background(), "sched-1")
+	if err == nil {
+		t.Error("Delete should fail with delete error")
+	}
+}
+
+func TestScheduleService_GetByID_Error(t *testing.T) {
+	repo := newMockScheduleRepo()
+	repo.findErr = errors.New("database error")
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	_, err := service.GetByID(context.Background(), "sched-1")
+	if err == nil {
+		t.Error("GetByID should fail with find error")
+	}
+}
+
+func TestScheduleService_Update_PastStartAt(t *testing.T) {
+	repo := newMockScheduleRepo()
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	repo.schedules["sched-1"] = &entity.Schedule{
+		ID:        "sched-1",
+		Status:    entity.ScheduleStatusActive,
+		Frequency: entity.FrequencyDaily,
+	}
+
+	// StartAt in the past should recalculate next run
+	pastTime := time.Now().Add(-1 * time.Hour)
+	req := &CreateScheduleRequest{
+		Name:       "Updated",
+		ScenarioID: "scenario-1",
+		Frequency:  entity.FrequencyHourly,
+		StartAt:    &pastTime,
+	}
+
+	schedule, err := service.Update(context.Background(), "sched-1", req)
+	if err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
+
+	// Should calculate next run, not use past StartAt
+	if schedule.NextRunAt != nil && schedule.NextRunAt.Before(time.Now()) {
+		t.Error("NextRunAt should be in the future when StartAt is in the past")
+	}
+}
+
+func TestScheduleService_Create_AllFrequencies(t *testing.T) {
+	frequencies := []entity.ScheduleFrequency{
+		entity.FrequencyOnce,
+		entity.FrequencyHourly,
+		entity.FrequencyDaily,
+		entity.FrequencyWeekly,
+		entity.FrequencyMonthly,
+	}
+
+	for _, freq := range frequencies {
+		t.Run(string(freq), func(t *testing.T) {
+			repo := newMockScheduleRepo()
+			logger := zap.NewNop()
+			service := NewScheduleService(repo, nil, logger)
+
+			req := &CreateScheduleRequest{
+				Name:       "Test Schedule",
+				ScenarioID: "scenario-1",
+				Frequency:  freq,
+			}
+
+			schedule, err := service.Create(context.Background(), req, "user-1")
+			if err != nil {
+				t.Fatalf("Create failed for frequency %s: %v", freq, err)
+			}
+
+			if schedule.Frequency != freq {
+				t.Errorf("Frequency = %q, want %q", schedule.Frequency, freq)
+			}
+		})
+	}
+}
+
+func TestErrInvalidCronExpr(t *testing.T) {
+	if ErrInvalidCronExpr.Error() != "invalid cron expression" {
+		t.Errorf("ErrInvalidCronExpr = %q, want %q", ErrInvalidCronExpr.Error(), "invalid cron expression")
+	}
+}

@@ -612,3 +612,508 @@ func TestNotificationHandler_TestSMTP_NotConfigured(t *testing.T) {
 		t.Errorf("Expected status 500, got %d", w.Code)
 	}
 }
+
+func TestNotificationHandler_GetUnreadCount_Unauthenticated(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/notifications/unread/count", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_MarkAsRead_Unauthenticated(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/notifications/notif-1/read", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_MarkAsRead_NotOwned(t *testing.T) {
+	handler, repo := setupNotificationHandler()
+	router := setupNotificationRouter(handler)
+
+	// Add notification owned by different user
+	repo.notifications["notif-1"] = &entity.Notification{
+		ID: "notif-1", UserID: "other-user", Read: false,
+	}
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/notifications/notif-1/read", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("Expected status 403, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestNotificationHandler_MarkAsRead_NotFound(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+	router := setupNotificationRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/notifications/nonexistent/read", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("Expected status 403, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_MarkAllAsRead_Unauthenticated(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/notifications/read-all", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_GetSettings_Unauthenticated(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/notifications/settings", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_CreateSettings_Unauthenticated(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	body := NotificationSettingsRequest{Channel: "email", Enabled: true, EmailAddress: "test@example.com"}
+	bodyBytes, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/notifications/settings", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_CreateSettings_MissingEmail(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+	router := setupNotificationRouter(handler)
+
+	body := NotificationSettingsRequest{
+		Channel: "email",
+		Enabled: true,
+		// Missing EmailAddress
+	}
+	bodyBytes, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/notifications/settings", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_CreateSettings_InvalidEmail(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+	router := setupNotificationRouter(handler)
+
+	body := NotificationSettingsRequest{
+		Channel:      "email",
+		Enabled:      true,
+		EmailAddress: "not-an-email",
+	}
+	bodyBytes, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/notifications/settings", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_CreateSettings_MissingWebhookURL(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+	router := setupNotificationRouter(handler)
+
+	body := NotificationSettingsRequest{
+		Channel: "webhook",
+		Enabled: true,
+		// Missing WebhookURL
+	}
+	bodyBytes, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/notifications/settings", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_CreateSettings_InvalidWebhookURL(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+	router := setupNotificationRouter(handler)
+
+	body := NotificationSettingsRequest{
+		Channel:    "webhook",
+		Enabled:    true,
+		WebhookURL: "not-a-url",
+	}
+	bodyBytes, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/notifications/settings", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_UpdateSettings_Unauthenticated(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	body := NotificationSettingsRequest{Channel: "email", Enabled: true, EmailAddress: "test@example.com"}
+	bodyBytes, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PUT", "/api/v1/notifications/settings", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_UpdateSettings_InvalidJSON(t *testing.T) {
+	handler, repo := setupNotificationHandler()
+	router := setupNotificationRouter(handler)
+
+	repo.settings["settings-1"] = &entity.NotificationSettings{
+		ID:     "settings-1",
+		UserID: "test-user-id",
+	}
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PUT", "/api/v1/notifications/settings", bytes.NewReader([]byte("invalid json")))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_UpdateSettings_ValidationError(t *testing.T) {
+	handler, repo := setupNotificationHandler()
+	router := setupNotificationRouter(handler)
+
+	repo.settings["settings-1"] = &entity.NotificationSettings{
+		ID:     "settings-1",
+		UserID: "test-user-id",
+	}
+
+	body := NotificationSettingsRequest{
+		Channel:      "email",
+		Enabled:      true,
+		EmailAddress: "invalid-email",
+	}
+	bodyBytes, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PUT", "/api/v1/notifications/settings", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_DeleteSettings_Unauthenticated(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("DELETE", "/api/v1/notifications/settings", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_GetSMTPConfig_Unauthenticated(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/notifications/smtp", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_GetSMTPConfig_NotAdmin(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+	router := setupNotificationRouter(handler) // No admin role
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/notifications/smtp", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("Expected status 403, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_TestSMTP_Unauthenticated(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	body := TestSMTPRequest{Email: "test@example.com"}
+	bodyBytes, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/notifications/smtp/test", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_TestSMTP_NotAdmin(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+	router := setupNotificationRouter(handler) // No admin role
+
+	body := TestSMTPRequest{Email: "test@example.com"}
+	bodyBytes, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/notifications/smtp/test", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("Expected status 403, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_GetNotifications_InvalidLimit(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+	router := setupNotificationRouter(handler)
+
+	// Invalid limit (too high)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/notifications?limit=200", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_GetNotifications_NegativeLimit(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+	router := setupNotificationRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/notifications?limit=-5", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_GetNotifications_NonNumericLimit(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+	router := setupNotificationRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/notifications?limit=abc", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_CreateSettings_WebhookSuccess(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+	router := setupNotificationRouter(handler)
+
+	body := NotificationSettingsRequest{
+		Channel:      "webhook",
+		Enabled:      true,
+		WebhookURL:   "https://hooks.example.com/webhook",
+		NotifyOnStart: true,
+	}
+	bodyBytes, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/notifications/settings", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("Expected status 201, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestNotificationHandler_CreateSettings_InvalidJSON(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+	router := setupNotificationRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/notifications/settings", bytes.NewReader([]byte("invalid json")))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d", w.Code)
+	}
+}
+
+func TestNotificationSettingsRequest_Validate(t *testing.T) {
+	tests := []struct {
+		name    string
+		req     NotificationSettingsRequest
+		wantErr bool
+	}{
+		{
+			name:    "email disabled no address",
+			req:     NotificationSettingsRequest{Channel: "email", Enabled: false},
+			wantErr: false,
+		},
+		{
+			name:    "email enabled with valid address",
+			req:     NotificationSettingsRequest{Channel: "email", Enabled: true, EmailAddress: "test@example.com"},
+			wantErr: false,
+		},
+		{
+			name:    "email enabled missing address",
+			req:     NotificationSettingsRequest{Channel: "email", Enabled: true, EmailAddress: ""},
+			wantErr: true,
+		},
+		{
+			name:    "webhook disabled no url",
+			req:     NotificationSettingsRequest{Channel: "webhook", Enabled: false},
+			wantErr: false,
+		},
+		{
+			name:    "webhook enabled with valid url",
+			req:     NotificationSettingsRequest{Channel: "webhook", Enabled: true, WebhookURL: "https://example.com/hook"},
+			wantErr: false,
+		},
+		{
+			name:    "webhook enabled missing url",
+			req:     NotificationSettingsRequest{Channel: "webhook", Enabled: true, WebhookURL: ""},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.req.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestParseInt(t *testing.T) {
+	tests := []struct {
+		input   string
+		want    int
+		wantErr bool
+	}{
+		{"10", 10, false},
+		{"0", 0, false},
+		{"-5", -5, false},
+		{"abc", 0, true},
+		{"", 0, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got, err := parseInt(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseInt(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+			}
+			if !tt.wantErr && got != tt.want {
+				t.Errorf("parseInt(%q) = %d, want %d", tt.input, got, tt.want)
+			}
+		})
+	}
+}

@@ -1016,3 +1016,342 @@ func TestRenderEmailTemplate_InvalidTemplate(t *testing.T) {
 		t.Error("renderEmailTemplate should fail with invalid template")
 	}
 }
+
+func TestRenderEmailTemplate_ExecutionError(t *testing.T) {
+	// Template that references missing field in a way that causes execution error
+	tmpl := "Hello {{.Name.Invalid}}"
+	data := map[string]any{"Name": "User"}
+
+	_, err := renderEmailTemplate(tmpl, data)
+	if err == nil {
+		t.Error("renderEmailTemplate should fail with execution error")
+	}
+}
+
+func TestNotificationService_NotifyExecutionStarted_NoSettings(t *testing.T) {
+	repo := newMockNotificationRepo()
+	userRepo := &mockUserRepoForNotification{}
+	service := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	// No settings - should not create any notifications
+	execution := &entity.Execution{
+		ID:        "exec-1",
+		StartedAt: time.Now(),
+	}
+
+	err := service.NotifyExecutionStarted(context.Background(), execution, "Test Scenario")
+	if err != nil {
+		t.Fatalf("NotifyExecutionStarted failed: %v", err)
+	}
+
+	if len(repo.notifications) != 0 {
+		t.Errorf("len(notifications) = %d, want 0", len(repo.notifications))
+	}
+}
+
+func TestNotificationService_NotifyExecutionCompleted_NoSettings(t *testing.T) {
+	repo := newMockNotificationRepo()
+	userRepo := &mockUserRepoForNotification{}
+	service := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	execution := &entity.Execution{
+		ID:        "exec-1",
+		StartedAt: time.Now(),
+	}
+
+	err := service.NotifyExecutionCompleted(context.Background(), execution, "Test Scenario")
+	if err != nil {
+		t.Fatalf("NotifyExecutionCompleted failed: %v", err)
+	}
+
+	if len(repo.notifications) != 0 {
+		t.Errorf("len(notifications) = %d, want 0", len(repo.notifications))
+	}
+}
+
+func TestNotificationService_NotifyExecutionFailed_NoSettings(t *testing.T) {
+	repo := newMockNotificationRepo()
+	userRepo := &mockUserRepoForNotification{}
+	service := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	execution := &entity.Execution{
+		ID:        "exec-1",
+		StartedAt: time.Now(),
+	}
+
+	err := service.NotifyExecutionFailed(context.Background(), execution, "Test Scenario", "Error")
+	if err != nil {
+		t.Fatalf("NotifyExecutionFailed failed: %v", err)
+	}
+
+	if len(repo.notifications) != 0 {
+		t.Errorf("len(notifications) = %d, want 0", len(repo.notifications))
+	}
+}
+
+func TestNotificationService_NotifyAgentOffline_NoSettings(t *testing.T) {
+	repo := newMockNotificationRepo()
+	userRepo := &mockUserRepoForNotification{}
+	service := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	agent := &entity.Agent{
+		Paw:      "test-paw",
+		Hostname: "test-host",
+		Platform: "linux",
+		LastSeen: time.Now(),
+	}
+
+	err := service.NotifyAgentOffline(context.Background(), agent)
+	if err != nil {
+		t.Fatalf("NotifyAgentOffline failed: %v", err)
+	}
+
+	if len(repo.notifications) != 0 {
+		t.Errorf("len(notifications) = %d, want 0", len(repo.notifications))
+	}
+}
+
+func TestNotificationService_NotifyExecutionStarted_DisabledSettings(t *testing.T) {
+	repo := newMockNotificationRepo()
+	userRepo := &mockUserRepoForNotification{}
+	service := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	// Add disabled settings
+	settings := &entity.NotificationSettings{
+		ID:            "settings-1",
+		UserID:        "user-1",
+		Channel:       entity.ChannelEmail,
+		Enabled:       false, // Disabled
+		NotifyOnStart: true,
+	}
+	repo.settings[settings.ID] = settings
+
+	execution := &entity.Execution{
+		ID:        "exec-1",
+		StartedAt: time.Now(),
+	}
+
+	err := service.NotifyExecutionStarted(context.Background(), execution, "Test Scenario")
+	if err != nil {
+		t.Fatalf("NotifyExecutionStarted failed: %v", err)
+	}
+
+	// Disabled settings shouldn't create notifications
+	if len(repo.notifications) != 0 {
+		t.Errorf("len(notifications) = %d, want 0", len(repo.notifications))
+	}
+}
+
+func TestNotificationService_NotifyExecutionCompleted_ScoreAlertDisabled(t *testing.T) {
+	repo := newMockNotificationRepo()
+	userRepo := &mockUserRepoForNotification{}
+	service := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	settings := &entity.NotificationSettings{
+		ID:                  "settings-1",
+		UserID:              "user-1",
+		Channel:             entity.ChannelEmail,
+		Enabled:             true,
+		NotifyOnComplete:    true,
+		NotifyOnScoreAlert:  false, // Disabled
+		ScoreAlertThreshold: 70.0,
+	}
+	repo.settings[settings.ID] = settings
+
+	execution := &entity.Execution{
+		ID:        "exec-1",
+		StartedAt: time.Now(),
+		Score: &entity.SecurityScore{
+			Overall: 50.0, // Below threshold but alert disabled
+		},
+	}
+
+	err := service.NotifyExecutionCompleted(context.Background(), execution, "Test Scenario")
+	if err != nil {
+		t.Fatalf("NotifyExecutionCompleted failed: %v", err)
+	}
+
+	// Should only have completion notification, not score alert
+	if len(repo.notifications) != 1 {
+		t.Errorf("len(notifications) = %d, want 1", len(repo.notifications))
+	}
+}
+
+func TestNotificationService_GetSettingsByUserID_NotFound(t *testing.T) {
+	repo := newMockNotificationRepo()
+	userRepo := &mockUserRepoForNotification{}
+	service := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	result, err := service.GetSettingsByUserID(context.Background(), "nonexistent")
+	if err != nil {
+		t.Fatalf("GetSettingsByUserID failed: %v", err)
+	}
+
+	if result != nil {
+		t.Error("GetSettingsByUserID should return nil for nonexistent user")
+	}
+}
+
+func TestNotificationService_SendEmail_TemplateNotFound(t *testing.T) {
+	repo := newMockNotificationRepo()
+	userRepo := &mockUserRepoForNotification{}
+	smtpConfig := &entity.SMTPConfig{
+		Host:     "smtp.example.com",
+		Port:     587,
+		Username: "user",
+		Password: "pass",
+		From:     "noreply@example.com",
+		UseTLS:   false,
+	}
+	service := NewNotificationService(repo, userRepo, smtpConfig, "https://localhost:8443", nil)
+
+	// Call sendEmail with an invalid notification type
+	err := service.sendEmail("test@example.com", "invalid-type", map[string]any{})
+	if err == nil {
+		t.Error("sendEmail should fail with unknown notification type")
+	}
+}
+
+func TestNotificationService_SendEmail_InvalidSMTPConfig(t *testing.T) {
+	repo := newMockNotificationRepo()
+	userRepo := &mockUserRepoForNotification{}
+	// Invalid SMTP config (missing required fields)
+	smtpConfig := &entity.SMTPConfig{
+		Host: "",
+		Port: 0,
+	}
+	service := NewNotificationService(repo, userRepo, smtpConfig, "https://localhost:8443", nil)
+
+	err := service.sendEmail("test@example.com", entity.NotificationExecutionStarted, map[string]any{
+		"ScenarioName": "Test",
+		"ExecutionID":  "exec-1",
+		"StartedAt":    time.Now().Format(time.RFC1123),
+		"SafeMode":     true,
+		"DashboardURL": "https://localhost:8443",
+	})
+	if err == nil {
+		t.Error("sendEmail should fail with invalid SMTP config")
+	}
+}
+
+func TestBuildEmailMessage_AllFields(t *testing.T) {
+	msg := buildEmailMessage(
+		"sender@example.com",
+		"recipient@example.com",
+		"Test Subject with Special Chars: <>&",
+		"This is the body\nwith multiple\nlines",
+	)
+
+	// Verify MIME headers
+	if !contains(msg, "MIME-Version: 1.0") {
+		t.Error("Message should contain MIME-Version header")
+	}
+	if !contains(msg, "Content-Type: text/plain") {
+		t.Error("Message should contain Content-Type header")
+	}
+}
+
+func TestNotificationService_NotifyExecutionCompleted_ScoreExactlyAtThreshold(t *testing.T) {
+	repo := newMockNotificationRepo()
+	userRepo := &mockUserRepoForNotification{}
+	service := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	settings := &entity.NotificationSettings{
+		ID:                  "settings-1",
+		UserID:              "user-1",
+		Channel:             entity.ChannelEmail,
+		Enabled:             true,
+		NotifyOnComplete:    true,
+		NotifyOnScoreAlert:  true,
+		ScoreAlertThreshold: 70.0,
+	}
+	repo.settings[settings.ID] = settings
+
+	execution := &entity.Execution{
+		ID:        "exec-1",
+		StartedAt: time.Now(),
+		Score: &entity.SecurityScore{
+			Overall: 70.0, // Exactly at threshold - should NOT trigger alert
+		},
+	}
+
+	err := service.NotifyExecutionCompleted(context.Background(), execution, "Test Scenario")
+	if err != nil {
+		t.Fatalf("NotifyExecutionCompleted failed: %v", err)
+	}
+
+	// Score at threshold should NOT trigger alert (only below)
+	if len(repo.notifications) != 1 {
+		t.Errorf("len(notifications) = %d, want 1", len(repo.notifications))
+	}
+}
+
+func TestNotificationService_NotifyExecutionCompleted_MultipleSettings(t *testing.T) {
+	repo := newMockNotificationRepo()
+	userRepo := &mockUserRepoForNotification{}
+	service := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	// Add multiple enabled settings
+	repo.settings["settings-1"] = &entity.NotificationSettings{
+		ID:               "settings-1",
+		UserID:           "user-1",
+		Channel:          entity.ChannelEmail,
+		Enabled:          true,
+		NotifyOnComplete: true,
+	}
+	repo.settings["settings-2"] = &entity.NotificationSettings{
+		ID:               "settings-2",
+		UserID:           "user-2",
+		Channel:          entity.ChannelEmail,
+		Enabled:          true,
+		NotifyOnComplete: true,
+	}
+
+	execution := &entity.Execution{
+		ID:        "exec-1",
+		StartedAt: time.Now(),
+	}
+
+	err := service.NotifyExecutionCompleted(context.Background(), execution, "Test Scenario")
+	if err != nil {
+		t.Fatalf("NotifyExecutionCompleted failed: %v", err)
+	}
+
+	// Should create notifications for both users
+	if len(repo.notifications) != 2 {
+		t.Errorf("len(notifications) = %d, want 2", len(repo.notifications))
+	}
+}
+
+func TestNotificationService_NotifyExecutionStarted_WithEmailChannel(t *testing.T) {
+	repo := newMockNotificationRepo()
+	userRepo := &mockUserRepoForNotification{}
+	service := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	// Settings with email channel but no email address (shouldn't send email)
+	settings := &entity.NotificationSettings{
+		ID:            "settings-1",
+		UserID:        "user-1",
+		Channel:       entity.ChannelEmail,
+		Enabled:       true,
+		EmailAddress:  "", // Empty
+		NotifyOnStart: true,
+	}
+	repo.settings[settings.ID] = settings
+
+	execution := &entity.Execution{
+		ID:        "exec-1",
+		StartedAt: time.Now(),
+		SafeMode:  true,
+	}
+
+	err := service.NotifyExecutionStarted(context.Background(), execution, "Test Scenario")
+	if err != nil {
+		t.Fatalf("NotifyExecutionStarted failed: %v", err)
+	}
+
+	// Notification should be created but email not sent (no address)
+	if len(repo.notifications) != 1 {
+		t.Errorf("len(notifications) = %d, want 1", len(repo.notifications))
+	}
+}
