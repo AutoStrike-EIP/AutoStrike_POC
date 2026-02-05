@@ -445,3 +445,48 @@ func TestAnalyticsService_GetPeriodStats_TacticScores(t *testing.T) {
 		t.Errorf("ScoreByTactic[execution] = %f, want 60.0", stats.ScoreByTactic["execution"])
 	}
 }
+
+func TestDetermineTrend(t *testing.T) {
+	tests := []struct {
+		name             string
+		percentageChange float64
+		expected         string
+	}{
+		{"improving high", 10.0, "improving"},
+		{"improving edge", 5.1, "improving"},
+		{"stable positive", 4.9, "stable"},
+		{"stable zero", 0.0, "stable"},
+		{"stable negative", -4.9, "stable"},
+		{"declining edge", -5.1, "declining"},
+		{"declining low", -10.0, "declining"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := determineTrend(tt.percentageChange)
+			if result != tt.expected {
+				t.Errorf("determineTrend(%f) = %q, want %q", tt.percentageChange, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestPeriodLabel(t *testing.T) {
+	tests := []struct {
+		days     int
+		expected string
+	}{
+		{7, "7d"},
+		{30, "30d"},
+		{90, "90d"},
+		{14, "7d"}, // default
+		{0, "7d"},  // default
+	}
+
+	for _, tt := range tests {
+		result := periodLabel(tt.days)
+		if result != tt.expected {
+			t.Errorf("periodLabel(%d) = %q, want %q", tt.days, result, tt.expected)
+		}
+	}
+}

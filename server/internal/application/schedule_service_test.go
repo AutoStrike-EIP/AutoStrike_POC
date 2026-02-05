@@ -605,3 +605,295 @@ func TestErrScheduleNotFound(t *testing.T) {
 		t.Errorf("ErrScheduleNotFound = %q, want %q", ErrScheduleNotFound.Error(), "schedule not found")
 	}
 }
+
+func TestScheduleService_Create_CronFrequency(t *testing.T) {
+	repo := newMockScheduleRepo()
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	req := &CreateScheduleRequest{
+		Name:       "Cron Schedule",
+		ScenarioID: "scenario-1",
+		Frequency:  entity.FrequencyCron,
+		CronExpr:   "0 * * * *", // Every hour
+	}
+
+	schedule, err := service.Create(context.Background(), req, "user-1")
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	if schedule.CronExpr != "0 * * * *" {
+		t.Errorf("CronExpr = %q, want %q", schedule.CronExpr, "0 * * * *")
+	}
+}
+
+func TestScheduleService_Create_CronFrequency_MissingExpr(t *testing.T) {
+	repo := newMockScheduleRepo()
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	req := &CreateScheduleRequest{
+		Name:       "Cron Schedule",
+		ScenarioID: "scenario-1",
+		Frequency:  entity.FrequencyCron,
+		CronExpr:   "", // Missing
+	}
+
+	_, err := service.Create(context.Background(), req, "user-1")
+	if err == nil {
+		t.Error("Create should fail with missing cron expression")
+	}
+	if !errors.Is(err, ErrInvalidCronExpr) {
+		t.Errorf("Create should return ErrInvalidCronExpr, got %v", err)
+	}
+}
+
+func TestScheduleService_Create_CronFrequency_InvalidExpr(t *testing.T) {
+	repo := newMockScheduleRepo()
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	req := &CreateScheduleRequest{
+		Name:       "Cron Schedule",
+		ScenarioID: "scenario-1",
+		Frequency:  entity.FrequencyCron,
+		CronExpr:   "invalid cron expression",
+	}
+
+	_, err := service.Create(context.Background(), req, "user-1")
+	if err == nil {
+		t.Error("Create should fail with invalid cron expression")
+	}
+	if !errors.Is(err, ErrInvalidCronExpr) {
+		t.Errorf("Create should return ErrInvalidCronExpr, got %v", err)
+	}
+}
+
+func TestScheduleService_Update_CronFrequency(t *testing.T) {
+	repo := newMockScheduleRepo()
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	repo.schedules["sched-1"] = &entity.Schedule{
+		ID:        "sched-1",
+		Name:      "Initial",
+		Frequency: entity.FrequencyDaily,
+		Status:    entity.ScheduleStatusActive,
+	}
+
+	req := &CreateScheduleRequest{
+		Name:       "Updated",
+		ScenarioID: "scenario-1",
+		Frequency:  entity.FrequencyCron,
+		CronExpr:   "0 0 * * *", // Every day at midnight
+	}
+
+	schedule, err := service.Update(context.Background(), "sched-1", req)
+	if err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
+
+	if schedule.CronExpr != "0 0 * * *" {
+		t.Errorf("CronExpr = %q, want %q", schedule.CronExpr, "0 0 * * *")
+	}
+}
+
+func TestScheduleService_Update_CronFrequency_MissingExpr(t *testing.T) {
+	repo := newMockScheduleRepo()
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	repo.schedules["sched-1"] = &entity.Schedule{
+		ID:     "sched-1",
+		Status: entity.ScheduleStatusActive,
+	}
+
+	req := &CreateScheduleRequest{
+		Name:       "Test",
+		ScenarioID: "scenario-1",
+		Frequency:  entity.FrequencyCron,
+		CronExpr:   "",
+	}
+
+	_, err := service.Update(context.Background(), "sched-1", req)
+	if err == nil {
+		t.Error("Update should fail with missing cron expression")
+	}
+}
+
+func TestScheduleService_Update_CronFrequency_InvalidExpr(t *testing.T) {
+	repo := newMockScheduleRepo()
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	repo.schedules["sched-1"] = &entity.Schedule{
+		ID:     "sched-1",
+		Status: entity.ScheduleStatusActive,
+	}
+
+	req := &CreateScheduleRequest{
+		Name:       "Test",
+		ScenarioID: "scenario-1",
+		Frequency:  entity.FrequencyCron,
+		CronExpr:   "bad cron",
+	}
+
+	_, err := service.Update(context.Background(), "sched-1", req)
+	if err == nil {
+		t.Error("Update should fail with invalid cron expression")
+	}
+}
+
+func TestScheduleService_Update_Error(t *testing.T) {
+	repo := newMockScheduleRepo()
+	repo.updateErr = errors.New("database error")
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	repo.schedules["sched-1"] = &entity.Schedule{
+		ID:     "sched-1",
+		Status: entity.ScheduleStatusActive,
+	}
+
+	req := &CreateScheduleRequest{
+		Name:       "Updated",
+		ScenarioID: "scenario-1",
+		Frequency:  entity.FrequencyDaily,
+	}
+
+	_, err := service.Update(context.Background(), "sched-1", req)
+	if err == nil {
+		t.Error("Update should fail with database error")
+	}
+}
+
+func TestScheduleService_Update_FindError(t *testing.T) {
+	repo := newMockScheduleRepo()
+	repo.findErr = errors.New("database error")
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	req := &CreateScheduleRequest{
+		Name:       "Test",
+		ScenarioID: "scenario-1",
+		Frequency:  entity.FrequencyDaily,
+	}
+
+	_, err := service.Update(context.Background(), "sched-1", req)
+	if err == nil {
+		t.Error("Update should fail with find error")
+	}
+}
+
+func TestScheduleService_Pause_UpdateError(t *testing.T) {
+	repo := newMockScheduleRepo()
+	repo.updateErr = errors.New("database error")
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	repo.schedules["sched-1"] = &entity.Schedule{
+		ID:     "sched-1",
+		Status: entity.ScheduleStatusActive,
+	}
+
+	_, err := service.Pause(context.Background(), "sched-1")
+	if err == nil {
+		t.Error("Pause should fail with update error")
+	}
+}
+
+func TestScheduleService_Pause_FindError(t *testing.T) {
+	repo := newMockScheduleRepo()
+	repo.findErr = errors.New("database error")
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	_, err := service.Pause(context.Background(), "sched-1")
+	if err == nil {
+		t.Error("Pause should fail with find error")
+	}
+}
+
+func TestScheduleService_Resume_UpdateError(t *testing.T) {
+	repo := newMockScheduleRepo()
+	repo.updateErr = errors.New("database error")
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	repo.schedules["sched-1"] = &entity.Schedule{
+		ID:        "sched-1",
+		Status:    entity.ScheduleStatusPaused,
+		Frequency: entity.FrequencyDaily,
+	}
+
+	_, err := service.Resume(context.Background(), "sched-1")
+	if err == nil {
+		t.Error("Resume should fail with update error")
+	}
+}
+
+func TestScheduleService_Resume_FindError(t *testing.T) {
+	repo := newMockScheduleRepo()
+	repo.findErr = errors.New("database error")
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	_, err := service.Resume(context.Background(), "sched-1")
+	if err == nil {
+		t.Error("Resume should fail with find error")
+	}
+}
+
+func TestScheduleService_Update_WithStartAt(t *testing.T) {
+	repo := newMockScheduleRepo()
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	repo.schedules["sched-1"] = &entity.Schedule{
+		ID:     "sched-1",
+		Status: entity.ScheduleStatusActive,
+	}
+
+	futureTime := time.Now().Add(48 * time.Hour)
+	req := &CreateScheduleRequest{
+		Name:       "Updated",
+		ScenarioID: "scenario-1",
+		Frequency:  entity.FrequencyOnce,
+		StartAt:    &futureTime,
+	}
+
+	schedule, err := service.Update(context.Background(), "sched-1", req)
+	if err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
+
+	if schedule.NextRunAt == nil || !schedule.NextRunAt.Equal(futureTime) {
+		t.Error("NextRunAt should be set to StartAt")
+	}
+}
+
+func TestScheduleService_Create_PastStartAt(t *testing.T) {
+	repo := newMockScheduleRepo()
+	logger := zap.NewNop()
+	service := NewScheduleService(repo, nil, logger)
+
+	// StartAt in the past should use calculated next run
+	pastTime := time.Now().Add(-1 * time.Hour)
+	req := &CreateScheduleRequest{
+		Name:       "Test",
+		ScenarioID: "scenario-1",
+		Frequency:  entity.FrequencyHourly,
+		StartAt:    &pastTime,
+	}
+
+	schedule, err := service.Create(context.Background(), req, "user-1")
+	if err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	// Should calculate next run, not use past StartAt
+	if schedule.NextRunAt != nil && schedule.NextRunAt.Before(time.Now()) {
+		t.Error("NextRunAt should be in the future when StartAt is in the past")
+	}
+}

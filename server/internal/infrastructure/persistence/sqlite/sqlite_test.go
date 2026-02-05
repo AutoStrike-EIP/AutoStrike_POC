@@ -2438,6 +2438,156 @@ func TestUserRepository_CountByRole(t *testing.T) {
 	}
 }
 
+func TestUserRepository_DeactivateAdminIfNotLast_Success(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewUserRepository(db)
+	ctx := context.Background()
+
+	// Create two admin users
+	admin1 := &entity.User{
+		ID:           "admin-1",
+		Username:     "admin1",
+		Email:        "admin1@example.com",
+		PasswordHash: "$2a$10$hash",
+		Role:         entity.RoleAdmin,
+		IsActive:     true,
+	}
+	admin2 := &entity.User{
+		ID:           "admin-2",
+		Username:     "admin2",
+		Email:        "admin2@example.com",
+		PasswordHash: "$2a$10$hash",
+		Role:         entity.RoleAdmin,
+		IsActive:     true,
+	}
+	_ = repo.Create(ctx, admin1)
+	_ = repo.Create(ctx, admin2)
+
+	// Should succeed because there's another admin
+	err := repo.DeactivateAdminIfNotLast(ctx, "admin-1")
+	if err != nil {
+		t.Fatalf("DeactivateAdminIfNotLast failed: %v", err)
+	}
+
+	// Verify user is deactivated
+	found, _ := repo.FindByID(ctx, "admin-1")
+	if found.IsActive {
+		t.Error("Expected user to be deactivated")
+	}
+}
+
+func TestUserRepository_DeactivateAdminIfNotLast_LastAdmin(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewUserRepository(db)
+	ctx := context.Background()
+
+	// Create only one admin user
+	admin := &entity.User{
+		ID:           "admin-1",
+		Username:     "admin1",
+		Email:        "admin1@example.com",
+		PasswordHash: "$2a$10$hash",
+		Role:         entity.RoleAdmin,
+		IsActive:     true,
+	}
+	_ = repo.Create(ctx, admin)
+
+	// Should fail because it's the last admin
+	err := repo.DeactivateAdminIfNotLast(ctx, "admin-1")
+	if err == nil {
+		t.Error("Expected error when deactivating last admin")
+	}
+	if err != ErrLastAdmin {
+		t.Errorf("Expected ErrLastAdmin, got %v", err)
+	}
+
+	// Verify user is still active
+	found, _ := repo.FindByID(ctx, "admin-1")
+	if !found.IsActive {
+		t.Error("Expected user to still be active")
+	}
+}
+
+func TestUserRepository_DeactivateAdminIfNotLast_NotFound(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewUserRepository(db)
+	ctx := context.Background()
+
+	err := repo.DeactivateAdminIfNotLast(ctx, "nonexistent")
+	if err == nil {
+		t.Error("Expected error when user not found")
+	}
+	if err != ErrUserNotFound {
+		t.Errorf("Expected ErrUserNotFound, got %v", err)
+	}
+}
+
+func TestUserRepository_DeactivateAdminIfNotLast_NonAdmin(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewUserRepository(db)
+	ctx := context.Background()
+
+	// Create a non-admin user
+	user := &entity.User{
+		ID:           "user-1",
+		Username:     "user1",
+		Email:        "user1@example.com",
+		PasswordHash: "$2a$10$hash",
+		Role:         entity.RoleOperator,
+		IsActive:     true,
+	}
+	_ = repo.Create(ctx, user)
+
+	// Should succeed for non-admin (no admin count check needed)
+	err := repo.DeactivateAdminIfNotLast(ctx, "user-1")
+	if err != nil {
+		t.Fatalf("DeactivateAdminIfNotLast failed for non-admin: %v", err)
+	}
+
+	// Verify user is deactivated
+	found, _ := repo.FindByID(ctx, "user-1")
+	if found.IsActive {
+		t.Error("Expected user to be deactivated")
+	}
+}
+
+func TestUserRepository_DeactivateAdminIfNotLast_AlreadyInactive(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewUserRepository(db)
+	ctx := context.Background()
+
+	// Create two admin users, one inactive
+	admin1 := &entity.User{
+		ID:           "admin-1",
+		Username:     "admin1",
+		Email:        "admin1@example.com",
+		PasswordHash: "$2a$10$hash",
+		Role:         entity.RoleAdmin,
+		IsActive:     false, // Already inactive
+	}
+	admin2 := &entity.User{
+		ID:           "admin-2",
+		Username:     "admin2",
+		Email:        "admin2@example.com",
+		PasswordHash: "$2a$10$hash",
+		Role:         entity.RoleAdmin,
+		IsActive:     true,
+	}
+	_ = repo.Create(ctx, admin1)
+	_ = repo.Create(ctx, admin2)
+
+	// Deactivating already inactive user should succeed (idempotent)
+	err := repo.DeactivateAdminIfNotLast(ctx, "admin-1")
+	if err != nil {
+		t.Fatalf("DeactivateAdminIfNotLast failed: %v", err)
+	}
+}
+
 // Schedule Repository tests
 func TestNewScheduleRepository(t *testing.T) {
 	db := setupTestDB(t)
