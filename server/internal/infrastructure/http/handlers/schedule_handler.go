@@ -270,7 +270,7 @@ func (h *ScheduleHandler) Delete(c *gin.Context) {
 		return
 	}
 
-	if err := h.scheduleService.Delete(c.Request.Context(), id); err != nil {
+	if h.scheduleService.Delete(c.Request.Context(), id) != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete schedule"})
 		return
 	}

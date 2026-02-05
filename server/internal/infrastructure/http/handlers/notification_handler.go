@@ -186,7 +186,7 @@ func (h *NotificationHandler) MarkAllAsRead(c *gin.Context) {
 		return
 	}
 
-	if err := h.notificationService.MarkAllAsRead(c.Request.Context(), userID.(string)); err != nil {
+	if h.notificationService.MarkAllAsRead(c.Request.Context(), userID.(string)) != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to mark all as read"})
 		return
 	}
@@ -268,7 +268,7 @@ func (h *NotificationHandler) CreateSettings(c *gin.Context) {
 		NotifyOnAgentOffline: req.NotifyOnAgentOffline,
 	}
 
-	if err := h.notificationService.CreateSettings(c.Request.Context(), settings); err != nil {
+	if h.notificationService.CreateSettings(c.Request.Context(), settings) != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create settings"})
 		return
 	}
@@ -329,7 +329,7 @@ func (h *NotificationHandler) UpdateSettings(c *gin.Context) {
 	settings.ScoreAlertThreshold = req.ScoreAlertThreshold
 	settings.NotifyOnAgentOffline = req.NotifyOnAgentOffline
 
-	if err := h.notificationService.UpdateSettings(c.Request.Context(), settings); err != nil {
+	if h.notificationService.UpdateSettings(c.Request.Context(), settings) != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update settings"})
 		return
 	}
@@ -369,7 +369,7 @@ func (h *NotificationHandler) DeleteSettings(c *gin.Context) {
 		return
 	}
 
-	if err := h.notificationService.DeleteSettings(c.Request.Context(), settings.ID); err != nil {
+	if h.notificationService.DeleteSettings(c.Request.Context(), settings.ID) != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete settings"})
 		return
 	}

@@ -296,7 +296,7 @@ func (h *AdminHandler) UpdateUserRole(c *gin.Context) {
 	}
 
 	var req UpdateRoleRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if c.ShouldBindJSON(&req) != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "role is required"})
 		return
 	}
@@ -402,7 +402,7 @@ func (h *AdminHandler) ResetPassword(c *gin.Context) {
 	}
 
 	var req ResetPasswordRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if c.ShouldBindJSON(&req) != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "new_password is required (min 8 characters)"})
 		return
 	}

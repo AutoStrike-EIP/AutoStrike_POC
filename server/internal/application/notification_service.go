@@ -185,7 +185,7 @@ func (s *NotificationService) NotifyExecutionStarted(ctx context.Context, execut
 			CreatedAt: time.Now(),
 		}
 
-		if err := s.notificationRepo.CreateNotification(ctx, notification); err != nil {
+		if s.notificationRepo.CreateNotification(ctx, notification) != nil {
 			continue // Don't fail on individual notification errors
 		}
 
@@ -244,7 +244,7 @@ func (s *NotificationService) processScoreAlert(ctx context.Context, setting *en
 		CreatedAt: time.Now(),
 	}
 
-	if err := s.notificationRepo.CreateNotification(ctx, alertNotification); err != nil {
+	if s.notificationRepo.CreateNotification(ctx, alertNotification) != nil {
 		return
 	}
 
@@ -277,7 +277,7 @@ func (s *NotificationService) NotifyExecutionCompleted(ctx context.Context, exec
 			CreatedAt: time.Now(),
 		}
 
-		if err := s.notificationRepo.CreateNotification(ctx, notification); err != nil {
+		if s.notificationRepo.CreateNotification(ctx, notification) != nil {
 			continue
 		}
 
@@ -320,7 +320,7 @@ func (s *NotificationService) NotifyExecutionFailed(ctx context.Context, executi
 			CreatedAt: time.Now(),
 		}
 
-		if err := s.notificationRepo.CreateNotification(ctx, notification); err != nil {
+		if s.notificationRepo.CreateNotification(ctx, notification) != nil {
 			continue
 		}
 
@@ -362,7 +362,7 @@ func (s *NotificationService) NotifyAgentOffline(ctx context.Context, agent *ent
 			CreatedAt: time.Now(),
 		}
 
-		if err := s.notificationRepo.CreateNotification(ctx, notification); err != nil {
+		if s.notificationRepo.CreateNotification(ctx, notification) != nil {
 			continue
 		}
 
