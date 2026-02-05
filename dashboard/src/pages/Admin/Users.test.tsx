@@ -350,7 +350,7 @@ describe('Users Table Actions', () => {
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
-      checkAuth: vi.fn(),
+      authEnabled: true,
     });
 
     renderUsers();
@@ -372,7 +372,7 @@ describe('Users Table Actions', () => {
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
-      checkAuth: vi.fn(),
+      authEnabled: true,
     });
 
     renderUsers();

@@ -13,6 +13,15 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// Test constants for foreign key dependencies
+const (
+	testScenarioID = "scenario-1"
+	testUserID     = "user-1"
+	testAgentPaw   = "agent-1"
+	testExecID     = "exec-1"
+	testTechID     = "T1059"
+)
+
 func setupTestDB(t *testing.T) *sql.DB {
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
@@ -21,6 +30,61 @@ func setupTestDB(t *testing.T) *sql.DB {
 	if err := InitSchema(db); err != nil {
 		t.Fatalf("Failed to init schema: %v", err)
 	}
+	return db
+}
+
+// createTestScenario creates a scenario for foreign key references in tests
+func createTestScenario(t *testing.T, db *sql.DB, id string) {
+	_, err := db.Exec(`INSERT INTO scenarios (id, name, description, phases, tags, created_at, updated_at)
+		VALUES (?, 'Test Scenario', 'Test', '[]', '', datetime('now'), datetime('now'))`, id)
+	if err != nil {
+		t.Fatalf("Failed to create test scenario: %v", err)
+	}
+}
+
+// createTestUser creates a user for foreign key references in tests
+func createTestUser(t *testing.T, db *sql.DB, id string) {
+	_, err := db.Exec(`INSERT INTO users (id, username, email, password_hash, role, is_active, created_at, updated_at)
+		VALUES (?, ?, ?, 'hash', 'admin', 1, datetime('now'), datetime('now'))`, id, "user_"+id, id+"@test.com")
+	if err != nil {
+		t.Fatalf("Failed to create test user: %v", err)
+	}
+}
+
+// createTestTechnique creates a technique for foreign key references in tests
+func createTestTechnique(t *testing.T, db *sql.DB, id string) {
+	_, err := db.Exec(`INSERT INTO techniques (id, name, description, tactic, platforms, executors, detection, is_safe, created_at)
+		VALUES (?, 'Test Technique', 'Test', 'discovery', '["linux"]', '["sh"]', '', 1, datetime('now'))`, id)
+	if err != nil {
+		t.Fatalf("Failed to create test technique: %v", err)
+	}
+}
+
+// createTestAgent creates an agent for foreign key references in tests
+func createTestAgent(t *testing.T, db *sql.DB, paw string) {
+	_, err := db.Exec(`INSERT INTO agents (paw, hostname, username, platform, executors, status, last_seen, created_at)
+		VALUES (?, 'testhost', 'testuser', 'linux', '["sh"]', 'online', datetime('now'), datetime('now'))`, paw)
+	if err != nil {
+		t.Fatalf("Failed to create test agent: %v", err)
+	}
+}
+
+// createTestExecution creates an execution for foreign key references in tests
+func createTestExecution(t *testing.T, db *sql.DB, id, scenarioID string) {
+	_, err := db.Exec(`INSERT INTO executions (id, scenario_id, status, started_at, safe_mode)
+		VALUES (?, ?, 'running', datetime('now'), 1)`, id, scenarioID)
+	if err != nil {
+		t.Fatalf("Failed to create test execution: %v", err)
+	}
+}
+
+// setupTestDBWithFKData sets up test DB with common foreign key dependencies
+func setupTestDBWithFKData(t *testing.T) *sql.DB {
+	db := setupTestDB(t)
+	createTestScenario(t, db, testScenarioID)
+	createTestUser(t, db, testUserID)
+	createTestTechnique(t, db, testTechID)
+	createTestAgent(t, db, testAgentPaw)
 	return db
 }
 
@@ -808,6 +872,9 @@ func TestResultRepository_CreateExecution(t *testing.T) {
 	repo := NewResultRepository(db)
 	ctx := context.Background()
 
+	// Create scenario first for foreign key constraint
+	createTestScenario(t, db, "s1")
+
 	exec := &entity.Execution{
 		ID:         "e1",
 		ScenarioID: "s1",
@@ -827,6 +894,9 @@ func TestResultRepository_FindExecutionByID(t *testing.T) {
 	defer db.Close()
 	repo := NewResultRepository(db)
 	ctx := context.Background()
+
+	// Create scenario first for foreign key constraint
+	createTestScenario(t, db, "s1")
 
 	exec := &entity.Execution{
 		ID:         "e1",
@@ -863,6 +933,9 @@ func TestResultRepository_UpdateExecution(t *testing.T) {
 	repo := NewResultRepository(db)
 	ctx := context.Background()
 
+	// Create scenario first for foreign key constraint
+	createTestScenario(t, db, "s1")
+
 	exec := &entity.Execution{
 		ID:         "e1",
 		ScenarioID: "s1",
@@ -893,6 +966,10 @@ func TestResultRepository_FindExecutionsByScenario(t *testing.T) {
 	repo := NewResultRepository(db)
 	ctx := context.Background()
 
+	// Create scenarios first for foreign key constraint
+	createTestScenario(t, db, "s1")
+	createTestScenario(t, db, "s2")
+
 	for i := 0; i < 2; i++ {
 		exec := &entity.Execution{
 			ID:         "e" + string(rune('0'+i)),
@@ -900,7 +977,7 @@ func TestResultRepository_FindExecutionsByScenario(t *testing.T) {
 			Status:     entity.ExecutionCompleted,
 			StartedAt:  time.Now(),
 		}
-	_ = repo.CreateExecution(ctx, exec)
+		_ = repo.CreateExecution(ctx, exec)
 	}
 	exec3 := &entity.Execution{
 		ID:         "e3",
@@ -925,6 +1002,9 @@ func TestResultRepository_FindRecentExecutions(t *testing.T) {
 	repo := NewResultRepository(db)
 	ctx := context.Background()
 
+	// Create scenario first for foreign key constraint
+	createTestScenario(t, db, "s1")
+
 	for i := 0; i < 5; i++ {
 		exec := &entity.Execution{
 			ID:         "e" + string(rune('0'+i)),
@@ -932,7 +1012,7 @@ func TestResultRepository_FindRecentExecutions(t *testing.T) {
 			Status:     entity.ExecutionCompleted,
 			StartedAt:  time.Now(),
 		}
-	_ = repo.CreateExecution(ctx, exec)
+		_ = repo.CreateExecution(ctx, exec)
 	}
 
 	executions, err := repo.FindRecentExecutions(ctx, 3)
@@ -949,6 +1029,12 @@ func TestResultRepository_CreateResult(t *testing.T) {
 	defer db.Close()
 	repo := NewResultRepository(db)
 	ctx := context.Background()
+
+	// Create foreign key dependencies
+	createTestScenario(t, db, "s1")
+	createTestExecution(t, db, "e1", "s1")
+	createTestTechnique(t, db, "T1059")
+	createTestAgent(t, db, "paw1")
 
 	result := &entity.ExecutionResult{
 		ID:          "r1",
@@ -970,6 +1056,12 @@ func TestResultRepository_UpdateResult(t *testing.T) {
 	defer db.Close()
 	repo := NewResultRepository(db)
 	ctx := context.Background()
+
+	// Create foreign key dependencies
+	createTestScenario(t, db, "s1")
+	createTestExecution(t, db, "e1", "s1")
+	createTestTechnique(t, db, "T1059")
+	createTestAgent(t, db, "paw1")
 
 	result := &entity.ExecutionResult{
 		ID:          "r1",
@@ -998,6 +1090,12 @@ func TestResultRepository_FindResultsByExecution(t *testing.T) {
 	repo := NewResultRepository(db)
 	ctx := context.Background()
 
+	// Create foreign key dependencies
+	createTestScenario(t, db, "s1")
+	createTestExecution(t, db, "e1", "s1")
+	createTestTechnique(t, db, "T1059")
+	createTestAgent(t, db, "paw1")
+
 	for i := 0; i < 3; i++ {
 		result := &entity.ExecutionResult{
 			ID:          "r" + string(rune('0'+i)),
@@ -1007,7 +1105,7 @@ func TestResultRepository_FindResultsByExecution(t *testing.T) {
 			Status:      entity.StatusSuccess,
 			StartedAt:   time.Now(),
 		}
-	_ = repo.CreateResult(ctx, result)
+		_ = repo.CreateResult(ctx, result)
 	}
 
 	results, err := repo.FindResultsByExecution(ctx, "e1")
@@ -1024,6 +1122,13 @@ func TestResultRepository_FindResultsByTechnique(t *testing.T) {
 	defer db.Close()
 	repo := NewResultRepository(db)
 	ctx := context.Background()
+
+	// Create foreign key dependencies
+	createTestScenario(t, db, "s1")
+	createTestExecution(t, db, "e1", "s1")
+	createTestTechnique(t, db, "T1059")
+	createTestTechnique(t, db, "T1055")
+	createTestAgent(t, db, "paw1")
 
 	r1 := &entity.ExecutionResult{
 		ID: "r1", ExecutionID: "e1", TechniqueID: "T1059",
@@ -1357,6 +1462,9 @@ func TestResultRepository_FindRecentExecutions_WithScore(t *testing.T) {
 	repo := NewResultRepository(db)
 	ctx := context.Background()
 
+	// Create scenario first for foreign key constraint
+	createTestScenario(t, db, "s1")
+
 	// Insert execution with score (using correct schema columns)
 	_, err := db.Exec(`
 		INSERT INTO executions (id, scenario_id, status, started_at, completed_at, safe_mode,
@@ -1384,6 +1492,9 @@ func TestResultRepository_FindExecutionsByScenario_WithResults(t *testing.T) {
 	defer db.Close()
 	repo := NewResultRepository(db)
 	ctx := context.Background()
+
+	// Create scenario first for foreign key constraint
+	createTestScenario(t, db, "scenario-1")
 
 	// Insert multiple executions for same scenario
 	for i := 0; i < 3; i++ {
@@ -1645,6 +1756,12 @@ func TestResultRepository_FindResultByID(t *testing.T) {
 	defer db.Close()
 	repo := NewResultRepository(db)
 	ctx := context.Background()
+
+	// Create foreign key dependencies
+	createTestScenario(t, db, "s1")
+	createTestExecution(t, db, "exec-1", "s1")
+	createTestTechnique(t, db, "T1059")
+	createTestAgent(t, db, "agent-1")
 
 	now := time.Now()
 	result := &entity.ExecutionResult{
@@ -2338,6 +2455,10 @@ func TestScheduleRepository_Create(t *testing.T) {
 	repo := NewScheduleRepository(db)
 	ctx := context.Background()
 
+	// Create foreign key dependencies
+	createTestScenario(t, db, "scenario-1")
+	createTestUser(t, db, "user-1")
+
 	now := time.Now()
 	schedule := &entity.Schedule{
 		ID:          "sched-1",
@@ -2364,6 +2485,10 @@ func TestScheduleRepository_FindByID(t *testing.T) {
 	defer db.Close()
 	repo := NewScheduleRepository(db)
 	ctx := context.Background()
+
+	// Create foreign key dependencies
+	createTestScenario(t, db, "scenario-1")
+	createTestUser(t, db, "user-1")
 
 	now := time.Now()
 	schedule := &entity.Schedule{
@@ -2407,6 +2532,10 @@ func TestScheduleRepository_Update(t *testing.T) {
 	defer db.Close()
 	repo := NewScheduleRepository(db)
 	ctx := context.Background()
+
+	// Create foreign key dependencies
+	createTestScenario(t, db, "scenario-1")
+	createTestUser(t, db, "user-1")
 
 	now := time.Now()
 	schedule := &entity.Schedule{
@@ -2470,7 +2599,7 @@ func TestScheduleRepository_Delete(t *testing.T) {
 }
 
 func TestScheduleRepository_FindAll(t *testing.T) {
-	db := setupTestDB(t)
+	db := setupTestDBWithFKData(t)
 	defer db.Close()
 	repo := NewScheduleRepository(db)
 	ctx := context.Background()
@@ -2505,6 +2634,10 @@ func TestScheduleRepository_FindByStatus(t *testing.T) {
 	repo := NewScheduleRepository(db)
 	ctx := context.Background()
 
+	// Create foreign key dependencies
+	createTestScenario(t, db, "s1")
+	createTestUser(t, db, testUserID)
+
 	now := time.Now()
 	active := &entity.Schedule{
 		ID: "sched-active", Name: "Active", ScenarioID: "s1",
@@ -2533,6 +2666,10 @@ func TestScheduleRepository_FindActiveSchedulesDue(t *testing.T) {
 	defer db.Close()
 	repo := NewScheduleRepository(db)
 	ctx := context.Background()
+
+	// Create foreign key dependencies
+	createTestScenario(t, db, "s1")
+	createTestUser(t, db, testUserID)
 
 	now := time.Now()
 	pastTime := now.Add(-1 * time.Hour)
@@ -2572,12 +2709,17 @@ func TestScheduleRepository_FindByScenarioID(t *testing.T) {
 	repo := NewScheduleRepository(db)
 	ctx := context.Background()
 
+	// Create foreign key dependencies
+	createTestScenario(t, db, "scenario-target")
+	createTestScenario(t, db, "scenario-other")
+	createTestUser(t, db, testUserID)
+
 	now := time.Now()
 	for i := 0; i < 2; i++ {
 		schedule := &entity.Schedule{
 			ID: "sched-scenario-" + string(rune('a'+i)), Name: "Schedule",
 			ScenarioID: "scenario-target", Frequency: entity.FrequencyDaily,
-			Status: entity.ScheduleStatusActive, CreatedBy: "user-1",
+			Status: entity.ScheduleStatusActive, CreatedBy: testUserID,
 			CreatedAt: now, UpdatedAt: now,
 		}
 		_ = repo.Create(ctx, schedule)
@@ -2585,7 +2727,7 @@ func TestScheduleRepository_FindByScenarioID(t *testing.T) {
 	other := &entity.Schedule{
 		ID: "sched-other", Name: "Other", ScenarioID: "scenario-other",
 		Frequency: entity.FrequencyDaily, Status: entity.ScheduleStatusActive,
-		CreatedBy: "user-1", CreatedAt: now, UpdatedAt: now,
+		CreatedBy: testUserID, CreatedAt: now, UpdatedAt: now,
 	}
 	_ = repo.Create(ctx, other)
 
@@ -2604,18 +2746,23 @@ func TestScheduleRepository_CreateRun(t *testing.T) {
 	repo := NewScheduleRepository(db)
 	ctx := context.Background()
 
+	// Create foreign key dependencies
+	createTestScenario(t, db, "s1")
+	createTestUser(t, db, testUserID)
+	createTestExecution(t, db, testExecID, "s1")
+
 	now := time.Now()
 	schedule := &entity.Schedule{
 		ID: "sched-run-test", Name: "Run Test", ScenarioID: "s1",
 		Frequency: entity.FrequencyDaily, Status: entity.ScheduleStatusActive,
-		CreatedBy: "user-1", CreatedAt: now, UpdatedAt: now,
+		CreatedBy: testUserID, CreatedAt: now, UpdatedAt: now,
 	}
 	_ = repo.Create(ctx, schedule)
 
 	run := &entity.ScheduleRun{
 		ID:          "run-1",
 		ScheduleID:  "sched-run-test",
-		ExecutionID: "exec-1",
+		ExecutionID: testExecID,
 		StartedAt:   now,
 		Status:      "running",
 	}
@@ -2632,11 +2779,15 @@ func TestScheduleRepository_CreateRun_NoExecutionID(t *testing.T) {
 	repo := NewScheduleRepository(db)
 	ctx := context.Background()
 
+	// Create foreign key dependencies
+	createTestScenario(t, db, "s1")
+	createTestUser(t, db, testUserID)
+
 	now := time.Now()
 	schedule := &entity.Schedule{
 		ID: "sched-run-no-exec", Name: "Run No Exec", ScenarioID: "s1",
 		Frequency: entity.FrequencyDaily, Status: entity.ScheduleStatusActive,
-		CreatedBy: "user-1", CreatedAt: now, UpdatedAt: now,
+		CreatedBy: testUserID, CreatedAt: now, UpdatedAt: now,
 	}
 	_ = repo.Create(ctx, schedule)
 
@@ -2694,11 +2845,15 @@ func TestScheduleRepository_FindRunsByScheduleID(t *testing.T) {
 	repo := NewScheduleRepository(db)
 	ctx := context.Background()
 
+	// Create foreign key dependencies
+	createTestScenario(t, db, "s1")
+	createTestUser(t, db, testUserID)
+
 	now := time.Now()
 	schedule := &entity.Schedule{
 		ID: "sched-find-runs", Name: "Find Runs", ScenarioID: "s1",
 		Frequency: entity.FrequencyDaily, Status: entity.ScheduleStatusActive,
-		CreatedBy: "user-1", CreatedAt: now, UpdatedAt: now,
+		CreatedBy: testUserID, CreatedAt: now, UpdatedAt: now,
 	}
 	_ = repo.Create(ctx, schedule)
 
@@ -2706,7 +2861,7 @@ func TestScheduleRepository_FindRunsByScheduleID(t *testing.T) {
 		run := &entity.ScheduleRun{
 			ID:          "run-find-" + string(rune('a'+i)),
 			ScheduleID:  "sched-find-runs",
-			ExecutionID: "exec-" + string(rune('a'+i)),
+			ExecutionID: "", // Empty execution ID for test
 			StartedAt:   now.Add(time.Duration(i) * time.Hour),
 			Status:      "completed",
 		}
@@ -2728,11 +2883,15 @@ func TestScheduleRepository_FindRunsByScheduleID_WithLimit(t *testing.T) {
 	repo := NewScheduleRepository(db)
 	ctx := context.Background()
 
+	// Create foreign key dependencies
+	createTestScenario(t, db, "s1")
+	createTestUser(t, db, testUserID)
+
 	now := time.Now()
 	schedule := &entity.Schedule{
 		ID: "sched-limit-runs", Name: "Limit Runs", ScenarioID: "s1",
 		Frequency: entity.FrequencyDaily, Status: entity.ScheduleStatusActive,
-		CreatedBy: "user-1", CreatedAt: now, UpdatedAt: now,
+		CreatedBy: testUserID, CreatedAt: now, UpdatedAt: now,
 	}
 	_ = repo.Create(ctx, schedule)
 
@@ -2740,7 +2899,7 @@ func TestScheduleRepository_FindRunsByScheduleID_WithLimit(t *testing.T) {
 		run := &entity.ScheduleRun{
 			ID:          "run-limit-" + string(rune('a'+i)),
 			ScheduleID:  "sched-limit-runs",
-			ExecutionID: "exec-" + string(rune('a'+i)),
+			ExecutionID: "", // Empty execution ID for test
 			StartedAt:   now.Add(time.Duration(i) * time.Hour),
 			Status:      "completed",
 		}
@@ -2811,6 +2970,7 @@ func TestNotificationRepository_CreateSettings(t *testing.T) {
 	repo := NewNotificationRepository(db)
 	ctx := context.Background()
 
+	createTestUser(t, db, "user-1")
 	now := time.Now()
 	settings := &entity.NotificationSettings{
 		ID:                   "settings-1",
@@ -2840,6 +3000,7 @@ func TestNotificationRepository_UpdateSettings(t *testing.T) {
 	repo := NewNotificationRepository(db)
 	ctx := context.Background()
 
+	createTestUser(t, db, "user-1")
 	now := time.Now()
 	settings := &entity.NotificationSettings{
 		ID:           "settings-update",
@@ -2868,6 +3029,7 @@ func TestNotificationRepository_FindSettingsByUserID(t *testing.T) {
 	repo := NewNotificationRepository(db)
 	ctx := context.Background()
 
+	createTestUser(t, db, "user-find")
 	now := time.Now()
 	settings := &entity.NotificationSettings{
 		ID:           "settings-find",
@@ -2895,6 +3057,8 @@ func TestNotificationRepository_FindAllEnabledSettings(t *testing.T) {
 	repo := NewNotificationRepository(db)
 	ctx := context.Background()
 
+	createTestUser(t, db, "user-1")
+	createTestUser(t, db, "user-2")
 	now := time.Now()
 	enabled := &entity.NotificationSettings{
 		ID: "settings-enabled", UserID: "user-1", Channel: entity.ChannelEmail,
@@ -2924,6 +3088,7 @@ func TestNotificationRepository_DeleteSettings(t *testing.T) {
 	repo := NewNotificationRepository(db)
 	ctx := context.Background()
 
+	createTestUser(t, db, "user-1")
 	now := time.Now()
 	settings := &entity.NotificationSettings{
 		ID: "settings-delete", UserID: "user-1", Channel: entity.ChannelEmail,
@@ -2943,6 +3108,7 @@ func TestNotificationRepository_CreateNotification(t *testing.T) {
 	repo := NewNotificationRepository(db)
 	ctx := context.Background()
 
+	createTestUser(t, db, "user-1")
 	notification := &entity.Notification{
 		ID:        "notif-1",
 		UserID:    "user-1",
@@ -2966,6 +3132,7 @@ func TestNotificationRepository_FindNotificationByID(t *testing.T) {
 	repo := NewNotificationRepository(db)
 	ctx := context.Background()
 
+	createTestUser(t, db, "user-1")
 	notification := &entity.Notification{
 		ID:        "notif-find",
 		UserID:    "user-1",
@@ -2995,6 +3162,8 @@ func TestNotificationRepository_FindNotificationsByUserID(t *testing.T) {
 	repo := NewNotificationRepository(db)
 	ctx := context.Background()
 
+	createTestUser(t, db, "target-user")
+	createTestUser(t, db, "other-user")
 	for i := 0; i < 3; i++ {
 		notification := &entity.Notification{
 			ID:        "notif-user-" + string(rune('a'+i)),
@@ -3029,6 +3198,7 @@ func TestNotificationRepository_FindUnreadByUserID(t *testing.T) {
 	repo := NewNotificationRepository(db)
 	ctx := context.Background()
 
+	createTestUser(t, db, "user-unread")
 	unread := &entity.Notification{
 		ID: "notif-unread", UserID: "user-unread",
 		Type: entity.NotificationExecutionStarted, Title: "Unread",
@@ -3057,6 +3227,7 @@ func TestNotificationRepository_MarkAsRead(t *testing.T) {
 	repo := NewNotificationRepository(db)
 	ctx := context.Background()
 
+	createTestUser(t, db, "user-1")
 	notification := &entity.Notification{
 		ID: "notif-mark-read", UserID: "user-1",
 		Type: entity.NotificationExecutionStarted, Title: "Mark Read",
@@ -3081,6 +3252,7 @@ func TestNotificationRepository_MarkAllAsRead(t *testing.T) {
 	repo := NewNotificationRepository(db)
 	ctx := context.Background()
 
+	createTestUser(t, db, "user-all-read")
 	for i := 0; i < 3; i++ {
 		notification := &entity.Notification{
 			ID: "notif-all-read-" + string(rune('a'+i)), UserID: "user-all-read",
@@ -3107,6 +3279,7 @@ func TestNotificationRepository_WithWebhookURL(t *testing.T) {
 	repo := NewNotificationRepository(db)
 	ctx := context.Background()
 
+	createTestUser(t, db, "user-webhook")
 	now := time.Now()
 	settings := &entity.NotificationSettings{
 		ID:         "settings-webhook",
@@ -3134,6 +3307,7 @@ func TestNotificationRepository_WithSentAt(t *testing.T) {
 	repo := NewNotificationRepository(db)
 	ctx := context.Background()
 
+	createTestUser(t, db, "user-1")
 	sentAt := time.Now()
 	notification := &entity.Notification{
 		ID: "notif-sent", UserID: "user-1",
@@ -3158,6 +3332,7 @@ func TestResultRepository_FindExecutionsByDateRange(t *testing.T) {
 	repo := NewResultRepository(db)
 	ctx := context.Background()
 
+	createTestScenario(t, db, "scenario-1")
 	now := time.Now()
 	start := now.Add(-24 * time.Hour)
 	end := now.Add(24 * time.Hour)
@@ -3199,6 +3374,7 @@ func TestResultRepository_FindCompletedExecutionsByDateRange(t *testing.T) {
 	repo := NewResultRepository(db)
 	ctx := context.Background()
 
+	createTestScenario(t, db, "scenario-1")
 	now := time.Now()
 	start := now.Add(-24 * time.Hour)
 	end := now.Add(24 * time.Hour)
@@ -3236,6 +3412,7 @@ func TestResultRepository_UpdateExecution_NilScore(t *testing.T) {
 	repo := NewResultRepository(db)
 	ctx := context.Background()
 
+	createTestScenario(t, db, "scenario-1")
 	exec := &entity.Execution{
 		ID:         "exec-nil-score",
 		ScenarioID: "scenario-1",

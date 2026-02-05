@@ -334,7 +334,7 @@ describe('Permissions with Different User Roles', () => {
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
-      checkAuth: vi.fn(),
+      authEnabled: true,
     });
 
     mockGetMyPermissions.mockResolvedValue({
@@ -361,7 +361,7 @@ describe('Permissions with Different User Roles', () => {
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
-      checkAuth: vi.fn(),
+      authEnabled: true,
     });
 
     mockGetMyPermissions.mockResolvedValue({

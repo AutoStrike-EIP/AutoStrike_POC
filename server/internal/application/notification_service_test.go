@@ -169,6 +169,10 @@ func (m *mockUserRepoForNotification) CountByRole(ctx context.Context, role enti
 	return 0, nil
 }
 
+func (m *mockUserRepoForNotification) DeactivateAdminIfNotLast(ctx context.Context, id string) error {
+	return nil
+}
+
 func TestNewNotificationService(t *testing.T) {
 	repo := newMockNotificationRepo()
 	userRepo := &mockUserRepoForNotification{}

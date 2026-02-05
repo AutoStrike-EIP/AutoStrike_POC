@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"time"
 
 	"autostrike/internal/domain/entity"
@@ -182,6 +183,64 @@ func (r *UserRepository) CountByRole(ctx context.Context, role entity.UserRole) 
 		SELECT COUNT(*) FROM users WHERE role = ? AND is_active = 1
 	`, role).Scan(&count)
 	return count, err
+}
+
+// ErrLastAdmin is returned when trying to deactivate the last admin
+var ErrLastAdmin = errors.New("cannot deactivate the last admin")
+
+// ErrUserNotFound is returned when the user doesn't exist
+var ErrUserNotFound = errors.New("user not found")
+
+// DeactivateAdminIfNotLast atomically deactivates an admin user only if they are not the last active admin
+func (r *UserRepository) DeactivateAdminIfNotLast(ctx context.Context, id string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	// Check if user exists and is an admin
+	var role string
+	var isActive bool
+	err = tx.QueryRowContext(ctx, `SELECT role, is_active FROM users WHERE id = ?`, id).Scan(&role, &isActive)
+	if err == sql.ErrNoRows {
+		return ErrUserNotFound
+	}
+	if err != nil {
+		return err
+	}
+
+	// If not an admin, just deactivate normally
+	if role != string(entity.RoleAdmin) {
+		now := time.Now()
+		_, err = tx.ExecContext(ctx, `UPDATE users SET is_active = 0, updated_at = ? WHERE id = ?`, now, id)
+		if err != nil {
+			return err
+		}
+		return tx.Commit()
+	}
+
+	// Count active admins (excluding the one being deactivated)
+	var adminCount int
+	err = tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM users WHERE role = ? AND is_active = 1 AND id != ?
+	`, entity.RoleAdmin, id).Scan(&adminCount)
+	if err != nil {
+		return err
+	}
+
+	if adminCount == 0 {
+		return ErrLastAdmin
+	}
+
+	// Safe to deactivate
+	now := time.Now()
+	_, err = tx.ExecContext(ctx, `UPDATE users SET is_active = 0, updated_at = ? WHERE id = ?`, now, id)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (r *UserRepository) scanUsers(rows *sql.Rows) ([]*entity.User, error) {

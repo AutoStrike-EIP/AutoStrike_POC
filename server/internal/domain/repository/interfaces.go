@@ -74,6 +74,9 @@ type UserRepository interface {
 	Deactivate(ctx context.Context, id string) error
 	Reactivate(ctx context.Context, id string) error
 	CountByRole(ctx context.Context, role entity.UserRole) (int, error)
+	// DeactivateAdminIfNotLast atomically deactivates an admin user only if they are not the last active admin.
+	// Returns ErrLastAdmin if user is the last admin, ErrUserNotFound if user doesn't exist.
+	DeactivateAdminIfNotLast(ctx context.Context, id string) error
 }
 
 // NotificationRepository defines the interface for notification persistence

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"autostrike/internal/domain/entity"
+	"autostrike/internal/infrastructure/persistence/sqlite"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -137,6 +138,27 @@ func (m *mockUserRepo) CountByRole(ctx context.Context, role entity.UserRole) (i
 		}
 	}
 	return count, nil
+}
+
+func (m *mockUserRepo) DeactivateAdminIfNotLast(ctx context.Context, id string) error {
+	user, ok := m.users[id]
+	if !ok {
+		return sqlite.ErrUserNotFound
+	}
+	// If admin, check if last admin
+	if user.Role == entity.RoleAdmin {
+		count := 0
+		for _, u := range m.users {
+			if u.Role == entity.RoleAdmin && u.IsActive && u.ID != id {
+				count++
+			}
+		}
+		if count == 0 {
+			return sqlite.ErrLastAdmin
+		}
+	}
+	user.IsActive = false
+	return nil
 }
 
 func TestNewAuthService(t *testing.T) {

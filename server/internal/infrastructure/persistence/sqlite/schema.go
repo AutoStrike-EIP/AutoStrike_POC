@@ -8,6 +8,11 @@ import (
 
 // InitSchema initializes the database schema
 func InitSchema(db *sql.DB) error {
+	// Enable foreign key enforcement (disabled by default in SQLite)
+	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		return fmt.Errorf("failed to enable foreign keys: %w", err)
+	}
+
 	schema := `
 	-- Agents table
 	CREATE TABLE IF NOT EXISTS agents (

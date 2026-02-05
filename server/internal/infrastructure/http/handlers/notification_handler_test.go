@@ -176,6 +176,10 @@ func (m *mockUserRepoForNotificationHandler) CountByRole(ctx context.Context, ro
 	return 0, nil
 }
 
+func (m *mockUserRepoForNotificationHandler) DeactivateAdminIfNotLast(ctx context.Context, id string) error {
+	return nil
+}
+
 func setupNotificationHandler() (*NotificationHandler, *mockNotificationRepoForHandler) {
 	repo := newMockNotificationRepoForHandler()
 	userRepo := &mockUserRepoForNotificationHandler{}
@@ -511,8 +515,9 @@ func TestNotificationHandler_UpdateSettings_NotFound(t *testing.T) {
 	router := setupNotificationRouter(handler)
 
 	body := NotificationSettingsRequest{
-		Channel: "email",
-		Enabled: true,
+		Channel:      "email",
+		Enabled:      true,
+		EmailAddress: "test@example.com",
 	}
 	bodyBytes, _ := json.Marshal(body)
 

@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"net/mail"
+	"net/url"
 
 	"autostrike/internal/application"
 	"autostrike/internal/domain/entity"
@@ -64,6 +66,27 @@ type NotificationSettingsRequest struct {
 	NotifyOnScoreAlert   bool    `json:"notify_on_score_alert"`
 	ScoreAlertThreshold  float64 `json:"score_alert_threshold"`
 	NotifyOnAgentOffline bool    `json:"notify_on_agent_offline"`
+}
+
+// Validate validates the notification settings request
+func (r *NotificationSettingsRequest) Validate() error {
+	if r.Channel == "email" && r.Enabled {
+		if r.EmailAddress == "" {
+			return fmt.Errorf("email address is required when channel is email")
+		}
+		if _, err := mail.ParseAddress(r.EmailAddress); err != nil {
+			return fmt.Errorf("invalid email address format")
+		}
+	}
+	if r.Channel == "webhook" && r.Enabled {
+		if r.WebhookURL == "" {
+			return fmt.Errorf("webhook URL is required when channel is webhook")
+		}
+		if _, err := url.ParseRequestURI(r.WebhookURL); err != nil {
+			return fmt.Errorf("invalid webhook URL format")
+		}
+	}
+	return nil
 }
 
 // GetNotifications godoc
@@ -254,6 +277,11 @@ func (h *NotificationHandler) CreateSettings(c *gin.Context) {
 		return
 	}
 
+	if err := req.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	settings := &entity.NotificationSettings{
 		UserID:               userID.(string),
 		Channel:              entity.NotificationChannel(req.Channel),
@@ -298,6 +326,11 @@ func (h *NotificationHandler) UpdateSettings(c *gin.Context) {
 
 	var req NotificationSettingsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := req.Validate(); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

@@ -64,7 +64,7 @@ func (s *ScheduleService) Create(ctx context.Context, req *CreateScheduleRequest
 		if req.CronExpr == "" {
 			return nil, fmt.Errorf("cron expression required for cron frequency: %w", ErrInvalidCronExpr)
 		}
-		if err := entity.ValidateCronExpr(req.CronExpr); err != nil {
+		if entity.ValidateCronExpr(req.CronExpr) != nil {
 			return nil, fmt.Errorf("invalid cron expression '%s': %w", req.CronExpr, ErrInvalidCronExpr)
 		}
 	}
@@ -114,7 +114,7 @@ func (s *ScheduleService) Update(ctx context.Context, id string, req *CreateSche
 		if req.CronExpr == "" {
 			return nil, fmt.Errorf("cron expression required for cron frequency: %w", ErrInvalidCronExpr)
 		}
-		if err := entity.ValidateCronExpr(req.CronExpr); err != nil {
+		if entity.ValidateCronExpr(req.CronExpr) != nil {
 			return nil, fmt.Errorf("invalid cron expression '%s': %w", req.CronExpr, ErrInvalidCronExpr)
 		}
 	}

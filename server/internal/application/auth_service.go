@@ -11,6 +11,7 @@ import (
 
 	"autostrike/internal/domain/entity"
 	"autostrike/internal/domain/repository"
+	"autostrike/internal/infrastructure/persistence/sqlite"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -365,26 +366,19 @@ func (s *AuthService) DeactivateUser(ctx context.Context, id, currentUserID stri
 		return ErrCannotDeactivateSelf
 	}
 
-	user, err := s.userRepo.FindByID(ctx, id)
+	// Use atomic operation to prevent race condition with concurrent admin deactivations
+	err := s.userRepo.DeactivateAdminIfNotLast(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		// Map repository errors to application errors
+		if errors.Is(err, sqlite.ErrUserNotFound) {
 			return ErrUserNotFound
+		}
+		if errors.Is(err, sqlite.ErrLastAdmin) {
+			return ErrLastAdmin
 		}
 		return err
 	}
-
-	// If user is admin, check if they're the last one
-	if user.Role == entity.RoleAdmin {
-		count, err := s.userRepo.CountByRole(ctx, entity.RoleAdmin)
-		if err != nil {
-			return err
-		}
-		if count <= 1 {
-			return ErrLastAdmin
-		}
-	}
-
-	return s.userRepo.Deactivate(ctx, id)
+	return nil
 }
 
 // ReactivateUser reactivates a deactivated user account
