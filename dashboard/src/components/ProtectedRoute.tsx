@@ -68,10 +68,10 @@ export function ProtectedRoute({ children, requiredRole, allowedRoles }: Protect
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </div>
     );
@@ -91,11 +91,11 @@ export function ProtectedRoute({ children, requiredRole, allowedRoles }: Protect
   if ((requiredRole || allowedRoles) && !hasRequiredRole(user?.role as UserRole, requiredRole, allowedRoles)) {
     // User doesn't have required role - show unauthorized
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-red-500">403</h1>
-          <p className="mt-4 text-gray-400">Access Denied</p>
-          <p className="mt-2 text-sm text-gray-500">You don't have permission to access this page.</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Access Denied</p>
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-500">You don't have permission to access this page.</p>
           <a href="/dashboard" className="mt-4 inline-block text-primary-400 hover:text-primary-300">
             Return to Dashboard
           </a>

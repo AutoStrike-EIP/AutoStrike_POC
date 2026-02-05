@@ -58,45 +58,45 @@ export default function Agents() {
           footer={<button onClick={() => setShowDeployModal(false)} className="btn-primary">Close</button>}
         >
           <div className="space-y-4">
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               Download the agent binary for your platform and run:
             </p>
             <div className="space-y-3">
               <div>
-                <span className="text-sm font-medium text-gray-700">Linux / macOS</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Linux / macOS</span>
                 <div className="mt-1 flex items-center gap-2">
-                  <code className="flex-1 bg-gray-100 px-3 py-2 rounded text-sm font-mono overflow-x-auto">
+                  <code className="flex-1 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 px-3 py-2 rounded text-sm font-mono overflow-x-auto">
                     {commands.linux}
                   </code>
-                  <button onClick={() => copyToClipboard(commands.linux, 'linux')} className="p-2 hover:bg-gray-100 rounded" title="Copy">
+                  <button onClick={() => copyToClipboard(commands.linux, 'linux')} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="Copy">
                     {copiedCommand === 'linux' ? <CheckIcon className="h-5 w-5 text-green-500" /> : <ClipboardIcon className="h-5 w-5 text-gray-400" />}
                   </button>
                 </div>
               </div>
               <div>
-                <span className="text-sm font-medium text-gray-700">Windows</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Windows</span>
                 <div className="mt-1 flex items-center gap-2">
-                  <code className="flex-1 bg-gray-100 px-3 py-2 rounded text-sm font-mono overflow-x-auto">
+                  <code className="flex-1 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 px-3 py-2 rounded text-sm font-mono overflow-x-auto">
                     {commands.windows}
                   </code>
-                  <button onClick={() => copyToClipboard(commands.windows, 'windows')} className="p-2 hover:bg-gray-100 rounded" title="Copy">
+                  <button onClick={() => copyToClipboard(commands.windows, 'windows')} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="Copy">
                     {copiedCommand === 'windows' ? <CheckIcon className="h-5 w-5 text-green-500" /> : <ClipboardIcon className="h-5 w-5 text-gray-400" />}
                   </button>
                 </div>
               </div>
               <div>
-                <span className="text-sm font-medium text-gray-700">Docker</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Docker</span>
                 <div className="mt-1 flex items-center gap-2">
-                  <code className="flex-1 bg-gray-100 px-3 py-2 rounded text-sm font-mono overflow-x-auto">
+                  <code className="flex-1 bg-gray-100 dark:bg-gray-700 dark:text-gray-300 px-3 py-2 rounded text-sm font-mono overflow-x-auto">
                     {commands.docker}
                   </code>
-                  <button onClick={() => copyToClipboard(commands.docker, 'docker')} className="p-2 hover:bg-gray-100 rounded" title="Copy">
+                  <button onClick={() => copyToClipboard(commands.docker, 'docker')} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="Copy">
                     {copiedCommand === 'docker' ? <CheckIcon className="h-5 w-5 text-green-500" /> : <ClipboardIcon className="h-5 w-5 text-gray-400" />}
                   </button>
                 </div>
               </div>
             </div>
-            <p className="text-sm text-gray-500 mt-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
               The agent will automatically register with the server once started.
             </p>
           </div>
@@ -107,8 +107,8 @@ export default function Agents() {
         {agents?.map((agent) => (
           <div key={agent.paw} className="card">
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-gray-100 rounded-lg">
-                <ComputerDesktopIcon className="h-6 w-6 text-gray-600" />
+              <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <ComputerDesktopIcon className="h-6 w-6 text-gray-600 dark:text-gray-400" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
@@ -121,19 +121,19 @@ export default function Agents() {
                     {agent.status}
                   </span>
                 </div>
-                <p className="text-sm text-gray-500 mt-1">{agent.username}</p>
-                <p className="text-sm text-gray-400 mt-1">PAW: {agent.paw.slice(0, 8)}...</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{agent.username}</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">PAW: {agent.paw.slice(0, 8)}...</p>
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-gray-500">Platform</p>
+                  <p className="text-gray-500 dark:text-gray-400">Platform</p>
                   <p className="font-medium">{agent.platform}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500">Last Seen</p>
+                  <p className="text-gray-500 dark:text-gray-400">Last Seen</p>
                   <p className="font-medium">
                     {formatDistanceToNow(new Date(agent.last_seen), { addSuffix: true })}
                   </p>
@@ -141,10 +141,10 @@ export default function Agents() {
               </div>
 
               <div className="mt-3">
-                <p className="text-gray-500 text-sm mb-1">Executors</p>
+                <p className="text-gray-500 dark:text-gray-400 text-sm mb-1">Executors</p>
                 <div className="flex gap-1 flex-wrap">
                   {agent.executors.map((exec) => (
-                    <span key={exec} className="badge bg-gray-100 text-gray-700">
+                    <span key={exec} className="badge bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
                       {exec}
                     </span>
                   ))}

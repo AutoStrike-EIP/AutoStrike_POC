@@ -313,7 +313,7 @@ export default function Scenarios() {
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Scenarios</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Scenarios</h1>
         <div className="flex gap-2">
           <button
             onClick={handleImportClick}
@@ -351,8 +351,8 @@ export default function Scenarios() {
           <div key={scenario.id} className="card">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="font-semibold text-lg">{scenario.name}</h3>
-                <p className="text-sm text-gray-500 mt-1">{scenario.description}</p>
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100">{scenario.name}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{scenario.description}</p>
               </div>
               <button
                 onClick={() => handleRunClick(scenario)}
@@ -363,15 +363,15 @@ export default function Scenarios() {
             </div>
 
             <div className="mt-4">
-              <p className="text-sm text-gray-500 mb-2">Phases</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Phases</p>
               <div className="space-y-2">
                 {scenario.phases.map((phase, idx) => (
                   <div key={`${phase.name}-${idx}`} className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-xs font-medium">
+                    <span className="w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center text-xs font-medium">
                       {idx + 1}
                     </span>
-                    <span className="text-sm">{phase.name}</span>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-sm text-gray-900 dark:text-gray-100">{phase.name}</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
                       ({phase.techniques.length} techniques)
                     </span>
                   </div>
@@ -379,10 +379,10 @@ export default function Scenarios() {
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
               <div className="flex gap-1 flex-wrap">
                 {scenario.tags?.map((tag) => (
-                  <span key={tag} className="badge bg-gray-100 text-gray-700">
+                  <span key={tag} className="badge bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
                     {tag}
                   </span>
                 ))}
@@ -428,13 +428,13 @@ export default function Scenarios() {
                 <ImportResultIcon importResult={importResult} />
                 <div>
                   <p className="font-medium"><ImportResultTitle importResult={importResult} /></p>
-                  <p className="text-sm text-gray-600">{importResult.imported} imported, {importResult.failed} failed</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{importResult.imported} imported, {importResult.failed} failed</p>
                 </div>
               </div>
               {importResult.errors && importResult.errors.length > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 max-h-40 overflow-y-auto">
-                  <p className="text-sm font-medium text-red-700 mb-2">Errors:</p>
-                  <ul className="text-xs text-red-600 space-y-1">
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 max-h-40 overflow-y-auto">
+                  <p className="text-sm font-medium text-red-700 dark:text-red-400 mb-2">Errors:</p>
+                  <ul className="text-xs text-red-600 dark:text-red-400 space-y-1">
                     {importResult.errors.map((error, idx) => (
                       <li key={`error-${idx}-${error.slice(0, 20)}`}>{error}</li>
                     ))}
@@ -444,20 +444,20 @@ export default function Scenarios() {
             </div>
           ) : (
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 Upload a JSON file containing scenarios to import. The file should be in AutoStrike export format.
               </p>
               <button
                 type="button"
-                className="w-full border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary-500 transition-colors bg-transparent"
+                className="w-full border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center cursor-pointer hover:border-primary-500 transition-colors bg-transparent"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <ArrowUpTrayIcon className="h-10 w-10 mx-auto text-gray-400 mb-3" />
-                <p className="text-sm text-gray-600">Click to select a JSON file</p>
-                <p className="text-xs text-gray-400 mt-1">or drag and drop</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Click to select a JSON file</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">or drag and drop</p>
               </button>
               {importMutation.isPending && (
-                <div className="flex items-center justify-center gap-2 text-gray-600">
+                <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400">
                   <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -473,12 +473,12 @@ export default function Scenarios() {
       {/* Create Scenario Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-xl font-semibold">Create Scenario</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Create Scenario</h2>
               <button
                 onClick={handleCloseCreateModal}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 dark:text-gray-400"
               >
                 <XMarkIcon className="h-5 w-5" />
               </button>
@@ -488,35 +488,35 @@ export default function Scenarios() {
                 {/* Name & Description */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="scenario-name" className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                    <label htmlFor="scenario-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name *</label>
                     <input
                       id="scenario-name"
                       type="text"
                       value={newScenario.name}
                       onChange={(e) => setNewScenario(prev => ({ ...prev, name: e.target.value }))}
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="input"
                       placeholder="My Attack Scenario"
                     />
                   </div>
                   <div>
-                    <label htmlFor="scenario-tags" className="block text-sm font-medium text-gray-700 mb-1">Tags (comma-separated)</label>
+                    <label htmlFor="scenario-tags" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tags (comma-separated)</label>
                     <input
                       id="scenario-tags"
                       type="text"
                       value={newScenario.tags}
                       onChange={(e) => setNewScenario(prev => ({ ...prev, tags: e.target.value }))}
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="input"
                       placeholder="discovery, safe, windows"
                     />
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="scenario-description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label htmlFor="scenario-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
                   <textarea
                     id="scenario-description"
                     value={newScenario.description}
                     onChange={(e) => setNewScenario(prev => ({ ...prev, description: e.target.value }))}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="input"
                     rows={2}
                     placeholder="Describe the purpose of this scenario..."
                   />
@@ -525,18 +525,18 @@ export default function Scenarios() {
                 {/* Phases */}
                 <div>
                   <div className="flex justify-between items-center mb-3">
-                    <span className="block text-sm font-medium text-gray-700">Phases</span>
+                    <span className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phases</span>
                     <button
                       type="button"
                       onClick={handleAddPhase}
-                      className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
+                      className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center gap-1"
                     >
                       <PlusIcon className="h-4 w-4" /> Add Phase
                     </button>
                   </div>
                   <div className="space-y-4">
                     {newScenario.phases.map((phase, phaseIndex) => (
-                      <div key={phase.id} className="border rounded-lg p-4">
+                      <div key={phase.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
                         <div className="flex justify-between items-center mb-3">
                           <label className="sr-only" htmlFor={`phase-name-${phase.id}`}>Phase name</label>
                           <input
@@ -544,13 +544,13 @@ export default function Scenarios() {
                             type="text"
                             value={phase.name}
                             onChange={(e) => handlePhaseNameChange(phaseIndex, e.target.value)}
-                            className="font-medium px-2 py-1 border rounded focus:ring-2 focus:ring-primary-500"
+                            className="font-medium px-2 py-1 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                           />
                           {newScenario.phases.length > 1 && (
                             <button
                               type="button"
                               onClick={() => handleRemovePhase(phaseIndex)}
-                              className="text-red-500 hover:text-red-700"
+                              className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                               aria-label={`Remove ${phase.name}`}
                             >
                               <TrashIcon className="h-5 w-5" />
@@ -562,8 +562,8 @@ export default function Scenarios() {
                             <label
                               key={technique.id}
                               aria-label={`Select technique ${technique.id} ${technique.name}`}
-                              className={`flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50 ${
-                                phase.techniques.includes(technique.id) ? 'border-primary-500 bg-primary-50' : ''
+                              className={`flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                                phase.techniques.includes(technique.id) ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-gray-200 dark:border-gray-600'
                               }`}
                             >
                               <input
@@ -574,13 +574,13 @@ export default function Scenarios() {
                                 aria-label={`${technique.id} ${technique.name}`}
                               />
                               <span className="text-sm truncate" aria-hidden="true">
-                                <span className="font-mono text-xs text-gray-500">{technique.id}</span>
-                                <span className="ml-1">{technique.name}</span>
+                                <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{technique.id}</span>
+                                <span className="ml-1 text-gray-900 dark:text-gray-100">{technique.name}</span>
                               </span>
                             </label>
                           ))}
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                           {phase.techniques.length} technique(s) selected
                         </p>
                       </div>
@@ -589,7 +589,7 @@ export default function Scenarios() {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 p-6 border-t">
+            <div className="flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
               <button
                 onClick={handleCloseCreateModal}
                 className="btn-secondary"

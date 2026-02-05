@@ -52,36 +52,36 @@ function StopConfirmModal({ execution, onConfirm, onCancel, isLoading }: Readonl
     <dialog open className="fixed inset-0 z-50 overflow-y-auto bg-transparent" aria-labelledby="modal-title" aria-modal="true">
       <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         {/* Background overlay */}
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={onCancel}></div>
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-black dark:bg-opacity-60 transition-opacity" aria-hidden="true" onClick={onCancel}></div>
 
         {/* Modal panel */}
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="sm:flex sm:items-start">
-              <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                <StopIcon className="h-6 w-6 text-red-600" aria-hidden="true" />
+              <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 sm:mx-0 sm:h-10 sm:w-10">
+                <StopIcon className="h-6 w-6 text-red-600 dark:text-red-400" aria-hidden="true" />
               </div>
               <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100" id="modal-title">
                   Stop Execution
                 </h3>
                 <div className="mt-2">
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
                     Are you sure you want to stop this execution? This will cancel all pending tasks and mark the execution as cancelled.
                   </p>
-                  <div className="mt-3 p-3 bg-gray-50 rounded-md">
-                    <p className="text-sm font-medium text-gray-900">Execution ID: <span className="font-mono">{execution.id.slice(0, 8)}...</span></p>
-                    <p className="text-sm text-gray-500">Scenario: {execution.scenario_id}</p>
-                    <p className="text-sm text-gray-500">Status: {execution.status}</p>
+                  <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Execution ID: <span className="font-mono">{execution.id.slice(0, 8)}...</span></p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Scenario: {execution.scenario_id}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Status: {execution.status}</p>
                   </div>
-                  <p className="mt-2 text-sm text-amber-600">
+                  <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
                     Note: Partial results will be preserved and remain accessible.
                   </p>
                 </div>
               </div>
             </div>
           </div>
-          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+          <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
             <button
               type="button"
               disabled={isLoading}
@@ -94,7 +94,7 @@ function StopConfirmModal({ execution, onConfirm, onCancel, isLoading }: Readonl
               type="button"
               disabled={isLoading}
               onClick={onCancel}
-              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-600 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
             >
               Cancel
             </button>
@@ -137,7 +137,7 @@ function ScenarioSelectContent({
 
   if (!scenarios || scenarios.length === 0) {
     return (
-      <p className="text-gray-500 text-center py-8">No scenarios available. Create a scenario first.</p>
+      <p className="text-gray-500 dark:text-gray-400 text-center py-8">No scenarios available. Create a scenario first.</p>
     );
   }
 
@@ -147,12 +147,12 @@ function ScenarioSelectContent({
         <button
           key={scenario.id}
           onClick={() => onSelect(scenario)}
-          className="w-full text-left p-4 border rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors"
+          className="w-full text-left p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
         >
           <div className="flex justify-between items-start">
             <div>
-              <h3 className="font-semibold">{scenario.name}</h3>
-              <p className="text-sm text-gray-500 mt-1">{scenario.description}</p>
+              <h3 className="font-semibold text-gray-900 dark:text-gray-100">{scenario.name}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{scenario.description}</p>
             </div>
             <span className="text-xs text-gray-400">
               {scenario.phases.length} phases
@@ -160,7 +160,7 @@ function ScenarioSelectContent({
           </div>
           <div className="mt-2 flex gap-1 flex-wrap">
             {scenario.tags?.map((tag) => (
-              <span key={tag} className="badge bg-gray-100 text-gray-700 text-xs">
+              <span key={tag} className="badge bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 text-xs">
                 {tag}
               </span>
             ))}
@@ -293,7 +293,7 @@ export default function Executions() {
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Executions</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Executions</h1>
         <button onClick={handleNewExecution} className="btn-primary flex items-center gap-2">
           <PlayIcon className="h-5 w-5" />
           New Execution
@@ -302,40 +302,40 @@ export default function Executions() {
 
       <div className="card overflow-hidden">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gray-50 dark:bg-gray-800">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Scenario
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Score
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Results
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Started
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Mode
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200">
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
             {executions?.map((execution) => (
               <tr
                 key={execution.id}
-                className="hover:bg-gray-50 cursor-pointer"
+                className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
                 onClick={() => navigate(`/executions/${execution.id}`)}
               >
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <p className="font-medium">{execution.scenario_id}</p>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{execution.scenario_id}</p>
                   <p className="text-xs text-gray-400">{execution.id.slice(0, 8)}...</p>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -344,24 +344,24 @@ export default function Executions() {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-2xl font-bold">
+                  <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     {execution.score?.overall?.toFixed(1) || '-'}%
                   </span>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex gap-2 text-sm">
-                    <span className="text-success-600">
+                    <span className="text-success-600 dark:text-success-400">
                       {execution.score?.blocked || 0} blocked
                     </span>
-                    <span className="text-warning-600">
+                    <span className="text-warning-600 dark:text-warning-400">
                       {execution.score?.detected || 0} detected
                     </span>
-                    <span className="text-danger-600">
+                    <span className="text-danger-600 dark:text-danger-400">
                       {execution.score?.successful || 0} success
                     </span>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                   {formatDistanceToNow(new Date(execution.started_at), { addSuffix: true })}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -381,7 +381,7 @@ export default function Executions() {
                     </button>
                   )}
                   {execution.status === 'cancelled' && (
-                    <span className="inline-flex items-center text-xs text-gray-500">
+                    <span className="inline-flex items-center text-xs text-gray-500 dark:text-gray-400">
                       <XMarkIcon className="h-4 w-4 mr-1" />
                       Cancelled
                     </span>

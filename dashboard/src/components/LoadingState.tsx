@@ -23,9 +23,9 @@ interface LoadingStateProps {
  */
 export function LoadingState({ message = 'Loading...', className = '' }: LoadingStateProps): ReactNode {
   return (
-    <output className={`animate-pulse text-gray-500 ${className}`} aria-live="polite">
+    <output className={`animate-pulse text-gray-500 dark:text-gray-400 ${className}`} aria-live="polite">
       <div className="flex items-center gap-2">
-        <div className="h-4 w-4 rounded-full bg-gray-300 animate-bounce" />
+        <div className="h-4 w-4 rounded-full bg-gray-300 dark:bg-gray-600 animate-bounce" />
         <span>{message}</span>
       </div>
     </output>

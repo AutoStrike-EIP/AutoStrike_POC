@@ -65,7 +65,7 @@ function ScheduleStatusButton({
     return (
       <button
         onClick={() => onPause(scheduleId)}
-        className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg"
+        className="p-2 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg"
         title="Pause"
         disabled={isPauseDisabled}
       >
@@ -77,7 +77,7 @@ function ScheduleStatusButton({
     return (
       <button
         onClick={() => onResume(scheduleId)}
-        className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+        className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg"
         title="Resume"
         disabled={isResumeDisabled}
       >
@@ -98,9 +98,9 @@ const frequencyLabels: Record<ScheduleFrequency, string> = {
 };
 
 const statusColors: Record<string, string> = {
-  active: 'bg-green-100 text-green-700',
-  paused: 'bg-yellow-100 text-yellow-700',
-  disabled: 'bg-gray-100 text-gray-700',
+  active: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  paused: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  disabled: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
 };
 
 function formatDate(date: string | null): string {
@@ -232,25 +232,25 @@ export default function Scheduler() {
                     </span>
                   </div>
                   {schedule.description && (
-                    <p className="text-sm text-gray-500 mt-1">{schedule.description}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{schedule.description}</p>
                   )}
 
                   <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-500">Scenario:</span>
+                      <span className="text-gray-500 dark:text-gray-400">Scenario:</span>
                       <p className="font-medium">{getScenarioName(schedule.scenario_id)}</p>
                     </div>
                     <div>
-                      <span className="text-gray-500">Frequency:</span>
+                      <span className="text-gray-500 dark:text-gray-400">Frequency:</span>
                       <p className="font-medium">
                         {frequencyLabels[schedule.frequency]}
                         {schedule.frequency === 'cron' && schedule.cron_expr && (
-                          <span className="text-gray-400 ml-1">({schedule.cron_expr})</span>
+                          <span className="text-gray-400 dark:text-gray-500 ml-1">({schedule.cron_expr})</span>
                         )}
                       </p>
                     </div>
                     <div>
-                      <span className="text-gray-500">Next Run:</span>
+                      <span className="text-gray-500 dark:text-gray-400">Next Run:</span>
                       <p className="font-medium">
                         {schedule.status === 'active'
                           ? formatRelativeTime(schedule.next_run_at)
@@ -258,7 +258,7 @@ export default function Scheduler() {
                       </p>
                     </div>
                     <div>
-                      <span className="text-gray-500">Last Run:</span>
+                      <span className="text-gray-500 dark:text-gray-400">Last Run:</span>
                       <p className="font-medium">{formatDate(schedule.last_run_at)}</p>
                     </div>
                   </div>
@@ -275,7 +275,7 @@ export default function Scheduler() {
                   />
                   <button
                     onClick={() => runNowMutation.mutate(schedule.id)}
-                    className="p-2 text-primary-600 hover:bg-primary-50 rounded-lg"
+                    className="p-2 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg"
                     title="Run Now"
                     disabled={runNowMutation.isPending}
                   >
@@ -283,21 +283,21 @@ export default function Scheduler() {
                   </button>
                   <button
                     onClick={() => setScheduleToEdit(schedule)}
-                    className="p-2 text-gray-600 hover:bg-gray-50 rounded-lg"
+                    className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg"
                     title="Edit"
                   >
                     <PencilIcon className="h-5 w-5" />
                   </button>
                   <button
                     onClick={() => setScheduleToDelete(schedule)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg"
                     title="Delete"
                   >
                     <TrashIcon className="h-5 w-5" />
                   </button>
                   <button
                     onClick={() => toggleExpanded(schedule.id)}
-                    className="p-2 text-gray-500 hover:bg-gray-50 rounded-lg"
+                    className="p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg"
                     title="Show history"
                   >
                     {expandedSchedule === schedule.id ? (
@@ -345,9 +345,9 @@ export default function Scheduler() {
       {/* Delete Confirmation Modal */}
       {scheduleToDelete && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
-            <h2 className="text-xl font-semibold mb-4">Delete Schedule</h2>
-            <p className="text-gray-600 mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">Delete Schedule</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               Are you sure you want to delete "{scheduleToDelete.name}"? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
@@ -384,28 +384,28 @@ function ScheduleRunsHistory({ scheduleId }: ScheduleRunsHistoryProps) {
 
   if (isLoading) {
     return (
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        <p className="text-sm text-gray-500">Loading history...</p>
+      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <p className="text-sm text-gray-500 dark:text-gray-400">Loading history...</p>
       </div>
     );
   }
 
   if (!runs || runs.length === 0) {
     return (
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        <p className="text-sm text-gray-500">No runs yet</p>
+      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <p className="text-sm text-gray-500 dark:text-gray-400">No runs yet</p>
       </div>
     );
   }
 
   return (
-    <div className="mt-4 pt-4 border-t border-gray-100">
-      <h4 className="text-sm font-medium text-gray-700 mb-3">Recent Runs</h4>
+    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Recent Runs</h4>
       <div className="space-y-2">
         {runs.map((run) => (
           <div
             key={run.id}
-            className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg text-sm"
+            className="flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm"
           >
             <div className="flex items-center gap-3">
               <span
@@ -413,13 +413,13 @@ function ScheduleRunsHistory({ scheduleId }: ScheduleRunsHistoryProps) {
               />
               <span>{formatDate(run.started_at)}</span>
               {run.error && (
-                <span className="text-red-600 text-xs">({run.error})</span>
+                <span className="text-red-600 dark:text-red-400 text-xs">({run.error})</span>
               )}
             </div>
             {run.execution_id && (
               <Link
                 to={`/executions/${run.execution_id}`}
-                className="text-primary-600 hover:text-primary-700"
+                className="text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
               >
                 View Execution
               </Link>
@@ -491,19 +491,19 @@ function ScheduleFormModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4">
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-semibold">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full mx-4">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
             {isEditMode ? 'Edit Schedule' : 'Create Schedule'}
           </h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 dark:text-gray-400">
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
-            <label htmlFor="schedule-name" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="schedule-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Name *
             </label>
             <input
@@ -517,7 +517,7 @@ function ScheduleFormModal({
           </div>
 
           <div>
-            <label htmlFor="schedule-description" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="schedule-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Description
             </label>
             <textarea
@@ -530,7 +530,7 @@ function ScheduleFormModal({
           </div>
 
           <div>
-            <label htmlFor="schedule-scenario" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="schedule-scenario" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Scenario *
             </label>
             <select
@@ -550,7 +550,7 @@ function ScheduleFormModal({
           </div>
 
           <div>
-            <label htmlFor="schedule-frequency" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="schedule-frequency" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Frequency *
             </label>
             <select
@@ -571,7 +571,7 @@ function ScheduleFormModal({
 
           {formData.frequency === 'cron' && (
             <div>
-              <label htmlFor="schedule-cron" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="schedule-cron" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Cron Expression *
               </label>
               <input
@@ -583,7 +583,7 @@ function ScheduleFormModal({
                 placeholder="0 0 * * *"
                 required={formData.frequency === 'cron'}
               />
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Format: minute hour day-of-month month day-of-week
               </p>
             </div>
@@ -591,7 +591,7 @@ function ScheduleFormModal({
 
           {!isEditMode && (
             <div>
-              <label htmlFor="schedule-start-at" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="schedule-start-at" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Start At (optional)
               </label>
               <input
@@ -611,7 +611,7 @@ function ScheduleFormModal({
           )}
 
           <div>
-            <label htmlFor="schedule-agent" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="schedule-agent" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Agent (optional)
             </label>
             <input
@@ -630,9 +630,9 @@ function ScheduleFormModal({
               id="safe_mode"
               checked={formData.safe_mode}
               onChange={(e) => setFormData({ ...formData, safe_mode: e.target.checked })}
-              className="h-4 w-4 text-primary-600 rounded border-gray-300"
+              className="h-4 w-4 text-primary-600 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700"
             />
-            <label htmlFor="safe_mode" className="text-sm font-medium text-gray-700">
+            <label htmlFor="safe_mode" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Safe Mode
             </label>
           </div>

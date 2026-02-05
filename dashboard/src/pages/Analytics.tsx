@@ -98,8 +98,8 @@ export default function Analytics() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
         <ExclamationTriangleIcon className="h-16 w-16 text-red-400 mb-4" />
-        <h2 className="text-xl font-semibold text-gray-700 mb-2">Failed to load analytics</h2>
-        <p className="text-gray-500 mb-6">
+        <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">Failed to load analytics</h2>
+        <p className="text-gray-500 dark:text-gray-400 mb-6">
           {comparisonError?.message || trendError?.message || summaryError?.message || 'An error occurred while fetching data'}
         </p>
         <button
@@ -212,7 +212,7 @@ export default function Analytics() {
           <select
             value={period}
             onChange={(e) => setPeriod(Number(e.target.value) as 7 | 30 | 90)}
-            className="border border-gray-300 rounded-lg px-3 py-2"
+            className="border border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 rounded-lg px-3 py-2"
           >
             <option value={7}>Last 7 days</option>
             <option value={30}>Last 30 days</option>
@@ -225,7 +225,7 @@ export default function Analytics() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="card">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-gray-500">Average Score</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Average Score</p>
             {getTrendIcon(comparison?.score_trend)}
           </div>
           <p className="text-3xl font-bold text-primary-600">
@@ -237,7 +237,7 @@ export default function Analytics() {
         </div>
 
         <div className="card">
-          <p className="text-sm text-gray-500 mb-2">Executions</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Executions</p>
           <p className="text-3xl font-bold">
             {comparison?.current.execution_count || 0}
           </p>
@@ -247,7 +247,7 @@ export default function Analytics() {
         </div>
 
         <div className="card">
-          <p className="text-sm text-gray-500 mb-2">Blocked Attacks</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Blocked Attacks</p>
           <p className="text-3xl font-bold text-green-600">
             {comparison?.current.total_blocked || 0}
           </p>
@@ -258,7 +258,7 @@ export default function Analytics() {
         </div>
 
         <div className="card">
-          <p className="text-sm text-gray-500 mb-2">Detected Attacks</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Detected Attacks</p>
           <p className="text-3xl font-bold text-amber-600">
             {comparison?.current.total_detected || 0}
           </p>
@@ -277,17 +277,17 @@ export default function Analytics() {
             <Line data={trendChartData} options={chartOptions} />
           </div>
           {trend?.summary && (
-            <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Min Score</span>
+                <span className="text-gray-500 dark:text-gray-400">Min Score</span>
                 <span className="font-medium">{trend.summary.min_score.toFixed(1)}%</span>
               </div>
               <div className="flex justify-between text-sm mt-1">
-                <span className="text-gray-500">Max Score</span>
+                <span className="text-gray-500 dark:text-gray-400">Max Score</span>
                 <span className="font-medium">{trend.summary.max_score.toFixed(1)}%</span>
               </div>
               <div className="flex justify-between text-sm mt-1">
-                <span className="text-gray-500">Average</span>
+                <span className="text-gray-500 dark:text-gray-400">Average</span>
                 <span className="font-medium">{trend.summary.average_score.toFixed(1)}%</span>
               </div>
             </div>
@@ -317,23 +317,23 @@ export default function Analytics() {
           <h2 className="text-lg font-semibold mb-4">Execution Summary</h2>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-gray-500">Total Executions</span>
+              <span className="text-gray-500 dark:text-gray-400">Total Executions</span>
               <span className="font-semibold">{summary?.total_executions || 0}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Completed</span>
+              <span className="text-gray-500 dark:text-gray-400">Completed</span>
               <span className="font-semibold text-green-600">
                 {summary?.completed_executions || 0}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Best Score</span>
+              <span className="text-gray-500 dark:text-gray-400">Best Score</span>
               <span className="font-semibold">
                 {summary?.best_score?.toFixed(1) || 0}%
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Worst Score</span>
+              <span className="text-gray-500 dark:text-gray-400">Worst Score</span>
               <span className="font-semibold">
                 {summary?.worst_score?.toFixed(1) || 0}%
               </span>
@@ -359,11 +359,11 @@ export default function Analytics() {
           <div className="space-y-3 max-h-64 overflow-y-auto">
             {Object.entries(summary?.scores_by_scenario || {}).map(([scenarioId, score]) => (
               <div key={scenarioId} className="flex justify-between items-center">
-                <span className="text-gray-700 truncate max-w-[60%]" title={scenarioId}>
+                <span className="text-gray-700 dark:text-gray-300 truncate max-w-[60%]" title={scenarioId}>
                   {scenarioId}
                 </span>
                 <div className="flex items-center gap-2">
-                  <div className="w-24 bg-gray-200 rounded-full h-2">
+                  <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                     <div
                       className="bg-primary-600 h-2 rounded-full"
                       style={{ width: `${Math.min(score, 100)}%` }}
@@ -376,7 +376,7 @@ export default function Analytics() {
               </div>
             ))}
             {Object.keys(summary?.scores_by_scenario || {}).length === 0 && (
-              <p className="text-gray-500 text-sm">No scenario data available</p>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">No scenario data available</p>
             )}
           </div>
         </div>

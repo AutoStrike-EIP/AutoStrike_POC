@@ -42,23 +42,23 @@ const tacticHeaderColors: Record<TacticType, string> = {
 };
 
 /**
- * Tactic cell background colors (lighter).
+ * Tactic cell background colors (lighter for light mode, darker for dark mode).
  */
 const tacticCellColors: Record<TacticType, string> = {
-  reconnaissance: 'bg-purple-50 hover:bg-purple-100 border-purple-200',
-  resource_development: 'bg-blue-50 hover:bg-blue-100 border-blue-200',
-  initial_access: 'bg-red-50 hover:bg-red-100 border-red-200',
-  execution: 'bg-orange-50 hover:bg-orange-100 border-orange-200',
-  persistence: 'bg-yellow-50 hover:bg-yellow-100 border-yellow-200',
-  privilege_escalation: 'bg-pink-50 hover:bg-pink-100 border-pink-200',
-  defense_evasion: 'bg-green-50 hover:bg-green-100 border-green-200',
-  credential_access: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200',
-  discovery: 'bg-cyan-50 hover:bg-cyan-100 border-cyan-200',
-  lateral_movement: 'bg-teal-50 hover:bg-teal-100 border-teal-200',
-  collection: 'bg-lime-50 hover:bg-lime-100 border-lime-200',
-  command_and_control: 'bg-amber-50 hover:bg-amber-100 border-amber-200',
-  exfiltration: 'bg-rose-50 hover:bg-rose-100 border-rose-200',
-  impact: 'bg-red-50 hover:bg-red-100 border-red-200',
+  reconnaissance: 'bg-purple-50 hover:bg-purple-100 border-purple-200 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 dark:border-purple-700',
+  resource_development: 'bg-blue-50 hover:bg-blue-100 border-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 dark:border-blue-700',
+  initial_access: 'bg-red-50 hover:bg-red-100 border-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:border-red-700',
+  execution: 'bg-orange-50 hover:bg-orange-100 border-orange-200 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 dark:border-orange-700',
+  persistence: 'bg-yellow-50 hover:bg-yellow-100 border-yellow-200 dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50 dark:border-yellow-700',
+  privilege_escalation: 'bg-pink-50 hover:bg-pink-100 border-pink-200 dark:bg-pink-900/30 dark:hover:bg-pink-900/50 dark:border-pink-700',
+  defense_evasion: 'bg-green-50 hover:bg-green-100 border-green-200 dark:bg-green-900/30 dark:hover:bg-green-900/50 dark:border-green-700',
+  credential_access: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 dark:border-indigo-700',
+  discovery: 'bg-cyan-50 hover:bg-cyan-100 border-cyan-200 dark:bg-cyan-900/30 dark:hover:bg-cyan-900/50 dark:border-cyan-700',
+  lateral_movement: 'bg-teal-50 hover:bg-teal-100 border-teal-200 dark:bg-teal-900/30 dark:hover:bg-teal-900/50 dark:border-teal-700',
+  collection: 'bg-lime-50 hover:bg-lime-100 border-lime-200 dark:bg-lime-900/30 dark:hover:bg-lime-900/50 dark:border-lime-700',
+  command_and_control: 'bg-amber-50 hover:bg-amber-100 border-amber-200 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 dark:border-amber-700',
+  exfiltration: 'bg-rose-50 hover:bg-rose-100 border-rose-200 dark:bg-rose-900/30 dark:hover:bg-rose-900/50 dark:border-rose-700',
+  impact: 'bg-red-50 hover:bg-red-100 border-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:border-red-700',
 };
 
 interface MitreMatrixProps {
@@ -118,7 +118,7 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex items-center gap-4">
-        <label htmlFor="platform-filter" className="text-sm font-medium text-gray-700">Platform:</label>
+        <label htmlFor="platform-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300">Platform:</label>
         <select
           id="platform-filter"
           value={platformFilter}
@@ -130,7 +130,7 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
             <option key={p} value={p}>{p}</option>
           ))}
         </select>
-        <span className="text-sm text-gray-500">
+        <span className="text-sm text-gray-500 dark:text-gray-400">
           {techniques.length} techniques loaded
         </span>
       </div>
@@ -154,7 +154,7 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
 
           {/* Technique Cells */}
           {TACTICS.map(tactic => (
-            <div key={`col-${tactic.id}`} className="flex flex-col gap-1 p-1 bg-gray-50 min-h-[200px]">
+            <div key={`col-${tactic.id}`} className="flex flex-col gap-1 p-1 bg-gray-50 dark:bg-gray-800 min-h-[200px]">
               {techniquesByTactic[tactic.id]?.map(technique => (
                 <button
                   key={technique.id}
@@ -162,8 +162,8 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
                   className={`${tacticCellColors[tactic.id]} p-2 rounded border text-left transition-all cursor-pointer`}
                   title={`${technique.id}: ${technique.name}`}
                 >
-                  <div className="text-xs font-mono text-gray-600">{technique.id}</div>
-                  <div className="text-xs font-medium text-gray-900 truncate">{technique.name}</div>
+                  <div className="text-xs font-mono text-gray-600 dark:text-gray-400">{technique.id}</div>
+                  <div className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">{technique.name}</div>
                   <div className="flex gap-1 mt-1">
                     {technique.is_safe ? (
                       <span className="w-2 h-2 rounded-full bg-green-500" title="Safe" />
@@ -174,7 +174,7 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
                 </button>
               ))}
               {techniquesByTactic[tactic.id]?.length === 0 && (
-                <div className="text-xs text-gray-400 text-center py-4">
+                <div className="text-xs text-gray-400 dark:text-gray-500 text-center py-4">
                   No techniques
                 </div>
               )}
@@ -189,14 +189,14 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
           <div className="flex items-center justify-center min-h-screen p-4">
             <button
               type="button"
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 cursor-default border-none"
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-black dark:bg-opacity-60 cursor-default border-none"
               onClick={handleCloseDetail}
               aria-label="Close modal"
             />
-            <div className="relative bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+            <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full p-6">
               <button
                 onClick={handleCloseDetail}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -207,25 +207,25 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
                   {selectedTechnique.id}
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{selectedTechnique.name}</h3>
-                  <p className="text-sm text-gray-500 capitalize">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedTechnique.name}</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
                     {String(selectedTechnique.tactic).replaceAll('-', '_').replaceAll('_', ' ')}
                   </p>
                 </div>
               </div>
-              <p className="mt-4 text-sm text-gray-600">{selectedTechnique.description}</p>
+              <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">{selectedTechnique.description}</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className={`badge ${selectedTechnique.is_safe ? 'badge-success' : 'badge-danger'}`}>
                   {selectedTechnique.is_safe ? 'Safe' : 'Unsafe'}
                 </span>
                 {selectedTechnique.platforms.map(p => (
-                  <span key={p} className="badge bg-gray-100 text-gray-700">{p}</span>
+                  <span key={p} className="badge bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">{p}</span>
                 ))}
               </div>
               {selectedTechnique.detection && selectedTechnique.detection.length > 0 && (
                 <div className="mt-4">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Detection</h4>
-                  <ul className="text-sm text-gray-600 space-y-1">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Detection</h4>
+                  <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                     {selectedTechnique.detection.map((d) => (
                       <li key={`${d.source}-${d.indicator}`} className="flex gap-2">
                         <span className="font-medium">{d.source}:</span>
@@ -241,7 +241,7 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
       )}
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-xs text-gray-500">
+      <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
         <div className="flex items-center gap-1">
           <span className="w-3 h-3 rounded-full bg-green-500"></span>
           <span>Safe technique</span>

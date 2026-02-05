@@ -66,8 +66,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         <div className="min-h-[200px] flex items-center justify-center">
           <div className="text-center p-8">
             <ExclamationTriangleIcon className="h-12 w-12 text-danger-500 mx-auto mb-4" />
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h2>
-            <p className="text-gray-500 mb-4 max-w-md">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Something went wrong</h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-4 max-w-md">
               {this.state.error?.message || 'An unexpected error occurred'}
             </p>
             <button

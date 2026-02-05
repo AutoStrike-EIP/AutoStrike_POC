@@ -212,16 +212,16 @@ export default function Users() {
   const getRoleBadgeClass = (role: UserRole) => {
     switch (role) {
       case 'admin':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
       case 'rssi':
-        return 'bg-purple-100 text-purple-800';
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
       case 'operator':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
       case 'analyst':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
       case 'viewer':
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
     }
   };
 
@@ -239,8 +239,8 @@ export default function Users() {
     <div>
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-gray-600 mt-1">Manage users and their permissions</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">User Management</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">Manage users and their permissions</p>
         </div>
         <button className="btn-primary flex items-center gap-2" onClick={openCreateModal}>
           <PlusIcon className="h-5 w-5" />
@@ -250,12 +250,12 @@ export default function Users() {
 
       {/* Filters */}
       <div className="mb-6">
-        <label className="flex items-center gap-2 text-sm text-gray-600">
+        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
           <input
             type="checkbox"
             checked={includeInactive}
             onChange={(e) => setIncludeInactive(e.target.checked)}
-            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+            className="rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 dark:bg-gray-700"
           />{' '}
           <span>Show inactive users</span>
         </label>
@@ -264,46 +264,46 @@ export default function Users() {
       {/* Users Table */}
       {users.length > 0 ? (
         <div className="card overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Role
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Last Login
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {users.map((user) => (
-                <tr key={user.id} className={user.is_active ? '' : 'bg-gray-50'}>
+                <tr key={user.id} className={user.is_active ? 'hover:bg-gray-50 dark:hover:bg-gray-700/50' : 'bg-gray-50 dark:bg-gray-800/50'}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="h-10 w-10 flex-shrink-0">
-                        <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                          <span className="text-primary-700 font-medium">
+                        <div className="h-10 w-10 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+                          <span className="text-primary-700 dark:text-primary-400 font-medium">
                             {user.username.charAt(0).toUpperCase()}
                           </span>
                         </div>
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                           {user.username}
                           {user.id === currentUser?.id && (
-                            <span className="ml-2 text-xs text-gray-500">(you)</span>
+                            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">(you)</span>
                           )}
                         </div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
                       </div>
                     </div>
                   </td>
@@ -318,14 +318,14 @@ export default function Users() {
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         user.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                       }`}
                     >
                       {user.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {user.last_login_at
                       ? formatDistanceToNow(new Date(user.last_login_at), { addSuffix: true })
                       : 'Never'}
@@ -334,14 +334,14 @@ export default function Users() {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => openEditModal(user)}
-                        className="p-1 text-gray-400 hover:text-gray-600"
+                        className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                         title="Edit user"
                       >
                         <PencilIcon className="h-5 w-5" />
                       </button>
                       <button
                         onClick={() => openRoleModal(user)}
-                        className="p-1 text-gray-400 hover:text-blue-600"
+                        className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
                         title="Change role"
                         disabled={user.id === currentUser?.id}
                       >
@@ -349,7 +349,7 @@ export default function Users() {
                       </button>
                       <button
                         onClick={() => openPasswordModal(user)}
-                        className="p-1 text-gray-400 hover:text-yellow-600"
+                        className="p-1 text-gray-400 hover:text-yellow-600 dark:hover:text-yellow-400"
                         title="Reset password"
                       >
                         <KeyIcon className="h-5 w-5" />
@@ -357,7 +357,7 @@ export default function Users() {
                       {user.is_active ? (
                         <button
                           onClick={() => openDeactivateModal(user)}
-                          className="p-1 text-gray-400 hover:text-red-600"
+                          className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
                           title="Deactivate user"
                           disabled={user.id === currentUser?.id}
                         >
@@ -366,7 +366,7 @@ export default function Users() {
                       ) : (
                         <button
                           onClick={() => openReactivateModal(user)}
-                          className="p-1 text-gray-400 hover:text-green-600"
+                          className="p-1 text-gray-400 hover:text-green-600 dark:hover:text-green-400"
                           title="Reactivate user"
                         >
                           <ArrowPathIcon className="h-5 w-5" />
@@ -393,7 +393,7 @@ export default function Users() {
           <form onSubmit={handleCreate} className="space-y-4">
             {formError && <ErrorAlert message={formError} />}
             <div>
-              <label htmlFor="create-username" className="block text-sm font-medium text-gray-700">Username</label>
+              <label htmlFor="create-username" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
               <input
                 id="create-username"
                 type="text"
@@ -401,22 +401,22 @@ export default function Users() {
                 minLength={3}
                 value={createForm.username}
                 onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="input mt-1"
               />
             </div>
             <div>
-              <label htmlFor="create-email" className="block text-sm font-medium text-gray-700">Email</label>
+              <label htmlFor="create-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
               <input
                 id="create-email"
                 type="email"
                 required
                 value={createForm.email}
                 onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="input mt-1"
               />
             </div>
             <div>
-              <label htmlFor="create-password" className="block text-sm font-medium text-gray-700">Password</label>
+              <label htmlFor="create-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
               <input
                 id="create-password"
                 type="password"
@@ -424,19 +424,19 @@ export default function Users() {
                 minLength={8}
                 value={createForm.password}
                 onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="input mt-1"
               />
-              <p className="mt-1 text-xs text-gray-500">Minimum 8 characters</p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Minimum 8 characters</p>
             </div>
             <div>
-              <label htmlFor="create-role" className="block text-sm font-medium text-gray-700">Role</label>
+              <label htmlFor="create-role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
               <select
                 id="create-role"
                 value={createForm.role}
                 onChange={(e) =>
                   setCreateForm({ ...createForm, role: e.target.value as UserRole })
                 }
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="input mt-1"
               >
                 {ROLES.map((role) => (
                   <option key={role.value} value={role.value}>
@@ -463,7 +463,7 @@ export default function Users() {
           <form onSubmit={handleEdit} className="space-y-4">
             {formError && <ErrorAlert message={formError} />}
             <div>
-              <label htmlFor="edit-username" className="block text-sm font-medium text-gray-700">Username</label>
+              <label htmlFor="edit-username" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
               <input
                 id="edit-username"
                 type="text"
@@ -471,18 +471,18 @@ export default function Users() {
                 minLength={3}
                 value={editForm.username || ''}
                 onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="input mt-1"
               />
             </div>
             <div>
-              <label htmlFor="edit-email" className="block text-sm font-medium text-gray-700">Email</label>
+              <label htmlFor="edit-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
               <input
                 id="edit-email"
                 type="email"
                 required
                 value={editForm.email || ''}
                 onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="input mt-1"
               />
             </div>
             <div className="flex justify-end gap-3 pt-4">
@@ -502,16 +502,16 @@ export default function Users() {
         <Modal title="Change Role" onClose={closeModal}>
           <form onSubmit={handleRoleChange} className="space-y-4">
             {formError && <ErrorAlert message={formError} />}
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Change role for <strong>{selectedUser.username}</strong>
             </p>
             <div>
-              <label htmlFor="change-role" className="block text-sm font-medium text-gray-700">Role</label>
+              <label htmlFor="change-role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
               <select
                 id="change-role"
                 value={roleForm.role}
                 onChange={(e) => setRoleForm({ role: e.target.value as UserRole })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="input mt-1"
               >
                 {ROLES.map((role) => (
                   <option key={role.value} value={role.value}>
@@ -537,11 +537,11 @@ export default function Users() {
         <Modal title="Reset Password" onClose={closeModal}>
           <form onSubmit={handlePasswordReset} className="space-y-4">
             {formError && <ErrorAlert message={formError} />}
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Reset password for <strong>{selectedUser.username}</strong>
             </p>
             <div>
-              <label htmlFor="reset-password" className="block text-sm font-medium text-gray-700">New Password</label>
+              <label htmlFor="reset-password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
               <input
                 id="reset-password"
                 type="password"
@@ -549,9 +549,9 @@ export default function Users() {
                 minLength={8}
                 value={passwordForm.new_password}
                 onChange={(e) => setPasswordForm({ new_password: e.target.value })}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                className="input mt-1"
               />
-              <p className="mt-1 text-xs text-gray-500">Minimum 8 characters</p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Minimum 8 characters</p>
             </div>
             <div className="flex justify-end gap-3 pt-4">
               <button type="button" onClick={closeModal} className="btn-secondary">
@@ -575,10 +575,10 @@ export default function Users() {
                 <ExclamationTriangleIcon className="h-6 w-6 text-yellow-500" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   Are you sure you want to deactivate <strong>{selectedUser.username}</strong>?
                 </p>
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                   The user will no longer be able to log in, but their data will be preserved.
                 </p>
               </div>
@@ -610,10 +610,10 @@ export default function Users() {
                 <CheckIcon className="h-6 w-6 text-green-500" />
               </div>
               <div>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   Are you sure you want to reactivate <strong>{selectedUser.username}</strong>?
                 </p>
-                <p className="text-sm text-gray-500 mt-2">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                   The user will be able to log in again with their existing credentials.
                 </p>
               </div>
@@ -642,10 +642,10 @@ export default function Users() {
 // Error Alert Component
 function ErrorAlert({ message }: { readonly message: string }) {
   return (
-    <div className="bg-red-50 border border-red-200 rounded-md p-3">
+    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
       <div className="flex items-center gap-2">
         <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
-        <p className="text-sm text-red-700">{message}</p>
+        <p className="text-sm text-red-700 dark:text-red-400">{message}</p>
       </div>
     </div>
   );

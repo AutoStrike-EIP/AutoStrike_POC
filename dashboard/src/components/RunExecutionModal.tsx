@@ -54,35 +54,35 @@ export function RunExecutionModal({ scenario, onConfirm, onCancel, isLoading }: 
     <dialog open className="fixed inset-0 z-50 overflow-y-auto bg-transparent" aria-labelledby="modal-title" aria-modal="true">
       <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         {/* Background overlay */}
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onClick={onCancel}></div>
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-black dark:bg-opacity-60 transition-opacity" aria-hidden="true" onClick={onCancel}></div>
 
         {/* Modal panel */}
-        <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div className="sm:flex sm:items-start">
-              <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-primary-100 sm:mx-0 sm:h-10 sm:w-10">
-                <PlayIcon className="h-6 w-6 text-primary-600" aria-hidden="true" />
+              <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-primary-100 dark:bg-primary-900/30 sm:mx-0 sm:h-10 sm:w-10">
+                <PlayIcon className="h-6 w-6 text-primary-600 dark:text-primary-400" aria-hidden="true" />
               </div>
               <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
-                <h3 className="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-gray-100" id="modal-title">
                   Run Scenario
                 </h3>
                 <div className="mt-2">
-                  <div className="p-3 bg-gray-50 rounded-md">
-                    <p className="text-sm font-medium text-gray-900">{scenario.name}</p>
-                    <p className="text-sm text-gray-500">{scenario.phases.length} phases, {techniqueCount} techniques</p>
+                  <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{scenario.name}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{scenario.phases.length} phases, {techniqueCount} techniques</p>
                   </div>
                 </div>
 
                 {/* Agent Selection */}
                 <div className="mt-4">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">Select Target Agents</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Select Target Agents</span>
                     {onlineAgents.length > 0 && (
                       <button
                         type="button"
                         onClick={handleSelectAll}
-                        className="text-xs text-primary-600 hover:text-primary-800"
+                        className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-800 dark:hover:text-primary-300"
                       >
                         {selectedAgents.length === onlineAgents.length ? 'Deselect All' : 'Select All'}
                       </button>
@@ -90,32 +90,32 @@ export function RunExecutionModal({ scenario, onConfirm, onCancel, isLoading }: 
                   </div>
 
                   {agentsLoading && (
-                    <div className="text-sm text-gray-500">Loading agents...</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Loading agents...</div>
                   )}
                   {!agentsLoading && onlineAgents.length === 0 && (
-                    <div className="text-sm text-amber-600 p-3 bg-amber-50 rounded-md">
+                    <div className="text-sm text-amber-600 dark:text-amber-400 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-md">
                       No online agents available. Please ensure at least one agent is connected.
                     </div>
                   )}
                   {!agentsLoading && onlineAgents.length > 0 && (
-                    <div className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-2">
+                    <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-md p-2">
                       {onlineAgents.map(agent => (
                         <label
                           key={agent.paw}
-                          className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-50 ${
-                            selectedAgents.includes(agent.paw) ? 'bg-primary-50 border border-primary-200' : ''
+                          className={`flex items-center p-2 rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                            selectedAgents.includes(agent.paw) ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-700' : ''
                           }`}
                         >
                           <input
                             type="checkbox"
                             checked={selectedAgents.includes(agent.paw)}
                             onChange={() => handleAgentToggle(agent.paw)}
-                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
                           />
-                          <ComputerDesktopIcon className="h-5 w-5 text-gray-400 ml-3" />
+                          <ComputerDesktopIcon className="h-5 w-5 text-gray-400 dark:text-gray-500 ml-3" />
                           <div className="ml-2">
-                            <p className="text-sm font-medium text-gray-900">{agent.hostname}</p>
-                            <p className="text-xs text-gray-500">{agent.platform} - {agent.paw.slice(0, 8)}...</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{agent.hostname}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{agent.platform} - {agent.paw.slice(0, 8)}...</p>
                           </div>
                         </label>
                       ))}
@@ -130,22 +130,22 @@ export function RunExecutionModal({ scenario, onConfirm, onCancel, isLoading }: 
                       type="checkbox"
                       checked={safeMode}
                       onChange={(e) => setSafeMode(e.target.checked)}
-                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
                     />
-                    <span className="ml-2 text-sm font-medium text-gray-700">Safe Mode</span>
-                    <span className="ml-2 text-xs text-gray-500">(Skip potentially destructive techniques)</span>
+                    <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">Safe Mode</span>
+                    <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">(Skip potentially destructive techniques)</span>
                   </label>
                 </div>
 
                 {selectedAgents.length === 0 && onlineAgents.length > 0 && (
-                  <p className="mt-3 text-sm text-amber-600">
+                  <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">
                     Please select at least one agent to run the scenario.
                   </p>
                 )}
               </div>
             </div>
           </div>
-          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+          <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
             <button
               type="button"
               disabled={isLoading || selectedAgents.length === 0}
@@ -159,7 +159,7 @@ export function RunExecutionModal({ scenario, onConfirm, onCancel, isLoading }: 
               type="button"
               disabled={isLoading}
               onClick={onCancel}
-              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-600 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
             >
               Cancel
             </button>

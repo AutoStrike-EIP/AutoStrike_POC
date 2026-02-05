@@ -6,11 +6,11 @@ import { LoadingState } from '../../components/LoadingState';
 import { useAuth } from '../../contexts/AuthContext';
 
 const ROLE_COLORS: Record<UserRole, string> = {
-  admin: 'bg-red-100 text-red-800',
-  rssi: 'bg-purple-100 text-purple-800',
-  operator: 'bg-blue-100 text-blue-800',
-  analyst: 'bg-green-100 text-green-800',
-  viewer: 'bg-gray-100 text-gray-800',
+  admin: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  rssi: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+  operator: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  analyst: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  viewer: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
 };
 
 const ROLE_DISPLAY_NAMES: Record<UserRole, string> = {
@@ -52,8 +52,8 @@ export default function Permissions() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Permissions Matrix</h1>
-        <p className="text-gray-600 mt-1">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Permissions Matrix</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
           Overview of role-based permissions across the system
         </p>
       </div>
@@ -61,12 +61,12 @@ export default function Permissions() {
       {/* Current User Permissions */}
       {myPermissions && (
         <div className="card mb-8">
-          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-gray-100">
             <ShieldCheckIcon className="h-5 w-5 text-primary-600" />
             Your Permissions
           </h2>
           <div className="flex items-center gap-4 mb-4">
-            <span className="text-gray-600">Role:</span>
+            <span className="text-gray-600 dark:text-gray-400">Role:</span>
             <span
               className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${ROLE_COLORS[(myPermissions.role as UserRole) || user?.role || 'viewer']}`}
             >
@@ -77,7 +77,7 @@ export default function Permissions() {
             {myPermissions.permissions.map((perm) => (
               <span
                 key={perm}
-                className="inline-flex items-center px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs"
+                className="inline-flex items-center px-2 py-1 rounded bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 text-xs"
               >
                 {perm}
               </span>
@@ -89,16 +89,16 @@ export default function Permissions() {
       {/* Permission Matrix Table */}
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 min-w-[200px]">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider sticky left-0 bg-gray-50 dark:bg-gray-800 z-10 min-w-[200px]">
                   Permission
                 </th>
                 {roles.map((role) => (
                   <th
                     key={role}
-                    className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]"
+                    className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[100px]"
                   >
                     <span
                       className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${ROLE_COLORS[role]}`}
@@ -109,28 +109,28 @@ export default function Permissions() {
                 ))}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {permissionsByCategory.map((category) => (
                 <React.Fragment key={`category-${category.name}`}>
                   {/* Category Header */}
-                  <tr className="bg-gray-100">
+                  <tr className="bg-gray-100 dark:bg-gray-700">
                     <td
                       colSpan={roles.length + 1}
-                      className="px-4 py-2 text-sm font-semibold text-gray-700 sticky left-0 bg-gray-100"
+                      className="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 sticky left-0 bg-gray-100 dark:bg-gray-700"
                     >
                       {category.name}
-                      <span className="text-gray-500 font-normal ml-2">
+                      <span className="text-gray-500 dark:text-gray-400 font-normal ml-2">
                         — {category.description}
                       </span>
                     </td>
                   </tr>
                   {/* Permission Rows */}
                   {category.permissionDetails.map((perm) => (
-                    <tr key={perm.permission} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm sticky left-0 bg-white z-10">
+                    <tr key={perm.permission} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                      <td className="px-4 py-3 text-sm sticky left-0 bg-white dark:bg-gray-800 z-10">
                         <div>
-                          <span className="font-medium text-gray-900">{perm.name}</span>
-                          <p className="text-xs text-gray-500">{perm.description}</p>
+                          <span className="font-medium text-gray-900 dark:text-gray-100">{perm.name}</span>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{perm.description}</p>
                         </div>
                       </td>
                       {roles.map((role) => (
@@ -138,7 +138,7 @@ export default function Permissions() {
                           {hasPermission(role, perm.permission) ? (
                             <CheckIcon className="h-5 w-5 text-green-500 mx-auto" />
                           ) : (
-                            <XMarkIcon className="h-5 w-5 text-gray-300 mx-auto" />
+                            <XMarkIcon className="h-5 w-5 text-gray-300 dark:text-gray-600 mx-auto" />
                           )}
                         </td>
                       ))}
@@ -164,10 +164,10 @@ export default function Permissions() {
                   {ROLE_DISPLAY_NAMES[role]}
                 </span>
               </div>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 {getRoleDescription(role)}
               </p>
-              <p className="text-xs text-gray-400 mt-2">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                 {permCount} permission{permCount === 1 ? '' : 's'}
               </p>
             </div>

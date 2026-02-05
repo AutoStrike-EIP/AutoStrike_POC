@@ -9,7 +9,7 @@ export const MODAL_OVERLAY_CLASS = 'fixed inset-0 bg-black/50 flex items-center 
 /**
  * Standard modal container classes
  */
-export const MODAL_CONTAINER_CLASS = 'bg-white rounded-xl shadow-xl';
+export const MODAL_CONTAINER_CLASS = 'bg-white dark:bg-gray-800 rounded-xl shadow-xl';
 
 interface ModalProps {
   /** Modal title displayed in the header */
@@ -65,11 +65,11 @@ export function Modal({ title, onClose, children, maxWidth = 'max-w-md', footer 
       aria-labelledby="modal-title"
     >
       <div ref={contentRef}>
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 id="modal-title" className="text-xl font-semibold">{title}</h2>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 id="modal-title" className="text-xl font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg"
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500 dark:text-gray-400"
             aria-label="Close modal"
           >
             <XMarkIcon className="h-5 w-5" />
@@ -79,7 +79,7 @@ export function Modal({ title, onClose, children, maxWidth = 'max-w-md', footer 
           {children}
         </div>
         {footer && (
-          <div className="flex justify-end gap-3 p-6 border-t">
+          <div className="flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
             {footer}
           </div>
         )}

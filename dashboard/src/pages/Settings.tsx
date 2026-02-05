@@ -62,7 +62,7 @@ function Toggle({
       onClick={onChange}
       disabled={disabled}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-        enabled ? 'bg-primary-600' : 'bg-gray-200'
+        enabled ? 'bg-primary-600' : 'bg-gray-200 dark:bg-gray-600'
       } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     >
       <span
@@ -214,7 +214,7 @@ export default function Settings() {
           </div>
 
           {notifLoading ? (
-            <div className="text-center py-4 text-gray-500">Loading...</div>
+            <div className="text-center py-4 text-gray-500 dark:text-gray-400">Loading...</div>
           ) : (
             <div className="space-y-4">
               {/* Enable Notifications */}
@@ -235,7 +235,7 @@ export default function Settings() {
                 <>
                   {/* Channel Selection */}
                   <div>
-                    <label htmlFor="notif-channel" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="notif-channel" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Notification Channel
                     </label>
                     <select
@@ -254,7 +254,7 @@ export default function Settings() {
                   {/* Email Settings */}
                   {notifSettings.channel === 'email' && (
                     <div>
-                      <label htmlFor="notif-email" className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="notif-email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Email Address
                       </label>
                       <input
@@ -266,7 +266,7 @@ export default function Settings() {
                         onChange={(e) => updateNotifSetting('email_address', e.target.value)}
                       />
                       {!smtpConfig && (
-                        <p className="mt-1 text-sm text-amber-600 flex items-center gap-1">
+                        <p className="mt-1 text-sm text-amber-600 dark:text-amber-400 flex items-center gap-1">
                           <ExclamationTriangleIcon className="h-4 w-4" />
                           SMTP not configured on server. Email notifications may not work.
                         </p>
@@ -277,7 +277,7 @@ export default function Settings() {
                   {/* Webhook Settings */}
                   {notifSettings.channel === 'webhook' && (
                     <div>
-                      <label htmlFor="notif-webhook" className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="notif-webhook" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Webhook URL
                       </label>
                       <input
@@ -292,11 +292,11 @@ export default function Settings() {
                   )}
 
                   {/* Notification Types */}
-                  <div className="border-t pt-4 mt-4">
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
                     <p className="font-medium mb-3">Notify me when:</p>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700">Execution starts</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Execution starts</span>
                         <Toggle
                           enabled={notifSettings.notify_on_start}
                           onChange={() =>
@@ -305,7 +305,7 @@ export default function Settings() {
                         />
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700">Execution completes</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Execution completes</span>
                         <Toggle
                           enabled={notifSettings.notify_on_complete}
                           onChange={() =>
@@ -314,7 +314,7 @@ export default function Settings() {
                         />
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700">Execution fails</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Execution fails</span>
                         <Toggle
                           enabled={notifSettings.notify_on_failure}
                           onChange={() =>
@@ -323,7 +323,7 @@ export default function Settings() {
                         />
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-700">Agent goes offline</span>
+                        <span className="text-sm text-gray-700 dark:text-gray-300">Agent goes offline</span>
                         <Toggle
                           enabled={notifSettings.notify_on_agent_offline}
                           onChange={() =>
@@ -336,7 +336,7 @@ export default function Settings() {
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <span className="text-sm text-gray-700">
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
                             Security score below threshold
                           </span>
                           {notifSettings.notify_on_score_alert && (
@@ -354,7 +354,7 @@ export default function Settings() {
                                   )
                                 }
                               />
-                              <span className="text-sm text-gray-500 ml-2">%</span>
+                              <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">%</span>
                             </div>
                           )}
                         </div>
@@ -394,7 +394,7 @@ export default function Settings() {
               <h2 className="text-lg font-semibold">Test Email</h2>
             </div>
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 SMTP Server: {smtpConfig.host}:{smtpConfig.port} ({smtpConfig.use_tls ? 'TLS' : 'Plain'})
               </p>
               <div className="flex gap-2">
@@ -422,7 +422,7 @@ export default function Settings() {
           <h2 className="text-lg font-semibold mb-4">Server Configuration</h2>
           <div className="space-y-4">
             <div>
-              <label htmlFor="server-url" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="server-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Server URL
               </label>
               <input
@@ -460,7 +460,7 @@ export default function Settings() {
           <h2 className="text-lg font-semibold mb-4">Agent Settings</h2>
           <div className="space-y-4">
             <div>
-              <label htmlFor="heartbeat-interval" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="heartbeat-interval" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Heartbeat Interval (seconds)
               </label>
               <input
@@ -472,7 +472,7 @@ export default function Settings() {
               />
             </div>
             <div>
-              <label htmlFor="stale-timeout" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="stale-timeout" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Stale Agent Timeout (seconds)
               </label>
               <input
@@ -491,7 +491,7 @@ export default function Settings() {
           <h2 className="text-lg font-semibold mb-4">TLS / mTLS Configuration</h2>
           <div className="space-y-4">
             <div>
-              <label htmlFor="ca-cert-path" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="ca-cert-path" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 CA Certificate Path
               </label>
               <input
@@ -504,7 +504,7 @@ export default function Settings() {
               />
             </div>
             <div>
-              <label htmlFor="server-cert-path" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="server-cert-path" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Server Certificate Path
               </label>
               <input
@@ -517,7 +517,7 @@ export default function Settings() {
               />
             </div>
             <div>
-              <label htmlFor="server-key-path" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="server-key-path" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Server Key Path
               </label>
               <input
