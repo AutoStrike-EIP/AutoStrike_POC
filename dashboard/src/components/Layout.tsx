@@ -17,6 +17,7 @@ import {
 import clsx from 'clsx';
 import { useAuth } from '../contexts/AuthContext';
 import { UserRole } from '../lib/api';
+import { ThemeToggle } from './ThemeToggle';
 
 interface LayoutProps {
   readonly children: ReactNode;
@@ -115,15 +116,18 @@ export default function Layout({ children }: LayoutProps) {
                 </p>
               </div>
             </div>
-            {authEnabled && (
-              <button
-                onClick={handleLogout}
-                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
-                title="Logout"
-              >
-                <ArrowLeftStartOnRectangleIcon className="h-5 w-5" />
-              </button>
-            )}
+            <div className="flex items-center gap-1">
+              <ThemeToggle variant="icon" />
+              {authEnabled && (
+                <button
+                  onClick={handleLogout}
+                  className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+                  title="Logout"
+                >
+                  <ArrowLeftStartOnRectangleIcon className="h-5 w-5" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

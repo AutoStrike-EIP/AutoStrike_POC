@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { authApi } from './lib/api';
 
 // Mock the API
@@ -25,8 +26,17 @@ const localStorageMock = {
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),
+  length: 0,
+  key: vi.fn(),
 };
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+
+// Mock matchMedia for ThemeContext
+const matchMediaMock = vi.fn().mockReturnValue({
+  matches: false,
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+});
 
 const createQueryClient = () =>
   new QueryClient({
@@ -56,19 +66,26 @@ function renderWithProviders(initialRoute = '/') {
   } as never);
 
   return render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[initialRoute]}>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-      </MemoryRouter>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[initialRoute]}>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </MemoryRouter>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('matchMedia', matchMediaMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('renders layout with AutoStrike title', async () => {
@@ -108,6 +125,11 @@ describe('App', () => {
 describe('Navigation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('matchMedia', matchMediaMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('highlights Dashboard link when on dashboard route', async () => {
@@ -138,20 +160,27 @@ describe('Navigation', () => {
 describe('Login Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('matchMedia', matchMediaMock);
     localStorageMock.getItem.mockReturnValue(null);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('renders login page for unauthenticated users', async () => {
     const queryClient = createQueryClient();
 
     render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/login']}>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </MemoryRouter>
-      </QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={['/login']}>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </MemoryRouter>
+        </QueryClientProvider>
+      </ThemeProvider>
     );
 
     await waitFor(() => {

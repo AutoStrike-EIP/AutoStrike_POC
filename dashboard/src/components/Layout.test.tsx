@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import Layout from './Layout';
 import { AuthProvider } from '../contexts/AuthContext';
+import { ThemeProvider } from '../contexts/ThemeContext';
 import { authApi } from '../lib/api';
 
 // Mock the API
@@ -21,8 +22,17 @@ const localStorageMock = {
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),
+  length: 0,
+  key: vi.fn(),
 };
 Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+
+// Mock matchMedia for ThemeContext
+const matchMediaMock = vi.fn().mockReturnValue({
+  matches: false,
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+});
 
 function renderLayout(path = '/dashboard', user = { username: 'TestUser', email: 'test@example.com' }) {
   // Set up the mock to return the user
@@ -41,19 +51,26 @@ function renderLayout(path = '/dashboard', user = { username: 'TestUser', email:
   } as never);
 
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <AuthProvider>
-        <Layout>
-          <div data-testid="child-content">Test Content</div>
-        </Layout>
-      </AuthProvider>
-    </MemoryRouter>
+    <ThemeProvider>
+      <MemoryRouter initialEntries={[path]}>
+        <AuthProvider>
+          <Layout>
+            <div data-testid="child-content">Test Content</div>
+          </Layout>
+        </AuthProvider>
+      </MemoryRouter>
+    </ThemeProvider>
   );
 }
 
 describe('Layout', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('matchMedia', matchMediaMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('renders AutoStrike brand name', async () => {
@@ -133,6 +150,7 @@ describe('Layout', () => {
 describe('Layout Navigation Active State', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('matchMedia', matchMediaMock);
     localStorageMock.getItem.mockReturnValue('test-token');
     vi.mocked(authApi.me).mockResolvedValue({
       data: {
@@ -144,15 +162,21 @@ describe('Layout Navigation Active State', () => {
     } as never);
   });
 
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('highlights active route', async () => {
     render(
-      <MemoryRouter initialEntries={['/dashboard']}>
-        <AuthProvider>
-          <Layout>
-            <div>Content</div>
-          </Layout>
-        </AuthProvider>
-      </MemoryRouter>
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/dashboard']}>
+          <AuthProvider>
+            <Layout>
+              <div>Content</div>
+            </Layout>
+          </AuthProvider>
+        </MemoryRouter>
+      </ThemeProvider>
     );
 
     await waitFor(() => {
@@ -163,13 +187,15 @@ describe('Layout Navigation Active State', () => {
 
   it('does not highlight inactive routes', async () => {
     render(
-      <MemoryRouter initialEntries={['/dashboard']}>
-        <AuthProvider>
-          <Layout>
-            <div>Content</div>
-          </Layout>
-        </AuthProvider>
-      </MemoryRouter>
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/dashboard']}>
+          <AuthProvider>
+            <Layout>
+              <div>Content</div>
+            </Layout>
+          </AuthProvider>
+        </MemoryRouter>
+      </ThemeProvider>
     );
 
     await waitFor(() => {
@@ -183,18 +209,25 @@ describe('Layout Navigation Active State', () => {
 describe('Layout with default user', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('matchMedia', matchMediaMock);
     localStorageMock.getItem.mockReturnValue(null);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('displays default values when no user in context', async () => {
     render(
-      <MemoryRouter initialEntries={['/dashboard']}>
-        <AuthProvider>
-          <Layout>
-            <div>Content</div>
-          </Layout>
-        </AuthProvider>
-      </MemoryRouter>
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/dashboard']}>
+          <AuthProvider>
+            <Layout>
+              <div>Content</div>
+            </Layout>
+          </AuthProvider>
+        </MemoryRouter>
+      </ThemeProvider>
     );
 
     // When not authenticated, the default values should show
