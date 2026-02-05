@@ -50,7 +50,7 @@ type CreateScheduleRequest struct {
 	Description string `json:"description"`
 	ScenarioID  string `json:"scenario_id" binding:"required"`
 	AgentPaw    string `json:"agent_paw"`
-	Frequency   string `json:"frequency" binding:"required,oneof=once hourly daily weekly monthly"`
+	Frequency   string `json:"frequency" binding:"required,oneof=once hourly daily weekly monthly cron"`
 	CronExpr    string `json:"cron_expr"`
 	SafeMode    bool   `json:"safe_mode"`
 	StartAt     string `json:"start_at"`

@@ -1,3 +1,4 @@
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ShieldCheckIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { permissionApi, UserRole } from '../../lib/api';
@@ -110,9 +111,9 @@ export default function Permissions() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {permissionsByCategory.map((category) => (
-                <>
+                <React.Fragment key={`category-${category.name}`}>
                   {/* Category Header */}
-                  <tr key={`category-${category.name}`} className="bg-gray-100">
+                  <tr className="bg-gray-100">
                     <td
                       colSpan={roles.length + 1}
                       className="px-4 py-2 text-sm font-semibold text-gray-700 sticky left-0 bg-gray-100"
@@ -143,7 +144,7 @@ export default function Permissions() {
                       ))}
                     </tr>
                   ))}
-                </>
+                </React.Fragment>
               ))}
             </tbody>
           </table>

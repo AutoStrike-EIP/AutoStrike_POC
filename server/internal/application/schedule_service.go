@@ -300,9 +300,7 @@ func (s *ScheduleService) runSchedule(ctx context.Context, schedule *entity.Sche
 		run.CompletedAt = &completedAt
 	} else {
 		run.ExecutionID = result.Execution.ID
-		run.Status = "completed"
-		completedAt := time.Now()
-		run.CompletedAt = &completedAt
+		run.Status = "started"
 	}
 
 	// Save the run record
@@ -362,9 +360,7 @@ func (s *ScheduleService) RunNow(ctx context.Context, id string) (*entity.Schedu
 		run.CompletedAt = &completedAt
 	} else {
 		run.ExecutionID = result.Execution.ID
-		run.Status = "completed"
-		completedAt := time.Now()
-		run.CompletedAt = &completedAt
+		run.Status = "started"
 	}
 
 	// Save the run record

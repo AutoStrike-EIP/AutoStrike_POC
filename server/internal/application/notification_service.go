@@ -119,7 +119,7 @@ func (s *NotificationService) MarkAsRead(ctx context.Context, id string) error {
 // MarkAsReadForUser marks a notification as read only if owned by the user
 func (s *NotificationService) MarkAsReadForUser(ctx context.Context, id string, userID string) error {
 	notification, err := s.notificationRepo.FindNotificationByID(ctx, id)
-	if err != nil {
+	if err != nil || notification == nil {
 		return fmt.Errorf("notification not found or not owned by user")
 	}
 

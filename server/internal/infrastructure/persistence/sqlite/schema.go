@@ -158,7 +158,7 @@ func InitSchema(db *sql.DB) error {
 	CREATE TABLE IF NOT EXISTS schedule_runs (
 		id TEXT PRIMARY KEY,
 		schedule_id TEXT NOT NULL,
-		execution_id TEXT NOT NULL,
+		execution_id TEXT,
 		started_at DATETIME NOT NULL,
 		completed_at DATETIME,
 		status TEXT NOT NULL DEFAULT 'pending',

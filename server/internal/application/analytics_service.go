@@ -105,11 +105,13 @@ func (s *AnalyticsService) GetPeriodStats(ctx context.Context, start, end time.T
 	stats.ExecutionCount = len(executions)
 
 	var totalScore float64
+	var scoredCount int
 	tacticScores := make(map[string][]float64)
 
 	for _, exec := range executions {
 		if exec.Score != nil {
 			totalScore += exec.Score.Overall
+			scoredCount++
 			stats.TotalBlocked += exec.Score.Blocked
 			stats.TotalDetected += exec.Score.Detected
 			stats.TotalSuccessful += exec.Score.Successful
@@ -122,7 +124,9 @@ func (s *AnalyticsService) GetPeriodStats(ctx context.Context, start, end time.T
 		}
 	}
 
-	stats.AverageScore = totalScore / float64(len(executions))
+	if scoredCount > 0 {
+		stats.AverageScore = totalScore / float64(scoredCount)
+	}
 
 	// Calculate average per tactic
 	for tactic, scores := range tacticScores {

@@ -69,7 +69,8 @@ func (s *Schedule) CalculateNextRun(from time.Time) *time.Time {
 		if s.NextRunAt != nil {
 			return s.NextRunAt
 		}
-		return nil
+		// If no start_at was provided, run immediately
+		return &from
 	case FrequencyHourly:
 		next = from.Add(time.Hour)
 	case FrequencyDaily:

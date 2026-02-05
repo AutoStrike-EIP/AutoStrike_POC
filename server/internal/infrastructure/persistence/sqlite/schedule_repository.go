@@ -166,10 +166,15 @@ func (r *ScheduleRepository) CreateRun(ctx context.Context, run *entity.Schedule
 		INSERT INTO schedule_runs (id, schedule_id, execution_id, started_at, completed_at, status, error)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`
+	// Handle nullable execution_id
+	var executionID sql.NullString
+	if run.ExecutionID != "" {
+		executionID = sql.NullString{String: run.ExecutionID, Valid: true}
+	}
 	_, err := r.db.ExecContext(ctx, query,
 		run.ID,
 		run.ScheduleID,
-		run.ExecutionID,
+		executionID,
 		run.StartedAt,
 		run.CompletedAt,
 		run.Status,
@@ -211,10 +216,11 @@ func (r *ScheduleRepository) FindRunsByScheduleID(ctx context.Context, scheduleI
 		run := &entity.ScheduleRun{}
 		var completedAt sql.NullTime
 		var errStr sql.NullString
+		var executionID sql.NullString
 		err := rows.Scan(
 			&run.ID,
 			&run.ScheduleID,
-			&run.ExecutionID,
+			&executionID,
 			&run.StartedAt,
 			&completedAt,
 			&run.Status,
@@ -222,6 +228,9 @@ func (r *ScheduleRepository) FindRunsByScheduleID(ctx context.Context, scheduleI
 		)
 		if err != nil {
 			return nil, err
+		}
+		if executionID.Valid {
+			run.ExecutionID = executionID.String
 		}
 		if completedAt.Valid {
 			run.CompletedAt = &completedAt.Time
