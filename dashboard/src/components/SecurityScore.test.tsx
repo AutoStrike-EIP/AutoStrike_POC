@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import { SecurityScore } from './SecurityScore';
 
 describe('SecurityScore', () => {
@@ -142,5 +142,38 @@ describe('SecurityScore', () => {
     const { container } = render(<SecurityScore score={75} className="custom-class" animated={false} />);
 
     expect(container.firstChild).toHaveClass('custom-class');
+  });
+
+  it('animates from current value on score prop change, not from 0', () => {
+    // Mock requestAnimationFrame to run callback immediately with a time far enough for completion
+    let rafCallback: ((time: number) => void) | null = null;
+    vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => {
+      rafCallback = cb;
+      return 1;
+    });
+    vi.spyOn(globalThis, 'cancelAnimationFrame').mockImplementation(() => {});
+    vi.spyOn(performance, 'now').mockReturnValue(0);
+
+    // Initial render with score=50, non-animated to set baseline
+    const { rerender } = render(<SecurityScore score={50} animated={false} />);
+    expect(screen.getByText('50.0')).toBeInTheDocument();
+
+    // Re-render with score=80, animated
+    act(() => {
+      rerender(<SecurityScore score={80} animated={true} />);
+    });
+
+    // The animation should start - trigger the first frame at time=0 (start)
+    if (rafCallback) {
+      act(() => {
+        (rafCallback as (time: number) => void)(0);
+      });
+    }
+
+    // At time=0 (start of animation), the displayed score should be ~50 (the previous value),
+    // NOT 0. This verifies the animation starts from the current displayed value.
+    const displayedValue = screen.getByText(/\d+\.\d/);
+    const numericValue = parseFloat(displayedValue.textContent || '0');
+    expect(numericValue).toBeGreaterThanOrEqual(49);
   });
 });

@@ -60,7 +60,7 @@ export function Modal({ title, onClose, children, maxWidth = 'max-w-md', footer 
   return (
     <dialog
       ref={dialogRef}
-      className={`${MODAL_CONTAINER_CLASS} ${maxWidth} w-full mx-4 p-0 backdrop:bg-black/50`}
+      className={`${MODAL_CONTAINER_CLASS} ${maxWidth} w-full mx-auto p-0 backdrop:bg-black/50`}
       onCancel={handleCancel}
       aria-labelledby="modal-title"
     >

@@ -27,7 +27,7 @@ const ThemeContext = createContext<ThemeContextType | null>(null);
  * Get system color scheme preference
  */
 function getSystemTheme(): 'light' | 'dark' {
-  if (typeof globalThis.window === 'undefined') return 'light';
+  if (globalThis.window === undefined) return 'light';
   return globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
@@ -35,7 +35,7 @@ function getSystemTheme(): 'light' | 'dark' {
  * Get stored theme from localStorage
  */
 function getStoredTheme(): Theme {
-  if (typeof globalThis.window === 'undefined') return 'system';
+  if (globalThis.window === undefined) return 'system';
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored === 'light' || stored === 'dark' || stored === 'system') {
     return stored;

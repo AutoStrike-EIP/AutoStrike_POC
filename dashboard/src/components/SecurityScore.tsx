@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowTrendingUpIcon, ArrowTrendingDownIcon } from '@heroicons/react/24/outline';
 
 /**
@@ -66,6 +66,7 @@ export function SecurityScore({
   className = '',
 }: SecurityScoreProps) {
   const [displayScore, setDisplayScore] = useState(animated ? 0 : score);
+  const displayScoreRef = useRef(displayScore);
   const config = sizeConfig[size];
 
   // SVG circle calculations
@@ -78,6 +79,7 @@ export function SecurityScore({
   // Animate score on mount
   useEffect(() => {
     if (!animated) {
+      displayScoreRef.current = normalizedScore;
       setDisplayScore(normalizedScore);
       return;
     }
@@ -85,14 +87,15 @@ export function SecurityScore({
     // Check for reduced motion preference
     const prefersReducedMotion = globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReducedMotion) {
+      displayScoreRef.current = normalizedScore;
       setDisplayScore(normalizedScore);
       return;
     }
 
-    // Animate from 0 to target score
+    // Animate from current displayed value to target score
     const duration = 1000;
     const startTime = performance.now();
-    const startValue = 0;
+    const startValue = displayScoreRef.current;
     const endValue = normalizedScore;
     let animationId: number;
 
@@ -102,6 +105,7 @@ export function SecurityScore({
       // Ease out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
       const current = startValue + (endValue - startValue) * eased;
+      displayScoreRef.current = current;
       setDisplayScore(current);
 
       if (progress < 1) {
