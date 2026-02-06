@@ -266,17 +266,23 @@ Connection: `wss://server:8443/ws/dashboard`
 - `VITE_API_BASE_URL` - API base path
 - `VITE_WS_HOST` - WebSocket host override
 
-## Available Techniques (30 total)
+## Available Techniques (48 total)
 
 | Tactic | Count | IDs |
 |--------|-------|-----|
-| Discovery | 9 | T1082, T1083, T1057, T1016, T1049, T1087, T1069, T1018, T1007 |
-| Execution | 3 | T1059.001, T1059.003, T1059.004 |
+| Reconnaissance | 2 | T1592.004, T1595.002 |
+| Initial Access | 3 | T1078, T1133, T1190 |
+| Execution | 5 | T1059.001, T1059.003, T1059.004, T1047, T1059.006 |
 | Persistence | 4 | T1053.005, T1547.001, T1053.003, T1543.002 |
-| Defense Evasion | 3 | T1070.004, T1562.001, T1027 |
+| Privilege Escalation | 4 | T1548.001, T1548.002, T1078.003, T1134.001 |
+| Defense Evasion | 6 | T1070.004, T1562.001, T1027, T1070.001, T1036.005, T1218.011 |
 | Credential Access | 4 | T1552.001, T1555.003, T1003.008, T1552.004 |
-| Collection | 4 | T1005, T1039, T1074.001, T1119 |
+| Discovery | 9 | T1082, T1083, T1057, T1016, T1049, T1087, T1069, T1018, T1007 |
 | Lateral Movement | 3 | T1021.001, T1021.002, T1021.004 |
+| Collection | 4 | T1005, T1039, T1074.001, T1119 |
+| Command and Control | 3 | T1071.001, T1105, T1572 |
+| Exfiltration | 3 | T1048.003, T1041, T1567.002 |
+| Impact | 3 | T1490, T1489, T1486 |
 
 All techniques are **safe mode compatible** (non-destructive).
 
@@ -320,6 +326,61 @@ score = (blocked * 100 + detected * 50) / (total * 100) * 100
 | Blocked | 100 | Attack prevented |
 | Detected | 50 | Attack seen but not stopped |
 | Success | 0 | Attack succeeded undetected |
+
+## Git Rules
+
+### Branches
+- NEVER push to main directly
+- Naming: `feat/<scope>-<description>`, `fix/<scope>-<description>`, `test/<scope>-<description>`
+- Scope: server, dashboard, agent, techniques, scenarios, docs, ci
+- Always branch from latest main: `git checkout main && git pull && git checkout -b feat/...`
+
+### Commits
+- Format: `type(scope): description`
+- Types: feat, fix, test, refactor, docs, ci, chore
+- Examples: `feat(server): add PDF report endpoint`, `test(dashboard): add Reports page tests`
+- NEVER mention Claude, AI, LLM, assistant, copilot, or Anthropic in commits
+- NEVER add Co-Authored-By with Claude or Anthropic
+- Messages in English, concise, descriptive
+- Stage specific files (`git add <files>`) — never use `git add -A` or `git add .`
+
+### Pull Requests
+- Use `gh pr create` with title (<70 chars) and body
+- NEVER mention Claude/AI/LLM in PRs
+- PR body format:
+  ```
+  ## Summary
+  - <change 1>
+  - <change 2>
+
+  ## Test plan
+  - [ ] Unit tests added
+  - [ ] Coverage >= 95%
+  - [ ] Lint passes
+  - [ ] No regressions
+  ```
+
+## Quality Standards
+
+### Coverage Targets
+- Server Go: 95%+ per package
+- Dashboard React: 95%+ lines
+- Agent Rust: 90%+
+
+### Lint (must pass with zero warnings)
+```bash
+cd server && go vet ./... && go test ./... -cover
+cd dashboard && npm run lint && npm run type-check && npm test -- --run
+cd agent && cargo fmt --check && cargo clippy -- -D warnings && cargo test
+```
+
+### Code Rules
+- No `any` in TypeScript unless justified with a comment
+- No `unsafe` in Rust unless justified and documented
+- No `panic` in Go handlers — always return proper HTTP errors
+- Input validation on all public endpoints
+- Error handling explicit — no unhandled promises, no ignored errors
+- Hexagonal architecture: domain/ has ZERO imports from infrastructure/
 
 ## Contributing
 

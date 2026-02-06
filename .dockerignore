@@ -1,0 +1,57 @@
+# Git
+.git
+.gitignore
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+*.crt
+*.p12
+certs/
+server/certs/
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# Build artifacts
+server/bin/
+server/data/
+server/coverage.*
+agent/target/
+dashboard/node_modules/
+dashboard/coverage/
+build/
+dist/
+out/
+
+# Documentation
+docs/
+site/
+
+# Database
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# CI/CD
+.github/
+.sonar/
+.scannerwork/
+
+# OS
+.DS_Store
+Thumbs.db

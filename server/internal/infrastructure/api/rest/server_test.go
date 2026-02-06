@@ -232,6 +232,7 @@ func TestNewServerWithConfig_AuthEnabled(t *testing.T) {
 	}
 
 	server := NewServerWithConfig(services, hub, logger, config)
+	defer server.Close()
 
 	if server == nil {
 		t.Fatal("NewServerWithConfig returned nil")
@@ -348,6 +349,7 @@ func TestServer_HealthEndpoint_AuthEnabled(t *testing.T) {
 		JWTSecret:  "test-secret",
 	}
 	server := NewServerWithConfig(services, nil, logger, config)
+	defer server.Close()
 
 	req, _ := http.NewRequest("GET", "/health", nil)
 	w := httptest.NewRecorder()
@@ -1096,6 +1098,7 @@ func TestServer_MiddlewareOrder_AuthBeforeHandlers(t *testing.T) {
 		JWTSecret:  "test-jwt-secret-key",
 	}
 	server := NewServerWithConfig(services, nil, logger, config)
+	defer server.Close()
 
 	// Without auth header, API should return 401 (auth middleware runs before handler)
 	req, _ := http.NewRequest("GET", "/api/v1/agents", nil)
@@ -1124,6 +1127,7 @@ func TestServer_MiddlewareOrder_InvalidBearerToken(t *testing.T) {
 		JWTSecret:  "test-jwt-secret-key",
 	}
 	server := NewServerWithConfig(services, nil, logger, config)
+	defer server.Close()
 
 	// With invalid bearer token format
 	req, _ := http.NewRequest("GET", "/api/v1/agents", nil)
@@ -1171,6 +1175,7 @@ func TestServer_MiddlewareOrder_HealthBypassesAuth(t *testing.T) {
 		JWTSecret:  "test-jwt-secret-key",
 	}
 	server := NewServerWithConfig(services, nil, logger, config)
+	defer server.Close()
 
 	// Health endpoint should be accessible without authentication
 	req, _ := http.NewRequest("GET", "/health", nil)
@@ -1232,6 +1237,7 @@ func TestServer_WithAuthService_RegistersAuthRoutes(t *testing.T) {
 		JWTSecret:  "test-jwt-secret-key",
 	}
 	server := NewServerWithConfig(services, nil, logger, config)
+	defer server.Close()
 
 	routes := server.Router().Routes()
 	expectedAuthRoutes := []string{
@@ -1263,6 +1269,7 @@ func TestServer_WithAuthService_RegistersAdminRoutes(t *testing.T) {
 		JWTSecret:  "test-jwt-secret-key",
 	}
 	server := NewServerWithConfig(services, nil, logger, config)
+	defer server.Close()
 
 	routes := server.Router().Routes()
 	expectedAdminRoutes := []string{
@@ -1293,6 +1300,7 @@ func TestServer_WithAuthService_RegistersProtectedMeRoute(t *testing.T) {
 		JWTSecret:  "test-jwt-secret-key",
 	}
 	server := NewServerWithConfig(services, nil, logger, config)
+	defer server.Close()
 
 	routes := server.Router().Routes()
 	found := false
@@ -1316,6 +1324,7 @@ func TestServer_WithAuthService_LoginEndpointAccessible(t *testing.T) {
 		JWTSecret:  "test-jwt-secret-key",
 	}
 	server := NewServerWithConfig(services, nil, logger, config)
+	defer server.Close()
 
 	// Login endpoint should be accessible without auth (it's a public route)
 	req, _ := http.NewRequest("POST", "/api/v1/auth/login", strings.NewReader(`{"username":"test","password":"test"}`))
@@ -1339,6 +1348,7 @@ func TestServer_WithAuthService_AdminRoutesRequireAuth(t *testing.T) {
 		JWTSecret:  "test-jwt-secret-key",
 	}
 	server := NewServerWithConfig(services, nil, logger, config)
+	defer server.Close()
 
 	// Admin endpoint without auth should return 401
 	req, _ := http.NewRequest("GET", "/api/v1/admin/users", nil)
@@ -1514,6 +1524,7 @@ func TestServer_AllServicesProvided(t *testing.T) {
 		JWTSecret:  "full-service-secret",
 	}
 	server := NewServerWithConfig(services, hub, logger, config)
+	defer server.Close()
 
 	if server == nil {
 		t.Fatal("Server should be created with all services provided")
@@ -1523,6 +1534,85 @@ func TestServer_AllServicesProvided(t *testing.T) {
 	routes := server.Router().Routes()
 	if len(routes) < 20 {
 		t.Errorf("Expected at least 20 routes with all services, got %d", len(routes))
+	}
+}
+
+// --- Body Size Limit Integration Tests ---
+
+func TestServer_BodySizeLimit_LargePostRejected(t *testing.T) {
+	logger := zap.NewNop()
+	services := createTestServices(t)
+
+	config := &ServerConfig{EnableAuth: false}
+	server := NewServerWithConfig(services, nil, logger, config)
+
+	// Create a body larger than 10 MB
+	largeBody := strings.Repeat("x", 11<<20) // 11 MB
+	req, _ := http.NewRequest("POST", "/api/v1/agents", strings.NewReader(largeBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	server.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusRequestEntityTooLarge {
+		t.Errorf("Expected status 413 for body > 10MB, got %d", w.Code)
+	}
+}
+
+func TestServer_BodySizeLimit_SmallPostAllowed(t *testing.T) {
+	logger := zap.NewNop()
+	services := createTestServices(t)
+
+	config := &ServerConfig{EnableAuth: false}
+	server := NewServerWithConfig(services, nil, logger, config)
+
+	smallBody := `{"paw":"test-agent","hostname":"host","platform":"linux"}`
+	req, _ := http.NewRequest("POST", "/api/v1/agents", strings.NewReader(smallBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	server.Router().ServeHTTP(w, req)
+
+	// Should not be rejected by body size limit (handler may return other status codes)
+	if w.Code == http.StatusRequestEntityTooLarge {
+		t.Error("Small body should not be rejected by body size limit")
+	}
+}
+
+func TestServer_BodySizeLimit_HealthGetUnaffected(t *testing.T) {
+	logger := zap.NewNop()
+	services := createTestServices(t)
+
+	config := &ServerConfig{EnableAuth: false}
+	server := NewServerWithConfig(services, nil, logger, config)
+
+	req, _ := http.NewRequest("GET", "/health", nil)
+	w := httptest.NewRecorder()
+	server.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected 200 for GET /health, got %d", w.Code)
+	}
+}
+
+func TestServer_BodySizeLimit_AuthLoginLargeBodyRejected(t *testing.T) {
+	logger := zap.NewNop()
+	services := createTestServicesWithAuth(t)
+
+	config := &ServerConfig{
+		EnableAuth: true,
+		JWTSecret:  "test-jwt-secret-key",
+	}
+	server := NewServerWithConfig(services, nil, logger, config)
+	defer server.Close()
+
+	// Large body to auth login endpoint
+	largeBody := `{"username":"` + strings.Repeat("a", 11<<20) + `","password":"test"}`
+	req, _ := http.NewRequest("POST", "/api/v1/auth/login", strings.NewReader(largeBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	server.Router().ServeHTTP(w, req)
+
+	if w.Code != http.StatusRequestEntityTooLarge {
+		t.Errorf("Expected status 413 for large auth login body, got %d", w.Code)
 	}
 }
 

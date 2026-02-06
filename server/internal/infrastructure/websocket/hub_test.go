@@ -567,6 +567,66 @@ func TestHub_RegisterAgent_Multiple(t *testing.T) {
 	}
 }
 
+func TestHub_Run_ProcessesBroadcast(t *testing.T) {
+	logger := zap.NewNop()
+	hub := NewHub(logger)
+	go hub.Run()
+
+	// Register a client through the Run loop
+	client := &Client{
+		hub:      hub,
+		send:     make(chan []byte, 256),
+		agentPaw: "run-broadcast-agent",
+	}
+	hub.Register(client)
+	time.Sleep(50 * time.Millisecond)
+
+	// Now broadcast through the Run loop (not directly calling handleBroadcast)
+	hub.Broadcast([]byte(`{"type":"via-run"}`))
+
+	// Client should receive the message processed by Run's broadcast case
+	select {
+	case data := <-client.send:
+		if string(data) != `{"type":"via-run"}` {
+			t.Errorf("Expected broadcast message, got %s", string(data))
+		}
+	case <-time.After(1 * time.Second):
+		t.Error("Timeout waiting for broadcast via Run loop")
+	}
+}
+
+func TestHub_Run_BroadcastRemovesSlowClient(t *testing.T) {
+	logger := zap.NewNop()
+	hub := NewHub(logger)
+	go hub.Run()
+
+	disconnected := make(chan string, 1)
+	hub.SetOnAgentDisconnect(func(paw string) {
+		disconnected <- paw
+	})
+
+	// Register a client with an unbuffered channel (will block on send)
+	slowClient := &Client{
+		hub:      hub,
+		send:     make(chan []byte), // unbuffered = always full
+		agentPaw: "slow-agent",
+	}
+	hub.Register(slowClient)
+	time.Sleep(50 * time.Millisecond)
+
+	// Broadcast through Run - slow client should be evicted
+	hub.Broadcast([]byte(`{"type":"evict"}`))
+
+	select {
+	case paw := <-disconnected:
+		if paw != "slow-agent" {
+			t.Errorf("Expected 'slow-agent', got '%s'", paw)
+		}
+	case <-time.After(1 * time.Second):
+		t.Error("Timeout waiting for disconnect callback via Run broadcast")
+	}
+}
+
 func TestHub_handleBroadcast_DisconnectCallback(t *testing.T) {
 	logger := zap.NewNop()
 	hub := NewHub(logger)

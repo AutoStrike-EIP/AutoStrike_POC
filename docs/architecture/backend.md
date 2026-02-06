@@ -1,6 +1,6 @@
 # Backend (Go)
 
-The AutoStrike control server is built with **Go 1.21+** using the **Gin** framework and **hexagonal architecture**.
+The AutoStrike control server is built with **Go 1.24+** using the **Gin** framework and **hexagonal architecture**.
 
 ---
 
@@ -20,7 +20,8 @@ L'architecture hexagonale (aussi appelée **Ports & Adapters**) est un pattern q
 │  │  ┌─────────────────────────────────────────────────┐  │  │
 │  │  │                   DOMAIN                        │  │  │
 │  │  │                                                 │  │  │
-│  │  │   Entités : Agent, Technique, Execution         │  │  │
+│  │  │   Entités : Agent, Technique, Execution, User   │  │  │
+│  │  │             Notification, Schedule, Permission   │  │  │
 │  │  │   Services : Orchestrator, Validator, Score     │  │  │
 │  │  │   Interfaces : Repository (ports)               │  │  │
 │  │  │                                                 │  │  │
@@ -76,14 +77,32 @@ server/
 ├── cmd/autostrike/
 │   └── main.go                    # Entry point, DI, startup
 ├── configs/
-│   └── techniques/                # YAML technique definitions
-│       ├── discovery.yaml
+│   └── techniques/                # YAML technique definitions (13 files)
+│       ├── reconnaissance.yaml
+│       ├── initial-access.yaml
 │       ├── execution.yaml
 │       ├── persistence.yaml
-│       └── defense-evasion.yaml
+│       ├── privilege-escalation.yaml
+│       ├── defense-evasion.yaml
+│       ├── credential-access.yaml
+│       ├── discovery.yaml
+│       ├── lateral-movement.yaml
+│       ├── collection.yaml
+│       ├── command-and-control.yaml
+│       ├── exfiltration.yaml
+│       └── impact.yaml
 ├── internal/
 │   ├── domain/                    # 🟢 Business Layer (independent)
-│   │   ├── entity/                # Entities: Agent, Technique, Scenario, Execution, Result
+│   │   ├── entity/                # Entities
+│   │   │   ├── agent.go           # Agent, AgentStatus
+│   │   │   ├── technique.go       # Technique, Executor, Detection
+│   │   │   ├── scenario.go        # Scenario, Phase
+│   │   │   ├── execution.go       # Execution, SecurityScore
+│   │   │   ├── result.go          # ExecutionResult, ResultStatus
+│   │   │   ├── user.go            # User, UserRole
+│   │   │   ├── notification.go    # Notification, NotificationSettings, SMTPConfig
+│   │   │   ├── schedule.go        # Schedule, ScheduleRun, ScheduleFrequency
+│   │   │   └── permission.go      # Permission, PermissionMatrix
 │   │   ├── repository/            # Interfaces (outbound ports)
 │   │   └── service/               # Domain services
 │   │       ├── orchestrator.go    # Attack orchestration
@@ -91,31 +110,44 @@ server/
 │   │       └── score_calculator.go # Security score calculation
 │   ├── application/               # 🟡 Use Cases
 │   │   ├── agent_service.go       # Agent CRUD, heartbeat
-│   │   ├── auth_service.go        # Authentication (login, tokens)
+│   │   ├── auth_service.go        # Authentication (login, tokens, JWT)
 │   │   ├── execution_service.go   # Execution lifecycle
 │   │   ├── scenario_service.go    # Scenario management
-│   │   └── technique_service.go   # Technique catalog
+│   │   ├── technique_service.go   # Technique catalog
+│   │   ├── notification_service.go # Notification management, SMTP
+│   │   ├── schedule_service.go    # Schedule management, cron
+│   │   ├── analytics_service.go   # Analytics, trends, comparisons
+│   │   └── token_blacklist.go     # JWT token blacklist for logout
 │   └── infrastructure/            # 🔵 External Adapters
 │       ├── api/rest/
-│       │   └── server.go          # Gin REST server
+│       │   └── server.go          # Gin REST server, route registration
 │       ├── http/
 │       │   ├── handlers/          # HTTP handlers
 │       │   │   ├── agent_handler.go
-│       │   │   ├── auth_handler.go    # Auth endpoints
+│       │   │   ├── auth_handler.go
 │       │   │   ├── technique_handler.go
 │       │   │   ├── scenario_handler.go
 │       │   │   ├── execution_handler.go
+│       │   │   ├── admin_handler.go        # User management (admin)
+│       │   │   ├── analytics_handler.go    # Analytics endpoints
+│       │   │   ├── notification_handler.go # Notification endpoints
+│       │   │   ├── schedule_handler.go     # Schedule endpoints
+│       │   │   ├── permission_handler.go   # Permission endpoints
 │       │   │   └── websocket_handler.go
-│       │   └── middleware/        # JWT Auth, Logging
-│       │       ├── auth.go
-│       │       └── logging.go
+│       │   └── middleware/
+│       │       ├── auth.go        # JWT auth, agent auth, roles, permissions
+│       │       ├── security.go    # Security headers (HSTS, CSP, etc.)
+│       │       ├── ratelimit.go   # Per-IP rate limiting
+│       │       └── logging.go     # Request logging, panic recovery
 │       ├── persistence/sqlite/    # SQLite implementation
 │       │   ├── schema.go
 │       │   ├── agent_repository.go
-│       │   ├── user_repository.go     # User persistence
+│       │   ├── user_repository.go
 │       │   ├── technique_repository.go
 │       │   ├── scenario_repository.go
-│       │   └── result_repository.go
+│       │   ├── result_repository.go
+│       │   ├── notification_repository.go
+│       │   └── schedule_repository.go
 │       └── websocket/             # Agent communication
 │           ├── hub.go             # Connection management
 │           └── client.go          # Client handling
@@ -133,6 +165,7 @@ Infrastructure → Application → Domain
   Handlers      Services     Entities
   Repositories              Interfaces
   WebSocket
+  Middleware
 ```
 
 **Rule**: Dependencies always point inward toward Domain.
@@ -148,44 +181,142 @@ Base URL: `https://localhost:8443/api/v1`
 |--------|----------|-------------|
 | `GET` | `/health` | Server health check |
 
-### Agents
+### Authentication (public, rate-limited)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/agents` | List agents (`?all=true` for offline) |
-| `GET` | `/agents/:paw` | Get agent details |
-| `POST` | `/agents` | Register agent |
-| `DELETE` | `/agents/:paw` | Delete agent |
-| `POST` | `/agents/:paw/heartbeat` | Update last_seen |
+| `POST` | `/auth/login` | Login (5 attempts/min per IP) |
+| `POST` | `/auth/refresh` | Refresh token (10 attempts/min per IP) |
+| `POST` | `/auth/logout` | Invalidate tokens |
+| `GET` | `/auth/me` | Get current user info |
+
+### Agents
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| `GET` | `/agents` | `agents:view` | List agents (`?all=true` for offline) |
+| `GET` | `/agents/:paw` | `agents:view` | Get agent details |
+| `POST` | `/agents` | `agents:create` | Register agent |
+| `DELETE` | `/agents/:paw` | `agents:delete` | Delete agent |
+| `POST` | `/agents/:paw/heartbeat` | `agents:view` | Update last_seen |
 
 ### Techniques
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/techniques` | List all techniques |
-| `GET` | `/techniques/:id` | Get technique by ID |
-| `GET` | `/techniques/tactic/:tactic` | By tactic |
-| `GET` | `/techniques/platform/:platform` | By platform |
-| `GET` | `/techniques/coverage` | Coverage statistics |
-| `POST` | `/techniques/import` | Import from YAML |
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| `GET` | `/techniques` | `techniques:view` | List all techniques |
+| `GET` | `/techniques/:id` | `techniques:view` | Get technique by ID |
+| `GET` | `/techniques/tactic/:tactic` | `techniques:view` | By tactic |
+| `GET` | `/techniques/platform/:platform` | `techniques:view` | By platform |
+| `GET` | `/techniques/coverage` | `techniques:view` | Coverage statistics |
+| `POST` | `/techniques/import` | `techniques:import` | Import from YAML |
 
 ### Scenarios
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/scenarios` | List all scenarios |
-| `GET` | `/scenarios/:id` | Get scenario details |
-| `GET` | `/scenarios/tag/:tag` | By tag |
-| `POST` | `/scenarios` | Create scenario |
-| `PUT` | `/scenarios/:id` | Update scenario |
-| `DELETE` | `/scenarios/:id` | Delete scenario |
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| `GET` | `/scenarios` | `scenarios:view` | List all scenarios |
+| `GET` | `/scenarios/:id` | `scenarios:view` | Get scenario details |
+| `GET` | `/scenarios/tag/:tag` | `scenarios:view` | By tag |
+| `GET` | `/scenarios/export` | `scenarios:export` | Export all scenarios |
+| `GET` | `/scenarios/:id/export` | `scenarios:export` | Export single scenario |
+| `POST` | `/scenarios` | `scenarios:create` | Create scenario |
+| `POST` | `/scenarios/import` | `scenarios:import` | Import scenarios |
+| `PUT` | `/scenarios/:id` | `scenarios:edit` | Update scenario |
+| `DELETE` | `/scenarios/:id` | `scenarios:delete` | Delete scenario |
 
 ### Executions
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| `GET` | `/executions` | `executions:view` | Recent executions (limit 50) |
+| `GET` | `/executions/:id` | `executions:view` | Get execution details |
+| `GET` | `/executions/:id/results` | `executions:view` | Get results |
+| `POST` | `/executions` | `executions:start` | Start execution |
+| `POST` | `/executions/:id/stop` | `executions:stop` | Stop execution |
+| `POST` | `/executions/:id/complete` | `executions:view` | Complete execution |
+
+### Analytics
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| `GET` | `/analytics/period` | `analytics:view` | Period stats |
+| `GET` | `/analytics/comparison` | `analytics:compare` | Compare periods |
+| `GET` | `/analytics/trend` | `analytics:view` | Score trend |
+| `GET` | `/analytics/summary` | `analytics:view` | Execution summary |
+
+### Notifications
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| `GET` | `/notifications` | authenticated | Get notifications |
+| `GET` | `/notifications/unread/count` | authenticated | Unread count |
+| `POST` | `/notifications/:id/read` | authenticated | Mark as read |
+| `POST` | `/notifications/read-all` | authenticated | Mark all as read |
+| `GET` | `/notifications/settings` | authenticated | Get settings |
+| `POST` | `/notifications/settings` | authenticated | Create settings |
+| `PUT` | `/notifications/settings/:id` | authenticated | Update settings |
+| `DELETE` | `/notifications/settings/:id` | authenticated | Delete settings |
+| `GET` | `/notifications/smtp` | admin | Get SMTP config |
+| `POST` | `/notifications/smtp/test` | admin | Test SMTP connection |
+
+### Schedules
+| Method | Endpoint | Permission | Description |
+|--------|----------|------------|-------------|
+| `GET` | `/schedules` | `scheduler:view` | List schedules |
+| `GET` | `/schedules/:id` | `scheduler:view` | Get schedule |
+| `GET` | `/schedules/:id/runs` | `scheduler:view` | Get run history |
+| `POST` | `/schedules` | `scheduler:create` | Create schedule |
+| `PUT` | `/schedules/:id` | `scheduler:edit` | Update schedule |
+| `DELETE` | `/schedules/:id` | `scheduler:delete` | Delete schedule |
+| `POST` | `/schedules/:id/pause` | `scheduler:edit` | Pause schedule |
+| `POST` | `/schedules/:id/resume` | `scheduler:edit` | Resume schedule |
+| `POST` | `/schedules/:id/run` | `executions:start` | Run schedule now |
+
+### Permissions
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/executions` | Recent executions (limit 50) |
-| `GET` | `/executions/:id` | Get execution details |
-| `GET` | `/executions/:id/results` | Get results |
-| `POST` | `/executions` | Start execution |
-| `POST` | `/executions/:id/stop` | Stop execution |
-| `POST` | `/executions/:id/complete` | Complete execution |
+| `GET` | `/permissions/matrix` | Permission matrix for all roles |
+| `GET` | `/permissions/me` | Current user permissions |
+
+### Admin (requires admin role)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/admin/users` | List all users |
+| `GET` | `/admin/users/:id` | Get user by ID |
+| `POST` | `/admin/users` | Create user |
+| `PUT` | `/admin/users/:id` | Update user |
+| `PUT` | `/admin/users/:id/role` | Update user role |
+| `DELETE` | `/admin/users/:id` | Deactivate user |
+| `POST` | `/admin/users/:id/reactivate` | Reactivate user |
+| `POST` | `/admin/users/:id/reset-password` | Reset user password |
+
+---
+
+## Middleware
+
+### Authentication (`auth.go`)
+| Middleware | Description |
+|-----------|-------------|
+| `NoAuthMiddleware()` | Dev mode: sets anonymous user with admin role |
+| `AuthMiddleware(config)` | JWT token validation and user context |
+| `AgentAuthMiddleware(config)` | Agent auth via `X-Agent-Key` header |
+| `RoleMiddleware(roles...)` | Role-based access control |
+| `PermissionMiddleware(perms...)` | Permission check (requires ALL) |
+| `RequireAnyPermission(perms...)` | Permission check (requires ANY) |
+
+### Security Headers (`security.go`)
+Adds production security headers:
+- `Strict-Transport-Security` (HSTS)
+- `Content-Security-Policy` (CSP)
+- `X-Frame-Options`
+- `X-Content-Type-Options`
+- `X-XSS-Protection`
+- `Referrer-Policy`
+- `Permissions-Policy`
+
+### Rate Limiting (`ratelimit.go`)
+Per-IP rate limiting with automatic cleanup every 5 minutes:
+- Login: 5 attempts/minute
+- Token refresh: 10 attempts/minute
+- Returns 429 Too Many Requests when exceeded
+
+### Logging (`logging.go`)
+- Structured request/response logging with zap
+- Panic recovery middleware
 
 ---
 
@@ -286,11 +417,15 @@ Score = (2×100 + 2×50) / (5×100) × 100 = 60%
 type Agent struct {
     Paw       string
     Hostname  string
-    Platform  string      // windows, linux, darwin
+    Platform  string            // windows, linux, darwin
     Username  string
-    Executors []string    // psh, cmd, bash, sh
-    Status    AgentStatus // online, offline, busy
+    Executors []string          // psh, cmd, bash, sh
+    Status    AgentStatus       // online, offline, busy, untrusted
     LastSeen  time.Time
+    IPAddress string
+    OSVersion string
+    Metadata  map[string]string
+    CreatedAt time.Time
 }
 ```
 
@@ -336,34 +471,152 @@ type ExecutionResult struct {
 }
 ```
 
+### User
+```go
+type User struct {
+    ID           string
+    Username     string
+    Email        string
+    PasswordHash string      // Never exposed in JSON
+    Role         UserRole    // admin, rssi, operator, analyst, viewer
+    IsActive     bool
+    LastLoginAt  *time.Time
+    CreatedAt    time.Time
+    UpdatedAt    time.Time
+}
+```
+
+### Notification
+```go
+type Notification struct {
+    ID        string
+    UserID    string
+    Type      NotificationType // execution_started, execution_completed, execution_failed, score_alert, agent_offline
+    Title     string
+    Message   string
+    Data      map[string]any
+    Read      bool
+    SentAt    *time.Time
+    CreatedAt time.Time
+}
+
+type NotificationSettings struct {
+    ID                   string
+    UserID               string
+    Channel              NotificationChannel // email, webhook
+    Enabled              bool
+    EmailAddress         string
+    WebhookURL           string
+    NotifyOnStart        bool
+    NotifyOnComplete     bool
+    NotifyOnFailure      bool
+    NotifyOnScoreAlert   bool
+    ScoreAlertThreshold  float64
+    NotifyOnAgentOffline bool
+    CreatedAt            time.Time
+    UpdatedAt            time.Time
+}
+```
+
+### Schedule
+```go
+type Schedule struct {
+    ID          string
+    Name        string
+    Description string
+    ScenarioID  string
+    AgentPaw    string              // empty = any available
+    Frequency   ScheduleFrequency   // once, hourly, daily, weekly, monthly, cron
+    CronExpr    string              // only for cron frequency
+    SafeMode    bool
+    Status      ScheduleStatus      // active, paused, disabled
+    NextRunAt   *time.Time
+    LastRunAt   *time.Time
+    LastRunID   string
+    CreatedBy   string
+    CreatedAt   time.Time
+    UpdatedAt   time.Time
+}
+
+type ScheduleRun struct {
+    ID          string
+    ScheduleID  string
+    ExecutionID string
+    StartedAt   time.Time
+    CompletedAt *time.Time
+    Status      string    // pending, running, completed, failed
+    Error       string
+}
+```
+
+### Permission
+```go
+type Permission string
+// 28 permissions across 10 categories:
+// users:view, users:create, users:edit, users:delete
+// agents:view, agents:create, agents:delete
+// techniques:view, techniques:import
+// scenarios:view, scenarios:create, scenarios:edit, scenarios:delete, scenarios:import, scenarios:export
+// executions:view, executions:start, executions:stop
+// analytics:view, analytics:compare, analytics:export
+// settings:view, settings:edit
+// scheduler:view, scheduler:create, scheduler:edit, scheduler:delete
+```
+
 ---
 
 ## Configuration
 
-Environment variables:
+### Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `DATABASE_PATH` | SQLite database path | `./data/autostrike.db` |
 | `DASHBOARD_PATH` | Dashboard dist folder | `../dashboard/dist` |
-| `JWT_SECRET` | JWT signing key | - (auth disabled if not set) |
-| `AGENT_SECRET` | Agent authentication | - |
+| `JWT_SECRET` | JWT signing key (enables auth when set) | - (auth disabled) |
+| `ENABLE_AUTH` | Explicit auth override (`true`/`false`) | - |
+| `AGENT_SECRET` | Agent authentication secret | - |
+| `DEFAULT_ADMIN_PASSWORD` | Initial admin password | Random |
 | `ALLOWED_ORIGINS` | CORS origins | `localhost:3000,localhost:8443` |
 | `LOG_LEVEL` | Logging level | `info` |
+
+### SMTP Configuration (optional)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SMTP_HOST` | Mail server hostname | - |
+| `SMTP_PORT` | Mail server port | `587` |
+| `SMTP_USERNAME` | SMTP username | - |
+| `SMTP_PASSWORD` | SMTP password | - |
+| `SMTP_FROM` | Sender email address | - |
+| `SMTP_USE_TLS` | Use TLS | `false` |
+| `DASHBOARD_URL` | Dashboard URL for email links | `https://localhost:8443` |
+
+### Authentication Behavior
+
+| Configuration | Auth Status |
+|--------------|-------------|
+| `JWT_SECRET` not set | Auth **disabled** (development mode) |
+| `JWT_SECRET` set | Auth **enabled** (production mode) |
+| `ENABLE_AUTH=false` | Auth **disabled** (explicit override) |
+| `ENABLE_AUTH=true` | Auth **enabled** (explicit override) |
 
 ---
 
 ## Testing
 
-Test coverage (Phase 3):
-- **application**: 83.0%
-- **entity**: 95.0%
-- **service**: 99.2%
-- **handlers**: 87.5%
-- **websocket**: 91.6%
-- **middleware**: 94.3%
-- **rest/server**: 87.9%
-- **sqlite**: 85.0%
+200+ tests with comprehensive coverage:
+
+| Package | Coverage |
+|---------|----------|
+| **application** | 83.0% |
+| **entity** | 95.0% |
+| **service** | 99.2% |
+| **handlers** | 87.5% |
+| **websocket** | 91.6% |
+| **middleware** | 94.3% |
+| **rest/server** | 87.9% |
+| **sqlite** | 85.0% |
 
 ```bash
 cd server
@@ -384,6 +637,9 @@ go run ./cmd/autostrike
 go build -o autostrike ./cmd/autostrike
 ./autostrike
 
-# With environment
+# With authentication
 JWT_SECRET=secret ./autostrike
+
+# With full configuration
+JWT_SECRET=secret AGENT_SECRET=agent-key SMTP_HOST=mail.example.com ./autostrike
 ```

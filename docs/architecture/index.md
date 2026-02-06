@@ -88,5 +88,5 @@ The Go server on **port 8443** handles everything:
 | Layer | Technologies |
 |-------|--------------|
 | Frontend | React 18, TypeScript, TailwindCSS, TanStack Query, Chart.js |
-| Backend | Go 1.21+, Gin, gorilla/websocket, SQLite, zap logger |
+| Backend | Go 1.24+, Gin, gorilla/websocket, SQLite, zap logger |
 | Agent | Rust 1.75+, tokio, tokio-tungstenite, serde, tracing |

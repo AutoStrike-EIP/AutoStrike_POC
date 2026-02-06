@@ -17,10 +17,16 @@ const (
 	errInsufficientPermissions = "insufficient permissions"
 )
 
+// TokenBlacklistChecker checks if a token has been revoked
+type TokenBlacklistChecker interface {
+	IsRevoked(token string) bool
+}
+
 // AuthConfig contains authentication configuration
 type AuthConfig struct {
-	JWTSecret   string
-	AgentSecret string
+	JWTSecret      string
+	AgentSecret    string
+	TokenBlacklist TokenBlacklistChecker
 }
 
 // NoAuthMiddleware creates a middleware that sets default user context when auth is disabled
@@ -37,56 +43,67 @@ func NoAuthMiddleware() gin.HandlerFunc {
 // AuthMiddleware creates an authentication middleware
 func AuthMiddleware(config *AuthConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization header required"})
+		tokenString, err := extractBearerToken(c.GetHeader("Authorization"))
+		if err != "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err})
 			c.Abort()
 			return
 		}
 
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header format"})
-			c.Abort()
-			return
-		}
-
-		tokenString := parts[1]
-
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, jwt.ErrSignatureInvalid
-			}
-			return []byte(config.JWTSecret), nil
-		})
-
-		if err != nil || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
-			c.Abort()
-			return
-		}
-
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token claims"})
-			c.Abort()
-			return
-		}
-
-		// Reject refresh tokens - only access tokens are valid for API authentication
-		tokenType, _ := claims["type"].(string)
-		if tokenType != "access" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token type"})
+		claims, validationErr := validateAccessToken(tokenString, config)
+		if validationErr != "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": validationErr})
 			c.Abort()
 			return
 		}
 
 		c.Set("user_id", claims["sub"])
 		c.Set("role", claims["role"])
-
 		c.Next()
 	}
+}
+
+// extractBearerToken extracts the token from an Authorization header.
+// Returns the token string and an empty error, or empty token and error message.
+func extractBearerToken(authHeader string) (string, string) {
+	if authHeader == "" {
+		return "", "authorization header required"
+	}
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		return "", "invalid authorization header format"
+	}
+	return parts[1], ""
+}
+
+// validateAccessToken parses, validates, and checks revocation of a JWT access token.
+// Returns the claims on success or an error message string.
+func validateAccessToken(tokenString string, config *AuthConfig) (jwt.MapClaims, string) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, jwt.ErrSignatureInvalid
+		}
+		return []byte(config.JWTSecret), nil
+	})
+	if err != nil || !token.Valid {
+		return nil, "invalid token"
+	}
+
+	if config.TokenBlacklist != nil && config.TokenBlacklist.IsRevoked(tokenString) {
+		return nil, "token has been revoked"
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, "invalid token claims"
+	}
+
+	tokenType, _ := claims["type"].(string)
+	if tokenType != "access" {
+		return nil, "invalid token type"
+	}
+
+	return claims, ""
 }
 
 // AgentAuthMiddleware creates an agent authentication middleware

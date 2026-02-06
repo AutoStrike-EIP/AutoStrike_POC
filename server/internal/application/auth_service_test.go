@@ -16,9 +16,11 @@ import (
 
 // mockUserRepo implements repository.UserRepository for testing
 type mockUserRepo struct {
-	users     map[string]*entity.User
-	findErr   error
-	createErr error
+	users          map[string]*entity.User
+	findErr        error
+	createErr      error
+	updateErr      error
+	deactivateErr  error
 }
 
 func newMockUserRepo() *mockUserRepo {
@@ -34,6 +36,9 @@ func (m *mockUserRepo) Create(ctx context.Context, user *entity.User) error {
 }
 
 func (m *mockUserRepo) Update(ctx context.Context, user *entity.User) error {
+	if m.updateErr != nil {
+		return m.updateErr
+	}
 	m.users[user.ID] = user
 	return nil
 }
@@ -141,6 +146,9 @@ func (m *mockUserRepo) CountByRole(ctx context.Context, role entity.UserRole) (i
 }
 
 func (m *mockUserRepo) DeactivateAdminIfNotLast(ctx context.Context, id string) error {
+	if m.deactivateErr != nil {
+		return m.deactivateErr
+	}
 	user, ok := m.users[id]
 	if !ok {
 		return sqlite.ErrUserNotFound
@@ -1259,5 +1267,125 @@ func TestAuthService_EnsureDefaultAdmin_FindAllError(t *testing.T) {
 
 	if err == nil {
 		t.Error("Expected error from EnsureDefaultAdmin")
+	}
+}
+
+func TestAuthService_EnsureDefaultAdmin_CreateUserError(t *testing.T) {
+	repo := newMockUserRepo()
+	repo.createErr = errors.New("database error")
+	service := NewAuthService(repo, "test-secret")
+
+	ctx := context.Background()
+	_, err := service.EnsureDefaultAdmin(ctx)
+
+	if err == nil {
+		t.Error("Expected error from EnsureDefaultAdmin when CreateUser fails")
+	}
+}
+
+func TestAuthService_ValidateToken_WrongSigningMethod(t *testing.T) {
+	service := NewAuthService(newMockUserRepo(), "test-secret")
+
+	// Create a token with none signing method (should be rejected by HMAC check)
+	token := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.MapClaims{
+		"sub":  "user-1",
+		"role": "admin",
+		"type": "access",
+		"exp":  time.Now().Add(time.Hour).Unix(),
+	})
+	tokenString, _ := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+
+	_, err := service.ValidateToken(tokenString)
+	if err != ErrInvalidToken {
+		t.Errorf("Expected ErrInvalidToken for wrong signing method, got %v", err)
+	}
+}
+
+func TestAuthService_HashPassword_InvalidBcryptCost(t *testing.T) {
+	repo := newMockUserRepo()
+	service := &AuthService{
+		userRepo:   repo,
+		bcryptCost: 100, // Invalid cost - max is 31
+	}
+
+	_, err := service.HashPassword("test")
+	if err == nil {
+		t.Error("HashPassword should fail with invalid bcrypt cost")
+	}
+}
+
+func TestAuthService_DeactivateUser_GenericError(t *testing.T) {
+	repo := newMockUserRepo()
+	repo.deactivateErr = errors.New("generic database error")
+	service := NewAuthService(repo, "test-secret")
+
+	ctx := context.Background()
+	err := service.DeactivateUser(ctx, "user-1", "admin-1")
+	if err == nil {
+		t.Error("DeactivateUser should return error")
+	}
+	// Should not map to ErrUserNotFound or ErrLastAdmin
+	if errors.Is(err, ErrUserNotFound) || errors.Is(err, ErrLastAdmin) {
+		t.Error("DeactivateUser should return generic error, not ErrUserNotFound or ErrLastAdmin")
+	}
+}
+
+func TestAuthService_UpdateUserRole_UpdateError(t *testing.T) {
+	repo := newMockUserRepo()
+	service := NewAuthService(repo, "test-secret")
+
+	ctx := context.Background()
+	user, _ := service.CreateUser(ctx, "testuser", "test@test.com", "password123", entity.RoleViewer)
+
+	repo.updateErr = errors.New("database error")
+
+	_, err := service.UpdateUserRole(ctx, user.ID, entity.RoleAdmin)
+	if err == nil {
+		t.Error("UpdateUserRole should fail with update error")
+	}
+}
+
+func TestAuthService_ResetPassword_UpdateError(t *testing.T) {
+	repo := newMockUserRepo()
+	service := NewAuthService(repo, "test-secret")
+
+	ctx := context.Background()
+	user, _ := service.CreateUser(ctx, "testuser", "test@test.com", "password123", entity.RoleViewer)
+
+	repo.updateErr = errors.New("database error")
+
+	err := service.ResetPassword(ctx, user.ID, "newpassword123")
+	if err == nil {
+		t.Error("ResetPassword should fail with update error")
+	}
+}
+
+func TestAuthService_ChangePassword_UpdateError(t *testing.T) {
+	repo := newMockUserRepo()
+	service := NewAuthService(repo, "test-secret")
+
+	ctx := context.Background()
+	user, _ := service.CreateUser(ctx, "testuser", "test@test.com", "password123", entity.RoleViewer)
+
+	repo.updateErr = errors.New("database error")
+
+	err := service.ChangePassword(ctx, user.ID, "password123", "newpassword456")
+	if err == nil {
+		t.Error("ChangePassword should fail with update error")
+	}
+}
+
+func TestAuthService_UpdateUser_UpdateError(t *testing.T) {
+	repo := newMockUserRepo()
+	service := NewAuthService(repo, "test-secret")
+
+	ctx := context.Background()
+	user, _ := service.CreateUser(ctx, "testuser", "test@test.com", "password123", entity.RoleViewer)
+
+	repo.updateErr = errors.New("database error")
+
+	_, err := service.UpdateUser(ctx, user.ID, "newname", "new@test.com", entity.RoleViewer)
+	if err == nil {
+		t.Error("UpdateUser should fail with update error")
 	}
 }

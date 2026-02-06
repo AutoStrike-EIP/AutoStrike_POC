@@ -2967,12 +2967,12 @@ La méthode EBIOS Risk Manager de l'ANSSI structure les scénarios d'attaque en 
 
 | Phase CRTE | Description | Tactiques MITRE | Couverture AutoStrike |
 |------------|-------------|-----------------|----------------------|
-| **C - Connaître** | Reconnaissance de la cible | Reconnaissance, Discovery | ✅ 9 techniques Discovery |
-| **R - Rentrer** | Accès initial au système | Initial Access | 🔜 Année 2 |
-| **T - Trouver** | Exploration interne, mouvement latéral | Discovery, Lateral Movement | ✅ Partiel (Discovery) |
-| **E - Exploiter** | Exécution de l'attaque, impact | Execution, Persistence, Impact | ✅ 6 techniques |
+| **C - Connaitre** | Reconnaissance de la cible | Reconnaissance, Discovery | ✅ 11 techniques (2 Recon + 9 Discovery) |
+| **R - Rentrer** | Acces initial au systeme | Initial Access, Privilege Escalation | ✅ 7 techniques (3 IA + 4 PrivEsc) |
+| **T - Trouver** | Exploration interne, mouvement lateral | Lateral Movement, Credential Access, Collection | ✅ 11 techniques (3 LM + 4 Cred + 4 Coll) |
+| **E - Exploiter** | Execution de l'attaque, impact | Execution, Persistence, Defense Evasion, C2, Exfiltration, Impact | ✅ 19 techniques |
 
-**Couverture actuelle :** 3/4 phases CRTE partiellement couvertes (15 techniques)
+**Couverture actuelle :** 4/4 phases CRTE couvertes (48 techniques, 13 tactiques)
 
 #### Pourquoi ce double alignement ?
 
@@ -3229,11 +3229,11 @@ is_safe: false
 **Métriques atteintes (Phase 1+2) :**
 | Métrique | Valeur |
 |----------|--------|
-| Tests | 447 (193 server + 193 dashboard + 61 agent) |
-| Coverage | 97%+ sur le domaine |
-| Techniques MITRE | 15 (4 tactiques) |
-| Issues GitHub | 170 fermées / 49 ouvertes |
-| Lignes de code | ~15,000 |
+| Tests | 780+ (200+ server + 513 dashboard + 67 agent) |
+| Coverage | 95%+ sur le domaine |
+| Techniques MITRE | 48 (13 tactiques sur 14) |
+| Issues GitHub | 170+ fermées |
+| Lignes de code | ~18,000 |
 
 **Techniques ajoutées:**
 - T1016 (System Network Configuration)
@@ -3247,39 +3247,60 @@ is_safe: false
 - T1049 (System Network Connections)
 - T1007 (System Service Discovery)
 
-#### Phase 3: Polish (M7-M9) 🔄 EN COURS
+#### Phase 3: Polish (M7-M9) ✅ COMPLÈTE
 
 **Objectifs:**
 - [x] Agent Linux (cross-compilation)
-- [ ] Profils adversaires prédéfinis (APT29, etc.)
-- [ ] Export rapports PDF
-- [x] Amélioration UX dashboard (8 pages)
+- [x] Authentification complète (JWT, 5 rôles, 28 permissions, token blacklist)
+- [x] Security hardening (rate limiting, security headers, CSP, HSTS)
+- [x] Amélioration UX dashboard (12+ pages)
 - [x] Documentation technique (MkDocs)
-- [x] Tests unitaires et intégration (447 tests)
+- [x] Tests unitaires et intégration (780+ tests)
 
 **Livrables:**
 - ✅ Support multi-plateforme (Windows + Linux)
-- En cours : 3 profils adversaires utilisables
-- En cours : Rapports exportables
+- ✅ Auth complète avec RBAC granulaire
+- ✅ Security headers, rate limiting, audit logging
 - ✅ Documentation complète
 
-#### Phase 4: V1.0 (M10-M12)
+#### Phase 4: V1.0 (M10-M12) ✅ COMPLÈTE
 
 **Objectifs:**
-- [ ] Scénarios custom builder UI
-- [ ] 30+ techniques totales
-- [ ] Mode déploiement Docker
-- [ ] Hardening sécurité
-- [ ] Performance optimization
-- [ ] Préparation soutenance EIP
+- [x] 48 techniques MITRE (13 tactiques sur 14)
+- [x] Mode déploiement Docker (docker-compose prod + dev)
+- [x] Hardening sécurité (rate limiting, CSP, HSTS, mTLS)
+- [x] Scheduling (cron, daily, weekly, monthly)
+- [x] Notifications (email SMTP + webhooks)
+- [x] Analytics (comparaison périodes, tendances, Security Score)
+- [x] Import/Export scénarios (YAML/JSON)
+- [x] CI/CD complet (GitHub Actions, SonarCloud)
 
 **Livrables:**
-- Version 1.0 stable
-- Documentation utilisateur
-- Guide de déploiement
-- Démo fonctionnelle complète
+- ✅ Version 1.0 stable
+- ✅ Documentation utilisateur (MkDocs sur GitHub Pages)
+- ✅ Guide de déploiement (Docker)
+- ✅ Démo fonctionnelle complète
+
+#### Phase 5: Features Avancées (en cours)
+
+**Priorité haute:**
+- [ ] Profils adversaires APT (APT29, Ransomware, Insider Threat, Full Kill Chain)
+- [ ] Export rapports PDF (handler backend + générateur + page Reports)
+
+**Priorité moyenne:**
+- [ ] ScenarioBuilder visuel (drag & drop)
+- [ ] Cleanup automatique post-exécution
+- [ ] Agent auto-deploy (scripts bash/PowerShell)
+- [ ] LiveLogs (page logs temps réel via WebSocket)
 
 ### 11.3 Année 2 (Extension)
+
+**Stretch Goals - Features Caldera-like:**
+- **Planners intelligents** : séquentiel (arrêt si échec), conditionnel (décision dynamique), buckets (randomisation par tactique)
+- **Facts / Data Exchange** : passer des données entre techniques (ex: users découverts → cibles brute force)
+- **Obfuscation des commandes** : Base64, concaténation, substitution de variables
+- **Recommandations de remédiation** : mapping mitigations ATT&CK automatique post-exécution
+- **Multiple agent types** : agent Python léger, agent reverse shell
 
 **Fonctionnalités potentielles:**
 - Agent macOS
@@ -3400,8 +3421,9 @@ is_safe: false
 
 | Document | Contenu | Usage |
 |----------|---------|-------|
-| [ROADMAP.md](./ROADMAP.md) | 49 issues GitHub, effort estimé, assignations | Planification opérationnelle |
+| [ROADMAP.md](./ROADMAP.md) | Issues GitHub, effort estimé, timeline 2026-2028 | Planification opérationnelle |
 | [PRESENTATION.md](./PRESENTATION.md) | Slides, arguments clés, FAQ | Présentation équipe |
+| [VISION_V2.md](./VISION_V2.md) | Decision Engine, Blackbox, Agent propagation | Vision autonome V2 |
 | [CLAUDE.md](../CLAUDE.md) | Contexte technique pour IA | Assistance développement |
 
 ---

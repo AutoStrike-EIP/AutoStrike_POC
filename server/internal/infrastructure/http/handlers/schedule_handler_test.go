@@ -19,13 +19,14 @@ import (
 
 // mockScheduleRepo implements repository.ScheduleRepository for testing
 type mockScheduleRepo struct {
-	schedules  map[string]*entity.Schedule
-	runs       map[string][]*entity.ScheduleRun
-	createErr  error
-	updateErr  error
-	deleteErr  error
-	findErr    error
+	schedules    map[string]*entity.Schedule
+	runs         map[string][]*entity.ScheduleRun
+	createErr    error
+	updateErr    error
+	deleteErr    error
+	findErr      error
 	createRunErr error
+	findRunsErr  error
 }
 
 func newMockScheduleRepo() *mockScheduleRepo {
@@ -120,6 +121,9 @@ func (m *mockScheduleRepo) UpdateRun(ctx context.Context, run *entity.ScheduleRu
 }
 
 func (m *mockScheduleRepo) FindRunsByScheduleID(ctx context.Context, scheduleID string, limit int) ([]*entity.ScheduleRun, error) {
+	if m.findRunsErr != nil {
+		return nil, m.findRunsErr
+	}
 	runs := m.runs[scheduleID]
 	if len(runs) > limit {
 		runs = runs[:limit]
@@ -1289,6 +1293,37 @@ func TestScheduleHandler_GetRuns_LimitExceedsMax(t *testing.T) {
 // ---------------------------------------------------------------
 // Delete - additional coverage
 // ---------------------------------------------------------------
+
+func TestScheduleHandler_GetRuns_Error(t *testing.T) {
+	repo := newMockScheduleRepo()
+	repo.findRunsErr = errors.New("database error")
+	_, router := setupRealScheduleHandler(repo)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/schedules/sched-1/runs", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Status = %d, want %d", w.Code, http.StatusInternalServerError)
+	}
+}
+
+func TestScheduleHandler_GetRuns_LimitBoundary100(t *testing.T) {
+	repo := newMockScheduleRepo()
+	repo.runs["sched-1"] = []*entity.ScheduleRun{
+		{ID: "run-1", ScheduleID: "sched-1"},
+	}
+	_, router := setupRealScheduleHandler(repo)
+
+	// limit=100 is the max valid value
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/schedules/sched-1/runs?limit=100", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Status = %d, want %d", w.Code, http.StatusOK)
+	}
+}
 
 func TestScheduleHandler_Delete_NotFound_Succeeds(t *testing.T) {
 	// Delete with a nonexistent ID does not trigger a "not found" error

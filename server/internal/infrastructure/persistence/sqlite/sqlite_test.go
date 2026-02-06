@@ -3581,3 +3581,1087 @@ func TestResultRepository_UpdateExecution_NilScore(t *testing.T) {
 		t.Fatalf("UpdateExecution with nil score failed: %v", err)
 	}
 }
+
+// =====================================================
+// Coverage improvement tests
+// =====================================================
+
+// --- Schema / Migration ---
+
+func TestMigrate_AddColumnsToExistingTable(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	defer db.Close()
+
+	// Create a minimal users table WITHOUT is_active and last_login_at
+	_, err = db.Exec(`CREATE TABLE users (
+		id TEXT PRIMARY KEY,
+		username TEXT UNIQUE NOT NULL,
+		email TEXT UNIQUE NOT NULL,
+		password_hash TEXT NOT NULL,
+		role TEXT NOT NULL DEFAULT 'viewer',
+		created_at DATETIME NOT NULL,
+		updated_at DATETIME NOT NULL
+	)`)
+	if err != nil {
+		t.Fatalf("Failed to create users table: %v", err)
+	}
+
+	// Migrate should add the missing columns via ALTER TABLE
+	err = Migrate(db)
+	if err != nil {
+		t.Fatalf("Migrate failed: %v", err)
+	}
+
+	// Verify columns were added
+	_, err = db.Exec(`INSERT INTO users (id, username, email, password_hash, role, is_active, last_login_at, created_at, updated_at)
+		VALUES ('u1', 'testuser', 'test@test.com', 'hash', 'admin', 1, datetime('now'), datetime('now'), datetime('now'))`)
+	if err != nil {
+		t.Fatalf("Failed to insert with new columns: %v", err)
+	}
+}
+
+func TestInitSchema_ClosedDB(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	db.Close()
+
+	err = InitSchema(db)
+	if err == nil {
+		t.Error("Expected error from InitSchema on closed DB")
+	}
+}
+
+func TestAddColumnIfNotExists_InvalidTable(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	defer db.Close()
+
+	// PRAGMA table_info on non-existent table returns empty rows,
+	// then ALTER TABLE on non-existent table should error
+	err = addColumnIfNotExists(db, "nonexistent_table", "test_col", "TEXT")
+	if err == nil {
+		t.Error("Expected error for ALTER TABLE on non-existent table")
+	}
+}
+
+func TestAddColumnIfNotExists_ClosedDB(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	db.Close()
+
+	err = addColumnIfNotExists(db, "users", "test_col", "TEXT")
+	if err == nil {
+		t.Error("Expected error on closed DB")
+	}
+}
+
+// --- Corrupt JSON fallback tests ---
+
+func TestTechniqueRepository_FindByID_CorruptJSON(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+
+	// Insert technique with corrupt JSON directly via SQL
+	_, err := db.Exec(`INSERT INTO techniques (id, name, description, tactic, platforms, executors, detection, is_safe, created_at)
+		VALUES ('T9999', 'Corrupt', 'Test', 'discovery', 'not-json', '{bad}', '[invalid', 1, datetime('now'))`)
+	if err != nil {
+		t.Fatalf("Failed to insert corrupt technique: %v", err)
+	}
+
+	repo := NewTechniqueRepository(db)
+	tech, err := repo.FindByID(ctx, "T9999")
+	if err != nil {
+		t.Fatalf("FindByID should succeed with fallback: %v", err)
+	}
+	if len(tech.Platforms) != 0 {
+		t.Errorf("Expected empty platforms fallback, got %v", tech.Platforms)
+	}
+	if len(tech.Executors) != 0 {
+		t.Errorf("Expected empty executors fallback, got %v", tech.Executors)
+	}
+	if len(tech.Detection) != 0 {
+		t.Errorf("Expected empty detection fallback, got %v", tech.Detection)
+	}
+}
+
+func TestTechniqueRepository_ScanTechniques_CorruptJSON(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+
+	_, err := db.Exec(`INSERT INTO techniques (id, name, description, tactic, platforms, executors, detection, is_safe, created_at)
+		VALUES ('T9998', 'Corrupt', 'Test', 'execution', '{not-array}', 'invalid', '', 1, datetime('now'))`)
+	if err != nil {
+		t.Fatalf("Failed to insert: %v", err)
+	}
+
+	repo := NewTechniqueRepository(db)
+	techniques, err := repo.FindAll(ctx)
+	if err != nil {
+		t.Fatalf("FindAll should succeed with fallback: %v", err)
+	}
+	if len(techniques) != 1 {
+		t.Fatalf("Expected 1 technique, got %d", len(techniques))
+	}
+	if len(techniques[0].Platforms) != 0 {
+		t.Errorf("Expected empty platforms fallback, got %v", techniques[0].Platforms)
+	}
+}
+
+func TestAgentRepository_FindByPaw_CorruptJSON(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+
+	_, err := db.Exec(`INSERT INTO agents (paw, hostname, username, platform, executors, status, last_seen, created_at)
+		VALUES ('corrupt-agent', 'host', 'user', 'linux', 'not-json-array', 'online', datetime('now'), datetime('now'))`)
+	if err != nil {
+		t.Fatalf("Failed to insert: %v", err)
+	}
+
+	repo := NewAgentRepository(db)
+	agent, err := repo.FindByPaw(ctx, "corrupt-agent")
+	if err != nil {
+		t.Fatalf("FindByPaw should succeed with fallback: %v", err)
+	}
+	if len(agent.Executors) != 0 {
+		t.Errorf("Expected empty executors fallback, got %v", agent.Executors)
+	}
+}
+
+func TestAgentRepository_ScanAgents_CorruptJSON(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+
+	_, err := db.Exec(`INSERT INTO agents (paw, hostname, username, platform, executors, status, last_seen, created_at)
+		VALUES ('corrupt-1', 'host1', 'user1', 'linux', '{invalid}', 'online', datetime('now'), datetime('now'))`)
+	if err != nil {
+		t.Fatalf("Failed to insert: %v", err)
+	}
+
+	repo := NewAgentRepository(db)
+	agents, err := repo.FindAll(ctx)
+	if err != nil {
+		t.Fatalf("FindAll should succeed with fallback: %v", err)
+	}
+	if len(agents) != 1 {
+		t.Fatalf("Expected 1 agent, got %d", len(agents))
+	}
+	if len(agents[0].Executors) != 0 {
+		t.Errorf("Expected empty executors fallback, got %v", agents[0].Executors)
+	}
+}
+
+func TestScenarioRepository_FindByID_CorruptJSON(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+
+	_, err := db.Exec(`INSERT INTO scenarios (id, name, description, phases, tags, created_at, updated_at)
+		VALUES ('corrupt-sc', 'Corrupt', 'Test', 'not-json', '{bad-tags}', datetime('now'), datetime('now'))`)
+	if err != nil {
+		t.Fatalf("Failed to insert: %v", err)
+	}
+
+	repo := NewScenarioRepository(db)
+	sc, err := repo.FindByID(ctx, "corrupt-sc")
+	if err != nil {
+		t.Fatalf("FindByID should succeed with fallback: %v", err)
+	}
+	if len(sc.Phases) != 0 {
+		t.Errorf("Expected empty phases fallback, got %v", sc.Phases)
+	}
+	if len(sc.Tags) != 0 {
+		t.Errorf("Expected empty tags fallback, got %v", sc.Tags)
+	}
+}
+
+func TestScenarioRepository_ScanScenarios_CorruptJSON(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+
+	_, err := db.Exec(`INSERT INTO scenarios (id, name, description, phases, tags, created_at, updated_at)
+		VALUES ('corrupt-sc2', 'Corrupt2', 'Test', '{bad}', 'not-array', datetime('now'), datetime('now'))`)
+	if err != nil {
+		t.Fatalf("Failed to insert: %v", err)
+	}
+
+	repo := NewScenarioRepository(db)
+	scenarios, err := repo.FindAll(ctx)
+	if err != nil {
+		t.Fatalf("FindAll should succeed: %v", err)
+	}
+	if len(scenarios) != 1 {
+		t.Fatalf("Expected 1 scenario, got %d", len(scenarios))
+	}
+	if len(scenarios[0].Phases) != 0 {
+		t.Errorf("Expected empty phases fallback, got %v", scenarios[0].Phases)
+	}
+}
+
+// --- Nullable field coverage tests ---
+
+func TestResultRepository_ScanResults_WithNullableFields(t *testing.T) {
+	db := setupTestDBWithFKData(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewResultRepository(db)
+
+	createTestExecution(t, db, testExecID, testScenarioID)
+
+	result := &entity.ExecutionResult{
+		ID: "result-full", ExecutionID: testExecID,
+		TechniqueID: testTechID, AgentPaw: testAgentPaw,
+		Status: entity.StatusSuccess, StartedAt: time.Now(),
+	}
+	_ = repo.CreateResult(ctx, result)
+
+	// Update with output and completedAt to exercise nullable Valid=true paths
+	now := time.Now()
+	result.Output = "command output here"
+	result.ExitCode = 0
+	result.CompletedAt = &now
+	_ = repo.UpdateResult(ctx, result)
+
+	results, err := repo.FindResultsByExecution(ctx, testExecID)
+	if err != nil {
+		t.Fatalf("FindResultsByExecution failed: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("Expected 1 result, got %d", len(results))
+	}
+	if results[0].Output != "command output here" {
+		t.Errorf("Expected output 'command output here', got %q", results[0].Output)
+	}
+	if results[0].CompletedAt == nil {
+		t.Error("Expected non-nil CompletedAt")
+	}
+}
+
+func TestResultRepository_FindResultsByTechnique_WithData(t *testing.T) {
+	db := setupTestDBWithFKData(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewResultRepository(db)
+
+	createTestExecution(t, db, testExecID, testScenarioID)
+
+	result := &entity.ExecutionResult{
+		ID: "result-tech-1", ExecutionID: testExecID,
+		TechniqueID: testTechID, AgentPaw: testAgentPaw,
+		Status: entity.StatusSuccess, StartedAt: time.Now(),
+	}
+	_ = repo.CreateResult(ctx, result)
+
+	now := time.Now()
+	result.Output = "test output"
+	result.CompletedAt = &now
+	_ = repo.UpdateResult(ctx, result)
+
+	results, err := repo.FindResultsByTechnique(ctx, testTechID)
+	if err != nil {
+		t.Fatalf("FindResultsByTechnique failed: %v", err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("Expected 1 result, got %d", len(results))
+	}
+	if results[0].Output != "test output" {
+		t.Errorf("Expected output 'test output', got %q", results[0].Output)
+	}
+}
+
+func TestResultRepository_ScanExecutions_WithCompletedAt(t *testing.T) {
+	db := setupTestDBWithFKData(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewResultRepository(db)
+
+	exec := &entity.Execution{
+		ID: "exec-completed", ScenarioID: testScenarioID,
+		Status: entity.ExecutionRunning, StartedAt: time.Now(),
+	}
+	_ = repo.CreateExecution(ctx, exec)
+
+	now := time.Now()
+	exec.Status = entity.ExecutionCompleted
+	exec.CompletedAt = &now
+	exec.Score = &entity.SecurityScore{Overall: 75, Blocked: 3, Detected: 1, Total: 4}
+	_ = repo.UpdateExecution(ctx, exec)
+
+	// FindRecentExecutions exercises scanExecutions with completedAt.Valid=true
+	executions, err := repo.FindRecentExecutions(ctx, 10)
+	if err != nil {
+		t.Fatalf("FindRecentExecutions failed: %v", err)
+	}
+	if len(executions) != 1 {
+		t.Fatalf("Expected 1 execution, got %d", len(executions))
+	}
+	if executions[0].CompletedAt == nil {
+		t.Error("Expected non-nil CompletedAt")
+	}
+}
+
+func TestUserRepository_FindAll_WithLastLoginAt(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewUserRepository(db)
+
+	user := &entity.User{
+		ID: "user-login", Username: "loginuser", Email: "login@test.com",
+		PasswordHash: "hash", Role: entity.RoleAdmin, IsActive: true,
+	}
+	_ = repo.Create(ctx, user)
+	_ = repo.UpdateLastLogin(ctx, user.ID)
+
+	// FindAll exercises scanUsers with lastLoginAt.Valid=true
+	users, err := repo.FindAll(ctx)
+	if err != nil {
+		t.Fatalf("FindAll failed: %v", err)
+	}
+	found := false
+	for _, u := range users {
+		if u.ID == "user-login" && u.LastLoginAt != nil {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("Expected to find user with LastLoginAt set")
+	}
+}
+
+func TestUserRepository_FindActive_WithLastLoginAt(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewUserRepository(db)
+
+	user := &entity.User{
+		ID: "user-active-login", Username: "activelogin", Email: "active@test.com",
+		PasswordHash: "hash", Role: entity.RoleOperator, IsActive: true,
+	}
+	_ = repo.Create(ctx, user)
+	_ = repo.UpdateLastLogin(ctx, user.ID)
+
+	users, err := repo.FindActive(ctx)
+	if err != nil {
+		t.Fatalf("FindActive failed: %v", err)
+	}
+	if len(users) == 0 {
+		t.Fatal("Expected at least 1 active user")
+	}
+	if users[0].LastLoginAt == nil {
+		t.Error("Expected non-nil LastLoginAt")
+	}
+}
+
+func TestUserRepository_FindByUsername_WithLastLoginAt(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewUserRepository(db)
+
+	user := &entity.User{
+		ID: "user-uname", Username: "unameuser", Email: "uname@test.com",
+		PasswordHash: "hash", Role: entity.RoleAnalyst, IsActive: true,
+	}
+	_ = repo.Create(ctx, user)
+	_ = repo.UpdateLastLogin(ctx, user.ID)
+
+	found, err := repo.FindByUsername(ctx, "unameuser")
+	if err != nil {
+		t.Fatalf("FindByUsername failed: %v", err)
+	}
+	if found.LastLoginAt == nil {
+		t.Error("Expected non-nil LastLoginAt")
+	}
+}
+
+func TestUserRepository_FindByEmail_WithLastLoginAt(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewUserRepository(db)
+
+	user := &entity.User{
+		ID: "user-email", Username: "emailuser", Email: "email@test.com",
+		PasswordHash: "hash", Role: entity.RoleRSSI, IsActive: true,
+	}
+	_ = repo.Create(ctx, user)
+	_ = repo.UpdateLastLogin(ctx, user.ID)
+
+	found, err := repo.FindByEmail(ctx, "email@test.com")
+	if err != nil {
+		t.Fatalf("FindByEmail failed: %v", err)
+	}
+	if found.LastLoginAt == nil {
+		t.Error("Expected non-nil LastLoginAt")
+	}
+}
+
+func TestScheduleRepository_FindAll_WithAllNullableFields(t *testing.T) {
+	db := setupTestDBWithFKData(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewScheduleRepository(db)
+
+	now := time.Now()
+	nextRun := now.Add(time.Hour)
+	lastRun := now.Add(-time.Hour)
+	schedule := &entity.Schedule{
+		ID: "sched-full", Name: "Full Schedule", Description: "With all fields",
+		ScenarioID: testScenarioID, AgentPaw: testAgentPaw,
+		Frequency: entity.FrequencyDaily, CronExpr: "0 8 * * *",
+		SafeMode: true, Status: entity.ScheduleStatusActive,
+		NextRunAt: &nextRun, LastRunAt: &lastRun, LastRunID: "exec-last",
+		CreatedBy: testUserID, CreatedAt: now, UpdatedAt: now,
+	}
+	err := repo.Create(ctx, schedule)
+	if err != nil {
+		t.Fatalf("Create schedule failed: %v", err)
+	}
+
+	// FindAll exercises scanSchedules + applyNullableFields with all Valid=true
+	schedules, err := repo.FindAll(ctx)
+	if err != nil {
+		t.Fatalf("FindAll failed: %v", err)
+	}
+	if len(schedules) != 1 {
+		t.Fatalf("Expected 1 schedule, got %d", len(schedules))
+	}
+	s := schedules[0]
+	if s.Description != "With all fields" {
+		t.Errorf("Expected description, got %q", s.Description)
+	}
+	if s.AgentPaw != testAgentPaw {
+		t.Errorf("Expected agent_paw, got %q", s.AgentPaw)
+	}
+	if s.CronExpr != "0 8 * * *" {
+		t.Errorf("Expected cron_expr, got %q", s.CronExpr)
+	}
+	if s.NextRunAt == nil || s.LastRunAt == nil {
+		t.Error("Expected non-nil NextRunAt and LastRunAt")
+	}
+	if s.LastRunID != "exec-last" {
+		t.Errorf("Expected last_run_id, got %q", s.LastRunID)
+	}
+}
+
+func TestScheduleRepository_FindByID_WithAllNullableFields(t *testing.T) {
+	db := setupTestDBWithFKData(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewScheduleRepository(db)
+
+	now := time.Now()
+	nextRun := now.Add(time.Hour)
+	lastRun := now.Add(-time.Hour)
+	schedule := &entity.Schedule{
+		ID: "sched-byid", Name: "ByID Schedule", Description: "Desc",
+		ScenarioID: testScenarioID, AgentPaw: testAgentPaw,
+		Frequency: entity.FrequencyCron, CronExpr: "*/5 * * * *",
+		SafeMode: true, Status: entity.ScheduleStatusActive,
+		NextRunAt: &nextRun, LastRunAt: &lastRun, LastRunID: "run-byid",
+		CreatedBy: testUserID, CreatedAt: now, UpdatedAt: now,
+	}
+	_ = repo.Create(ctx, schedule)
+
+	// FindByID exercises scanSchedule (single row) with all nullable fields
+	found, err := repo.FindByID(ctx, "sched-byid")
+	if err != nil {
+		t.Fatalf("FindByID failed: %v", err)
+	}
+	if found.Description != "Desc" || found.AgentPaw != testAgentPaw {
+		t.Errorf("Expected nullable fields populated")
+	}
+	if found.CronExpr != "*/5 * * * *" {
+		t.Errorf("Expected cron_expr, got %q", found.CronExpr)
+	}
+	if found.NextRunAt == nil || found.LastRunAt == nil {
+		t.Error("Expected non-nil time fields")
+	}
+}
+
+func TestScheduleRepository_FindRunsByScheduleID_WithNullableFields(t *testing.T) {
+	db := setupTestDBWithFKData(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewScheduleRepository(db)
+
+	now := time.Now()
+	schedule := &entity.Schedule{
+		ID: "sched-runs", Name: "With Runs", ScenarioID: testScenarioID,
+		Frequency: entity.FrequencyDaily, SafeMode: true,
+		Status: entity.ScheduleStatusActive, CreatedBy: testUserID,
+		CreatedAt: now, UpdatedAt: now,
+	}
+	_ = repo.Create(ctx, schedule)
+
+	createTestExecution(t, db, "exec-for-run", testScenarioID)
+
+	completedAt := now.Add(time.Minute)
+	run := &entity.ScheduleRun{
+		ID: "run-full", ScheduleID: "sched-runs", ExecutionID: "exec-for-run",
+		StartedAt: now, CompletedAt: &completedAt,
+		Status: "completed", Error: "some error message",
+	}
+	err := repo.CreateRun(ctx, run)
+	if err != nil {
+		t.Fatalf("CreateRun failed: %v", err)
+	}
+
+	runs, err := repo.FindRunsByScheduleID(ctx, "sched-runs", 10)
+	if err != nil {
+		t.Fatalf("FindRunsByScheduleID failed: %v", err)
+	}
+	if len(runs) != 1 {
+		t.Fatalf("Expected 1 run, got %d", len(runs))
+	}
+	if runs[0].ExecutionID != "exec-for-run" {
+		t.Errorf("Expected execution_id, got %q", runs[0].ExecutionID)
+	}
+	if runs[0].CompletedAt == nil {
+		t.Error("Expected non-nil CompletedAt")
+	}
+	if runs[0].Error != "some error message" {
+		t.Errorf("Expected error message, got %q", runs[0].Error)
+	}
+}
+
+// --- Notification Repository coverage ---
+
+func TestNotificationRepository_CreateAndFind_WithData(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewNotificationRepository(db)
+
+	createTestUser(t, db, testUserID)
+
+	now := time.Now()
+	sentAt := now.Add(-time.Minute)
+	notification := &entity.Notification{
+		ID: "notif-full", UserID: testUserID,
+		Type: entity.NotificationExecutionCompleted,
+		Title: "Test Notification", Message: "A test message",
+		Data: map[string]any{"score": 85.5, "scenario": "test"},
+		Read: false, SentAt: &sentAt, CreatedAt: now,
+	}
+	err := repo.CreateNotification(ctx, notification)
+	if err != nil {
+		t.Fatalf("CreateNotification failed: %v", err)
+	}
+
+	// FindNotificationByID exercises sentAt.Valid and data unmarshal
+	found, err := repo.FindNotificationByID(ctx, "notif-full")
+	if err != nil {
+		t.Fatalf("FindNotificationByID failed: %v", err)
+	}
+	if found.SentAt == nil {
+		t.Error("Expected non-nil SentAt")
+	}
+	if found.Data == nil {
+		t.Error("Expected non-nil Data")
+	}
+
+	// FindNotificationsByUserID exercises scanNotifications
+	notifications, err := repo.FindNotificationsByUserID(ctx, testUserID, 10)
+	if err != nil {
+		t.Fatalf("FindNotificationsByUserID failed: %v", err)
+	}
+	if len(notifications) != 1 {
+		t.Fatalf("Expected 1 notification, got %d", len(notifications))
+	}
+
+	// FindUnreadByUserID exercises another path through scanNotifications
+	unread, err := repo.FindUnreadByUserID(ctx, testUserID)
+	if err != nil {
+		t.Fatalf("FindUnreadByUserID failed: %v", err)
+	}
+	if len(unread) != 1 {
+		t.Fatalf("Expected 1 unread, got %d", len(unread))
+	}
+}
+
+func TestNotificationRepository_CreateNotification_NilData(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewNotificationRepository(db)
+
+	createTestUser(t, db, testUserID)
+
+	notification := &entity.Notification{
+		ID: "notif-nil", UserID: testUserID,
+		Type: entity.NotificationExecutionStarted,
+		Title: "Started", Message: "Execution started",
+		Data: nil, Read: false, CreatedAt: time.Now(),
+	}
+	err := repo.CreateNotification(ctx, notification)
+	if err != nil {
+		t.Fatalf("CreateNotification with nil data failed: %v", err)
+	}
+}
+
+// --- Closed DB error path tests ---
+
+func TestClosedDB_TechniqueRepository(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+	db.Close()
+
+	if _, err := repo.FindAll(ctx); err == nil {
+		t.Error("Expected error from FindAll on closed DB")
+	}
+	if _, err := repo.FindByTactic(ctx, entity.TacticDiscovery); err == nil {
+		t.Error("Expected error from FindByTactic on closed DB")
+	}
+	if _, err := repo.FindByPlatform(ctx, "linux"); err == nil {
+		t.Error("Expected error from FindByPlatform on closed DB")
+	}
+	if _, err := repo.FindByID(ctx, "T1234"); err == nil {
+		t.Error("Expected error from FindByID on closed DB")
+	}
+	if err := repo.Create(ctx, &entity.Technique{ID: "test"}); err == nil {
+		t.Error("Expected error from Create on closed DB")
+	}
+	if err := repo.Update(ctx, &entity.Technique{ID: "test"}); err == nil {
+		t.Error("Expected error from Update on closed DB")
+	}
+	if err := repo.Delete(ctx, "test"); err == nil {
+		t.Error("Expected error from Delete on closed DB")
+	}
+}
+
+func TestClosedDB_AgentRepository(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewAgentRepository(db)
+	ctx := context.Background()
+	db.Close()
+
+	if _, err := repo.FindAll(ctx); err == nil {
+		t.Error("Expected error from FindAll on closed DB")
+	}
+	if _, err := repo.FindByStatus(ctx, entity.AgentOnline); err == nil {
+		t.Error("Expected error from FindByStatus on closed DB")
+	}
+	if _, err := repo.FindByPlatform(ctx, "linux"); err == nil {
+		t.Error("Expected error from FindByPlatform on closed DB")
+	}
+	if _, err := repo.FindByPaw(ctx, "test"); err == nil {
+		t.Error("Expected error from FindByPaw on closed DB")
+	}
+	if _, err := repo.FindByPaws(ctx, []string{"test"}); err == nil {
+		t.Error("Expected error from FindByPaws on closed DB")
+	}
+	if err := repo.Create(ctx, &entity.Agent{Paw: "test", Executors: []string{"sh"}}); err == nil {
+		t.Error("Expected error from Create on closed DB")
+	}
+	if err := repo.Update(ctx, &entity.Agent{Paw: "test", Executors: []string{"sh"}}); err == nil {
+		t.Error("Expected error from Update on closed DB")
+	}
+}
+
+func TestClosedDB_ScenarioRepository(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewScenarioRepository(db)
+	ctx := context.Background()
+	db.Close()
+
+	if _, err := repo.FindAll(ctx); err == nil {
+		t.Error("Expected error from FindAll on closed DB")
+	}
+	if _, err := repo.FindByTag(ctx, "test"); err == nil {
+		t.Error("Expected error from FindByTag on closed DB")
+	}
+	if err := repo.Create(ctx, &entity.Scenario{ID: "test", Phases: []entity.Phase{}, Tags: []string{}}); err == nil {
+		t.Error("Expected error from Create on closed DB")
+	}
+	if err := repo.Update(ctx, &entity.Scenario{ID: "test", Phases: []entity.Phase{}, Tags: []string{}}); err == nil {
+		t.Error("Expected error from Update on closed DB")
+	}
+}
+
+func TestClosedDB_ResultRepository(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewResultRepository(db)
+	ctx := context.Background()
+	db.Close()
+
+	if _, err := repo.FindExecutionByID(ctx, "test"); err == nil {
+		t.Error("Expected error from FindExecutionByID on closed DB")
+	}
+	if _, err := repo.FindExecutionsByScenario(ctx, "test"); err == nil {
+		t.Error("Expected error from FindExecutionsByScenario on closed DB")
+	}
+	if _, err := repo.FindRecentExecutions(ctx, 10); err == nil {
+		t.Error("Expected error from FindRecentExecutions on closed DB")
+	}
+	if _, err := repo.FindExecutionsByDateRange(ctx, time.Now().Add(-time.Hour), time.Now()); err == nil {
+		t.Error("Expected error from FindExecutionsByDateRange on closed DB")
+	}
+	if _, err := repo.FindCompletedExecutionsByDateRange(ctx, time.Now().Add(-time.Hour), time.Now()); err == nil {
+		t.Error("Expected error from FindCompletedExecutionsByDateRange on closed DB")
+	}
+	if _, err := repo.FindResultByID(ctx, "test"); err == nil {
+		t.Error("Expected error from FindResultByID on closed DB")
+	}
+	if _, err := repo.FindResultsByExecution(ctx, "test"); err == nil {
+		t.Error("Expected error from FindResultsByExecution on closed DB")
+	}
+	if _, err := repo.FindResultsByTechnique(ctx, "test"); err == nil {
+		t.Error("Expected error from FindResultsByTechnique on closed DB")
+	}
+	if err := repo.CreateExecution(ctx, &entity.Execution{ID: "test", StartedAt: time.Now()}); err == nil {
+		t.Error("Expected error from CreateExecution on closed DB")
+	}
+	if err := repo.CreateResult(ctx, &entity.ExecutionResult{ID: "test", StartedAt: time.Now()}); err == nil {
+		t.Error("Expected error from CreateResult on closed DB")
+	}
+}
+
+func TestClosedDB_ScheduleRepository(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewScheduleRepository(db)
+	ctx := context.Background()
+	db.Close()
+
+	if _, err := repo.FindByID(ctx, "test"); err == nil {
+		t.Error("Expected error from FindByID on closed DB")
+	}
+	if _, err := repo.FindAll(ctx); err == nil {
+		t.Error("Expected error from FindAll on closed DB")
+	}
+	if _, err := repo.FindByStatus(ctx, entity.ScheduleStatusActive); err == nil {
+		t.Error("Expected error from FindByStatus on closed DB")
+	}
+	if _, err := repo.FindActiveSchedulesDue(ctx, time.Now()); err == nil {
+		t.Error("Expected error from FindActiveSchedulesDue on closed DB")
+	}
+	if _, err := repo.FindByScenarioID(ctx, "test"); err == nil {
+		t.Error("Expected error from FindByScenarioID on closed DB")
+	}
+	if _, err := repo.FindRunsByScheduleID(ctx, "test", 10); err == nil {
+		t.Error("Expected error from FindRunsByScheduleID on closed DB")
+	}
+	if err := repo.Delete(ctx, "test"); err == nil {
+		t.Error("Expected error from Delete on closed DB")
+	}
+	now := time.Now()
+	if err := repo.Create(ctx, &entity.Schedule{ID: "test", CreatedAt: now, UpdatedAt: now}); err == nil {
+		t.Error("Expected error from Create on closed DB")
+	}
+	if err := repo.Update(ctx, &entity.Schedule{ID: "test", UpdatedAt: now}); err == nil {
+		t.Error("Expected error from Update on closed DB")
+	}
+	if err := repo.CreateRun(ctx, &entity.ScheduleRun{ID: "test", StartedAt: now}); err == nil {
+		t.Error("Expected error from CreateRun on closed DB")
+	}
+}
+
+func TestClosedDB_UserRepository(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewUserRepository(db)
+	ctx := context.Background()
+	db.Close()
+
+	if _, err := repo.FindAll(ctx); err == nil {
+		t.Error("Expected error from FindAll on closed DB")
+	}
+	if _, err := repo.FindActive(ctx); err == nil {
+		t.Error("Expected error from FindActive on closed DB")
+	}
+	if _, err := repo.CountByRole(ctx, entity.RoleAdmin); err == nil {
+		t.Error("Expected error from CountByRole on closed DB")
+	}
+	if err := repo.DeactivateAdminIfNotLast(ctx, "test"); err == nil {
+		t.Error("Expected error from DeactivateAdminIfNotLast on closed DB")
+	}
+}
+
+func TestClosedDB_NotificationRepository(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewNotificationRepository(db)
+	ctx := context.Background()
+	db.Close()
+
+	if _, err := repo.FindSettingsByUserID(ctx, "test"); err == nil {
+		t.Error("Expected error from FindSettingsByUserID on closed DB")
+	}
+	if _, err := repo.FindAllEnabledSettings(ctx); err == nil {
+		t.Error("Expected error from FindAllEnabledSettings on closed DB")
+	}
+	if _, err := repo.FindNotificationByID(ctx, "test"); err == nil {
+		t.Error("Expected error from FindNotificationByID on closed DB")
+	}
+	if _, err := repo.FindNotificationsByUserID(ctx, "test", 10); err == nil {
+		t.Error("Expected error from FindNotificationsByUserID on closed DB")
+	}
+	if _, err := repo.FindUnreadByUserID(ctx, "test"); err == nil {
+		t.Error("Expected error from FindUnreadByUserID on closed DB")
+	}
+	if err := repo.CreateNotification(ctx, &entity.Notification{ID: "test", UserID: "test", CreatedAt: time.Now()}); err == nil {
+		t.Error("Expected error from CreateNotification on closed DB")
+	}
+}
+
+// --- ImportFromYAML additional tests ---
+
+func TestTechniqueRepository_ImportFromYAML_NonexistentFile(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewTechniqueRepository(db)
+
+	err := repo.ImportFromYAML(ctx, "/nonexistent/path/file.yaml")
+	if err == nil {
+		t.Error("Expected error from nonexistent file")
+	}
+}
+
+func TestScenarioRepository_ImportFromYAML_NonexistentFile(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewScenarioRepository(db)
+
+	err := repo.ImportFromYAML(ctx, "/nonexistent/path/file.yaml")
+	if err == nil {
+		t.Error("Expected error from nonexistent file")
+	}
+}
+
+func TestTechniqueRepository_ImportFromYAML_ValidFile(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewTechniqueRepository(db)
+
+	yamlContent := `
+- id: "T1082"
+  name: "System Information Discovery"
+  tactic: "discovery"
+  description: "Test technique"
+  platforms: ["linux", "windows"]
+  executors:
+    - type: "sh"
+      command: "uname -a"
+      timeout: 30
+  is_safe: true
+`
+	tmpFile := filepath.Join(t.TempDir(), "techniques.yaml")
+	_ = os.WriteFile(tmpFile, []byte(yamlContent), 0644)
+
+	err := repo.ImportFromYAML(ctx, tmpFile)
+	if err != nil {
+		t.Fatalf("ImportFromYAML failed: %v", err)
+	}
+
+	// Verify upsert worked
+	tech, err := repo.FindByID(ctx, "T1082")
+	if err != nil {
+		t.Fatalf("FindByID after import failed: %v", err)
+	}
+	if tech.Name != "System Information Discovery" {
+		t.Errorf("Expected name, got %q", tech.Name)
+	}
+
+	// Import again to test ON CONFLICT path (upsert)
+	err = repo.ImportFromYAML(ctx, tmpFile)
+	if err != nil {
+		t.Fatalf("ImportFromYAML upsert failed: %v", err)
+	}
+}
+
+// --- Additional targeted coverage tests ---
+
+func TestMigrate_ClosedDB(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	db.Close()
+
+	err = Migrate(db)
+	if err == nil {
+		t.Error("Expected error from Migrate on closed DB")
+	}
+}
+
+func TestMigrate_NoUsersTable(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	defer db.Close()
+
+	// No users table exists - addColumnIfNotExists will try ALTER TABLE on missing table
+	err = Migrate(db)
+	if err == nil {
+		t.Error("Expected error from Migrate without users table")
+	}
+}
+
+func TestNotificationRepository_CreateNotification_UnmarshalableData(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewNotificationRepository(db)
+
+	createTestUser(t, db, testUserID)
+
+	// Data with unmarshalable value triggers json.Marshal error → fallback to "{}"
+	notification := &entity.Notification{
+		ID: "notif-bad-data", UserID: testUserID,
+		Type: entity.NotificationExecutionFailed,
+		Title: "Failed", Message: "Bad data",
+		Data: map[string]any{"bad": make(chan int)},
+		Read: false, CreatedAt: time.Now(),
+	}
+	err := repo.CreateNotification(ctx, notification)
+	if err != nil {
+		t.Fatalf("CreateNotification with unmarshalable data should fallback: %v", err)
+	}
+
+	// Verify the notification was created with empty data
+	found, err := repo.FindNotificationByID(ctx, "notif-bad-data")
+	if err != nil {
+		t.Fatalf("FindNotificationByID failed: %v", err)
+	}
+	if found.Title != "Failed" {
+		t.Errorf("Expected title 'Failed', got %q", found.Title)
+	}
+}
+
+func TestNotificationRepository_FindSettingsByUserID_WithWebhook(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewNotificationRepository(db)
+
+	createTestUser(t, db, testUserID)
+	now := time.Now()
+	settings := &entity.NotificationSettings{
+		ID: "settings-webhook", UserID: testUserID,
+		Channel: entity.ChannelWebhook, Enabled: true,
+		WebhookURL:       "https://hooks.example.com/notify",
+		NotifyOnComplete: true, NotifyOnFailure: true,
+		CreatedAt: now, UpdatedAt: now,
+	}
+	_ = repo.CreateSettings(ctx, settings)
+
+	// FindSettingsByUserID exercises webhookURL.Valid=true path
+	found, err := repo.FindSettingsByUserID(ctx, testUserID)
+	if err != nil {
+		t.Fatalf("FindSettingsByUserID failed: %v", err)
+	}
+	if found.WebhookURL != "https://hooks.example.com/notify" {
+		t.Errorf("Expected webhook URL, got %q", found.WebhookURL)
+	}
+	if found.Channel != entity.ChannelWebhook {
+		t.Errorf("Expected webhook channel, got %q", found.Channel)
+	}
+}
+
+func TestNotificationRepository_FindAllEnabledSettings_WithWebhook(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewNotificationRepository(db)
+
+	createTestUser(t, db, "user-wh1")
+	createTestUser(t, db, "user-wh2")
+	now := time.Now()
+
+	// Create email settings
+	s1 := &entity.NotificationSettings{
+		ID: "settings-e1", UserID: "user-wh1",
+		Channel: entity.ChannelEmail, Enabled: true,
+		EmailAddress: "user1@test.com",
+		CreatedAt: now, UpdatedAt: now,
+	}
+	_ = repo.CreateSettings(ctx, s1)
+
+	// Create webhook settings
+	s2 := &entity.NotificationSettings{
+		ID: "settings-w1", UserID: "user-wh2",
+		Channel: entity.ChannelWebhook, Enabled: true,
+		WebhookURL: "https://hooks.example.com/2",
+		CreatedAt: now, UpdatedAt: now,
+	}
+	_ = repo.CreateSettings(ctx, s2)
+
+	settings, err := repo.FindAllEnabledSettings(ctx)
+	if err != nil {
+		t.Fatalf("FindAllEnabledSettings failed: %v", err)
+	}
+	if len(settings) != 2 {
+		t.Fatalf("Expected 2 enabled settings, got %d", len(settings))
+	}
+
+	// Verify both types are returned with correct nullable fields
+	hasEmail, hasWebhook := false, false
+	for _, s := range settings {
+		if s.EmailAddress != "" {
+			hasEmail = true
+		}
+		if s.WebhookURL != "" {
+			hasWebhook = true
+		}
+	}
+	if !hasEmail || !hasWebhook {
+		t.Error("Expected both email and webhook settings")
+	}
+}
+
+func TestScenarioRepository_ImportFromYAML_ValidFile(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+	repo := NewScenarioRepository(db)
+
+	yamlContent := `
+- id: "sc-import-1"
+  name: "Imported Scenario"
+  description: "Test import"
+  phases:
+    - name: "Phase 1"
+      techniques: ["T1082"]
+  tags: ["test", "import"]
+`
+	tmpFile := filepath.Join(t.TempDir(), "scenarios.yaml")
+	_ = os.WriteFile(tmpFile, []byte(yamlContent), 0644)
+
+	err := repo.ImportFromYAML(ctx, tmpFile)
+	if err != nil {
+		t.Fatalf("ImportFromYAML failed: %v", err)
+	}
+
+	sc, err := repo.FindByID(ctx, "sc-import-1")
+	if err != nil {
+		t.Fatalf("FindByID after import failed: %v", err)
+	}
+	if sc.Name != "Imported Scenario" {
+		t.Errorf("Expected name, got %q", sc.Name)
+	}
+
+	// Import again to test upsert ON CONFLICT
+	err = repo.ImportFromYAML(ctx, tmpFile)
+	if err != nil {
+		t.Fatalf("ImportFromYAML upsert failed: %v", err)
+	}
+}

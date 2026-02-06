@@ -1391,6 +1391,138 @@ func TestClient_handleOutgoingMessage_WithQueuedMessages(t *testing.T) {
 	}
 }
 
+func TestClient_ReadPump_SetReadDeadlineError(t *testing.T) {
+	logger := zap.NewNop()
+	hub := NewHub(logger)
+	go hub.Run()
+
+	server, wsURL := createTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		conn, err := testUpgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		conn.Close()
+	})
+	defer server.Close()
+
+	clientConn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("Failed to connect: %v", err)
+	}
+
+	client := NewClient(hub, clientConn, "deadline-error-agent", logger)
+	hub.Register(client)
+
+	// Close connection before ReadPump starts so SetReadDeadline fails
+	clientConn.Close()
+
+	done := make(chan bool, 1)
+	handler := func(c *Client, msg *Message) {}
+	go func() {
+		client.ReadPump(handler)
+		done <- true
+	}()
+
+	select {
+	case <-done:
+		// ReadPump exited due to SetReadDeadline error on closed connection
+	case <-time.After(2 * time.Second):
+		t.Error("ReadPump did not exit after SetReadDeadline error")
+	}
+}
+
+func TestClient_WritePump_ExitsCleanlyOnUnregister(t *testing.T) {
+	// Verify that WritePump exits when hub unregisters the client (closes send channel)
+	logger := zap.NewNop()
+	hub := NewHub(logger)
+	go hub.Run()
+
+	server, wsURL := createTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		conn, err := testUpgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		for {
+			_, _, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
+		}
+	})
+	defer server.Close()
+
+	clientConn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("Failed to connect: %v", err)
+	}
+	defer clientConn.Close()
+
+	client := NewClient(hub, clientConn, "unregister-pump-test", logger)
+	hub.Register(client)
+	time.Sleep(50 * time.Millisecond)
+
+	done := make(chan bool, 1)
+	go func() {
+		client.WritePump()
+		done <- true
+	}()
+
+	// Send a message first to ensure pump is running
+	_ = client.Send("alive", map[string]bool{"ok": true})
+	time.Sleep(50 * time.Millisecond)
+
+	// Unregister client via hub to close the send channel
+	hub.Unregister(client)
+
+	select {
+	case <-done:
+		// WritePump exited cleanly
+	case <-time.After(2 * time.Second):
+		t.Error("WritePump did not exit after unregister")
+	}
+}
+
+func TestClient_sendPing_WriteMessageFails(t *testing.T) {
+	// Test: SetWriteDeadline succeeds but WriteMessage(PingMessage) fails
+	logger := zap.NewNop()
+	hub := NewHub(logger)
+
+	server, wsURL := createTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		conn, err := testUpgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		// Close server side immediately to cause subsequent writes to fail
+		time.Sleep(20 * time.Millisecond)
+		conn.WriteMessage(websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+		conn.Close()
+	})
+	defer server.Close()
+
+	clientConn, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("Failed to connect: %v", err)
+	}
+
+	client := NewClient(hub, clientConn, "ping-write-fail", logger)
+
+	// Wait for server to close its side
+	time.Sleep(100 * time.Millisecond)
+
+	// Drain any close message
+	clientConn.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
+	_, _, _ = clientConn.ReadMessage()
+
+	// Now try sendPing - SetWriteDeadline may succeed on some OS but WriteMessage should fail
+	result := client.sendPing()
+	if result {
+		// On some platforms, both might still succeed if the TCP connection hasn't fully torn down
+		// This is platform-dependent, so we just verify it doesn't panic
+		t.Log("sendPing succeeded (platform-dependent, connection may not have fully closed)")
+	}
+}
+
 func TestClient_Send_MultipleConcurrent(t *testing.T) {
 	logger := zap.NewNop()
 	hub := NewHub(logger)

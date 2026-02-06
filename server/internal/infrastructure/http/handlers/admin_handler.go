@@ -140,7 +140,7 @@ func (h *AdminHandler) GetUser(c *gin.Context) {
 type CreateUserRequest struct {
 	Username string `json:"username" binding:"required,min=3,max=50"`
 	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=8"`
+	Password string `json:"password" binding:"required,min=8,max=72"`
 	Role     string `json:"role" binding:"required"`
 }
 
@@ -385,7 +385,7 @@ func (h *AdminHandler) ReactivateUser(c *gin.Context) {
 
 // ResetPasswordRequest represents the reset password request body
 type ResetPasswordRequest struct {
-	NewPassword string `json:"new_password" binding:"required,min=8"`
+	NewPassword string `json:"new_password" binding:"required,min=8,max=72"`
 }
 
 // ResetPassword resets a user's password (admin action)

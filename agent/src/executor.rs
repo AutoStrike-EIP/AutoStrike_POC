@@ -1,9 +1,11 @@
 //! Command execution with timeout support.
 
 use std::process::Stdio;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::io::AsyncReadExt;
 use tokio::process::Command;
-use tokio::time::timeout;
 use tracing::{debug, error};
 
 /// Result of a command execution.
@@ -16,6 +18,9 @@ pub struct ExecutionResult {
     pub exit_code: Option<i32>,
 }
 
+/// Maximum output size in bytes (1 MB) to prevent memory exhaustion.
+const MAX_OUTPUT_SIZE: usize = 1_048_576;
+
 /// Executes commands using platform-specific shells.
 pub struct CommandExecutor;
 
@@ -26,6 +31,7 @@ impl CommandExecutor {
     }
 
     /// Executes a command with the specified executor and timeout.
+    /// On timeout, the child process is actively killed.
     pub async fn execute(
         &self,
         executor_type: &str,
@@ -34,40 +40,84 @@ impl CommandExecutor {
     ) -> ExecutionResult {
         debug!("Executing command with {}: {}", executor_type, command);
 
-        let result = timeout(time_limit, self.run_command(executor_type, command)).await;
-
-        match result {
-            Ok(exec_result) => exec_result,
-            Err(_) => ExecutionResult {
-                success: false,
-                output: "Command timed out".to_string(),
-                exit_code: None,
-            },
-        }
-    }
-
-    async fn run_command(&self, executor_type: &str, command: &str) -> ExecutionResult {
         let mut cmd = self.build_command(executor_type, command);
-
         cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
 
-        match cmd.output().await {
-            Ok(output) => {
-                let stdout = String::from_utf8_lossy(&output.stdout);
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                let combined = format!("{}{}", stdout, stderr);
-
-                ExecutionResult {
-                    success: output.status.success(),
-                    output: combined.trim().to_string(),
-                    exit_code: output.status.code(),
-                }
-            }
+        let mut child = match cmd.spawn() {
+            Ok(child) => child,
             Err(e) => {
-                error!("Command execution failed: {}", e);
-                ExecutionResult {
+                error!("Failed to spawn command: {}", e);
+                return ExecutionResult {
                     success: false,
                     output: format!("Execution error: {}", e),
+                    exit_code: None,
+                };
+            }
+        };
+
+        // Take ownership of stdout/stderr for concurrent reads
+        let stdout = child.stdout.take().expect("stdout piped");
+        let stderr = child.stderr.take().expect("stderr piped");
+
+        // Shared byte budget to cap total output across both streams
+        let budget = Arc::new(AtomicUsize::new(MAX_OUTPUT_SIZE));
+
+        // Drain stdout concurrently
+        let stdout_fut = {
+            let budget = budget.clone();
+            async move { drain_stream(stdout, &budget).await }
+        };
+
+        // Drain stderr concurrently
+        let stderr_fut = {
+            let budget = budget.clone();
+            async move { drain_stream(stderr, &budget).await }
+        };
+
+        // Both streams are polled concurrently via join!, preventing pipe deadlocks
+        let read_output = async {
+            let (stdout_buf, stderr_buf) = tokio::join!(stdout_fut, stderr_fut);
+            let truncated = budget.load(Ordering::Relaxed) == 0;
+            let stdout_str = String::from_utf8_lossy(&stdout_buf);
+            let stderr_str = String::from_utf8_lossy(&stderr_buf);
+            let combined = format!("{}{}", stdout_str, stderr_str);
+            let mut output = combined.trim().to_string();
+            if truncated {
+                // Safe UTF-8 truncation
+                let safe_boundary = find_char_boundary(&output, MAX_OUTPUT_SIZE);
+                output.truncate(safe_boundary);
+                output.push_str("\n... [output truncated]");
+            }
+            output
+        };
+
+        // Race output collection against timeout, kill child on timeout
+        tokio::select! {
+            output = read_output => {
+                // Output collected, now wait for child to exit
+                match child.wait().await {
+                    Ok(status) => ExecutionResult {
+                        success: status.success(),
+                        output,
+                        exit_code: status.code(),
+                    },
+                    Err(e) => {
+                        error!("Failed to wait for child: {}", e);
+                        ExecutionResult {
+                            success: false,
+                            output,
+                            exit_code: None,
+                        }
+                    }
+                }
+            }
+            _ = tokio::time::sleep(time_limit) => {
+                // Timeout: kill the child process
+                let _ = child.kill().await;
+                let _ = child.wait().await; // Reap the zombie
+                ExecutionResult {
+                    success: false,
+                    output: "Command timed out".to_string(),
                     exit_code: None,
                 }
             }
@@ -120,6 +170,69 @@ impl Default for CommandExecutor {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Drains an async reader into a Vec, claiming bytes from a shared atomic budget.
+/// Returns the collected bytes. Stops when the stream is exhausted or the budget is depleted.
+async fn drain_stream<R: tokio::io::AsyncRead + Unpin>(
+    mut stream: R,
+    budget: &AtomicUsize,
+) -> Vec<u8> {
+    let mut buf = Vec::new();
+    let mut chunk = [0u8; 8192];
+    loop {
+        if budget.load(Ordering::Relaxed) == 0 {
+            break;
+        }
+        match stream.read(&mut chunk).await {
+            Ok(0) => break,
+            Ok(n) => {
+                let claimed = claim_budget(budget, n);
+                if claimed > 0 {
+                    buf.extend_from_slice(&chunk[..claimed]);
+                }
+                if claimed < n {
+                    break; // Budget exhausted
+                }
+            }
+            Err(_) => break,
+        }
+    }
+    buf
+}
+
+/// Atomically claims up to `want` bytes from the shared budget.
+/// Returns the number of bytes actually claimed.
+fn claim_budget(budget: &AtomicUsize, want: usize) -> usize {
+    loop {
+        let current = budget.load(Ordering::Relaxed);
+        if current == 0 {
+            return 0;
+        }
+        let claim = want.min(current);
+        match budget.compare_exchange_weak(
+            current,
+            current - claim,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        ) {
+            Ok(_) => return claim,
+            Err(_) => continue,
+        }
+    }
+}
+
+/// Finds the largest valid UTF-8 char boundary at or before `max` bytes.
+/// Prevents panics when slicing multi-byte characters.
+fn find_char_boundary(s: &str, max: usize) -> usize {
+    if max >= s.len() {
+        return s.len();
+    }
+    let mut boundary = max;
+    while boundary > 0 && !s.is_char_boundary(boundary) {
+        boundary -= 1;
+    }
+    boundary
 }
 
 #[cfg(test)]

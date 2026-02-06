@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Agent configuration loaded from file or CLI arguments.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct AgentConfig {
     /// URL of the AutoStrike server.
     pub server_url: String,
@@ -18,6 +18,21 @@ pub struct AgentConfig {
     /// Agent authentication secret (X-Agent-Key header).
     #[serde(default)]
     pub agent_secret: Option<String>,
+}
+
+impl std::fmt::Debug for AgentConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AgentConfig")
+            .field("server_url", &self.server_url)
+            .field("paw", &self.paw)
+            .field("heartbeat_interval", &self.heartbeat_interval)
+            .field("tls", &self.tls)
+            .field(
+                "agent_secret",
+                &self.agent_secret.as_ref().map(|_| "[REDACTED]"),
+            )
+            .finish()
+    }
 }
 
 /// TLS configuration for secure server connections.

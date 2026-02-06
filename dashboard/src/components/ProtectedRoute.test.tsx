@@ -694,3 +694,664 @@ describe('ProtectedRoute with both requiredRole and allowedRoles', () => {
     });
   });
 });
+
+describe('ProtectedRoute loading state details', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows spinner with correct structure during loading', () => {
+    localStorageMock.getItem.mockReturnValue('test-token');
+    vi.mocked(authApi.me).mockImplementation(
+      () => new Promise((resolve) => setTimeout(resolve, 5000))
+    );
+
+    const { container } = renderWithRouter(['/protected'], true);
+
+    // Verify the loading spinner element exists with the animate-spin class
+    const spinner = container.querySelector('.animate-spin');
+    expect(spinner).toBeInTheDocument();
+
+    // Verify the loading text
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+
+    // Verify the container has the expected background classes
+    const wrapper = container.querySelector('.min-h-screen');
+    expect(wrapper).toBeInTheDocument();
+  });
+
+  it('does not show protected content while loading', () => {
+    localStorageMock.getItem.mockReturnValue('test-token');
+    vi.mocked(authApi.me).mockImplementation(
+      () => new Promise((resolve) => setTimeout(resolve, 5000))
+    );
+
+    renderWithRouter(['/protected'], true);
+
+    expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+  });
+});
+
+describe('ProtectedRoute redirect preserves location', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('redirects to login when not authenticated and preserves route', async () => {
+    localStorageMock.getItem.mockReturnValue(null);
+
+    renderWithRouter(['/protected'], false);
+
+    await waitFor(() => {
+      expect(screen.getByText('Login Page')).toBeInTheDocument();
+    });
+
+    // Verify we navigated away from protected content
+    expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
+  });
+});
+
+describe('ProtectedRoute 403 page details', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows return to dashboard link with correct href', async () => {
+    localStorageMock.getItem.mockReturnValue('test-token');
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: {
+        id: 'user-1',
+        username: 'viewer',
+        email: 'viewer@example.com',
+        role: 'viewer',
+      },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <div>Admin Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      const link = screen.getByText('Return to Dashboard');
+      expect(link).toBeInTheDocument();
+      expect(link.getAttribute('href')).toBe('/dashboard');
+    });
+  });
+
+  it('shows all 403 page elements together', async () => {
+    localStorageMock.getItem.mockReturnValue('test-token');
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: {
+        id: 'user-1',
+        username: 'viewer',
+        email: 'viewer@example.com',
+        role: 'viewer',
+      },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <div>Admin Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('403')).toBeInTheDocument();
+      expect(screen.getByText('Access Denied')).toBeInTheDocument();
+      expect(screen.getByText("You don't have permission to access this page.")).toBeInTheDocument();
+      expect(screen.getByText('Return to Dashboard')).toBeInTheDocument();
+    });
+
+    // Verify admin content is NOT rendered
+    expect(screen.queryByText('Admin Content')).not.toBeInTheDocument();
+  });
+});
+
+describe('ProtectedRoute with empty allowedRoles', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('falls through to hierarchy check when allowedRoles is empty array', async () => {
+    localStorageMock.getItem.mockReturnValue('test-token');
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: {
+        id: 'user-1',
+        username: 'admin',
+        email: 'admin@example.com',
+        role: 'admin',
+      },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/page']}>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/page"
+              element={
+                <ProtectedRoute requiredRole="operator" allowedRoles={[]}>
+                  <div>Fallthrough Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    // Empty allowedRoles should not block; falls through to requiredRole hierarchy check
+    // admin (5) >= operator (3), so access is granted
+    await waitFor(() => {
+      expect(screen.getByText('Fallthrough Content')).toBeInTheDocument();
+    });
+  });
+
+  it('denies via hierarchy when allowedRoles is empty and user role is insufficient', async () => {
+    localStorageMock.getItem.mockReturnValue('test-token');
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: {
+        id: 'user-1',
+        username: 'viewer',
+        email: 'viewer@example.com',
+        role: 'viewer',
+      },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/page']}>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/page"
+              element={
+                <ProtectedRoute requiredRole="operator" allowedRoles={[]}>
+                  <div>Fallthrough Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    // Empty allowedRoles falls through to hierarchy; viewer (1) < operator (3), so denied
+    await waitFor(() => {
+      expect(screen.getByText('403')).toBeInTheDocument();
+      expect(screen.getByText('Access Denied')).toBeInTheDocument();
+    });
+  });
+});
+
+describe('ProtectedRoute auth disabled with allowedRoles', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('skips allowedRoles check when auth is disabled', async () => {
+    localStorageMock.getItem.mockReturnValue(null);
+    vi.mocked(healthApi.check).mockResolvedValue({
+      data: { status: 'ok', auth_enabled: false },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/reports']}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<div>Login Page</div>} />
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute allowedRoles={['analyst']}>
+                  <div>Reports Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Reports Content')).toBeInTheDocument();
+    });
+  });
+
+  it('skips combined requiredRole and allowedRoles check when auth is disabled', async () => {
+    localStorageMock.getItem.mockReturnValue(null);
+    vi.mocked(healthApi.check).mockResolvedValue({
+      data: { status: 'ok', auth_enabled: false },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/special']}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<div>Login Page</div>} />
+            <Route
+              path="/special"
+              element={
+                <ProtectedRoute requiredRole="admin" allowedRoles={['rssi']}>
+                  <div>Special Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Special Content')).toBeInTheDocument();
+    });
+  });
+});
+
+describe('ProtectedRoute complete role hierarchy coverage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Ensure auth is enabled so role checks are exercised
+    vi.mocked(healthApi.check).mockResolvedValue({
+      data: { status: 'ok', auth_enabled: true },
+    } as never);
+  });
+
+  it('viewer has access to viewer-level content (exact match)', async () => {
+    localStorageMock.getItem.mockReturnValue('test-token');
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: {
+        id: 'user-1',
+        username: 'viewer',
+        email: 'viewer@example.com',
+        role: 'viewer',
+      },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/view']}>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/view"
+              element={
+                <ProtectedRoute requiredRole="viewer">
+                  <div>Viewer Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Viewer Content')).toBeInTheDocument();
+    });
+  });
+
+  it('analyst has access to analyst-level content (exact match)', async () => {
+    localStorageMock.getItem.mockReturnValue('test-token');
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: {
+        id: 'user-1',
+        username: 'analyst',
+        email: 'analyst@example.com',
+        role: 'analyst',
+      },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/analysis']}>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/analysis"
+              element={
+                <ProtectedRoute requiredRole="analyst">
+                  <div>Analyst Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Analyst Content')).toBeInTheDocument();
+    });
+  });
+
+  it('analyst cannot access operator-level content', async () => {
+    localStorageMock.getItem.mockReturnValue('test-token');
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: {
+        id: 'user-1',
+        username: 'analyst',
+        email: 'analyst@example.com',
+        role: 'analyst',
+      },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/ops']}>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/ops"
+              element={
+                <ProtectedRoute requiredRole="operator">
+                  <div>Operator Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('403')).toBeInTheDocument();
+    });
+  });
+
+  it('viewer cannot access analyst-level content', async () => {
+    localStorageMock.getItem.mockReturnValue('test-token');
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: {
+        id: 'user-1',
+        username: 'viewer',
+        email: 'viewer@example.com',
+        role: 'viewer',
+      },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/analysis']}>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/analysis"
+              element={
+                <ProtectedRoute requiredRole="analyst">
+                  <div>Analyst Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('403')).toBeInTheDocument();
+    });
+  });
+
+  it('rssi has access to operator-level content via hierarchy', async () => {
+    localStorageMock.getItem.mockReturnValue('test-token');
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: {
+        id: 'user-1',
+        username: 'rssi',
+        email: 'rssi@example.com',
+        role: 'rssi',
+      },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/ops']}>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/ops"
+              element={
+                <ProtectedRoute requiredRole="operator">
+                  <div>Operator Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Operator Content')).toBeInTheDocument();
+    });
+  });
+
+  it('rssi cannot access admin-level content', async () => {
+    localStorageMock.getItem.mockReturnValue('test-token');
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: {
+        id: 'user-1',
+        username: 'rssi',
+        email: 'rssi@example.com',
+        role: 'rssi',
+      },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <div>Admin Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('403')).toBeInTheDocument();
+    });
+  });
+
+  it('admin has access to admin-level content (exact match at top)', async () => {
+    localStorageMock.getItem.mockReturnValue('test-token');
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: {
+        id: 'user-1',
+        username: 'admin',
+        email: 'admin@example.com',
+        role: 'admin',
+      },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/admin']}>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <div>Admin Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Admin Content')).toBeInTheDocument();
+    });
+  });
+});
+
+describe('ProtectedRoute allowedRoles edge cases', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Ensure auth is enabled so role checks are exercised
+    vi.mocked(healthApi.check).mockResolvedValue({
+      data: { status: 'ok', auth_enabled: true },
+    } as never);
+  });
+
+  it('allows access when user is one of multiple allowed roles', async () => {
+    localStorageMock.getItem.mockReturnValue('test-token');
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: {
+        id: 'user-1',
+        username: 'operator',
+        email: 'operator@example.com',
+        role: 'operator',
+      },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/multi']}>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/multi"
+              element={
+                <ProtectedRoute allowedRoles={['operator', 'analyst', 'rssi']}>
+                  <div>Multi Role Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Multi Role Content')).toBeInTheDocument();
+    });
+  });
+
+  it('denies access with single-item allowedRoles when role does not match', async () => {
+    localStorageMock.getItem.mockReturnValue('test-token');
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: {
+        id: 'user-1',
+        username: 'operator',
+        email: 'operator@example.com',
+        role: 'operator',
+      },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/single']}>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/single"
+              element={
+                <ProtectedRoute allowedRoles={['rssi']}>
+                  <div>RSSI Only Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('403')).toBeInTheDocument();
+    });
+  });
+
+  it('allows rssi when rssi is in allowedRoles with admin', async () => {
+    localStorageMock.getItem.mockReturnValue('test-token');
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: {
+        id: 'user-1',
+        username: 'rssi',
+        email: 'rssi@example.com',
+        role: 'rssi',
+      },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/management']}>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/management"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'rssi']}>
+                  <div>Management Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Management Content')).toBeInTheDocument();
+    });
+  });
+
+  it('denies viewer when only admin and rssi are in allowedRoles', async () => {
+    localStorageMock.getItem.mockReturnValue('test-token');
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: {
+        id: 'user-1',
+        username: 'viewer',
+        email: 'viewer@example.com',
+        role: 'viewer',
+      },
+    } as never);
+
+    render(
+      <MemoryRouter initialEntries={['/management']}>
+        <AuthProvider>
+          <Routes>
+            <Route
+              path="/management"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'rssi']}>
+                  <div>Management Content</div>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('403')).toBeInTheDocument();
+      expect(screen.getByText('Access Denied')).toBeInTheDocument();
+    });
+  });
+});

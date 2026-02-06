@@ -1,0 +1,48 @@
+# Reconnaissance techniques - MITRE ATT&CK
+# All techniques are safe/read-only (passive information gathering only)
+
+- id: "T1592.004"
+  name: "Gather Victim Host Information: Client Configurations"
+  description: "Adversaries may gather information about the victim's host configurations that can be used during targeting."
+  tactic: "reconnaissance"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "powershell"
+      command: "Get-ComputerInfo | Select-Object WindowsProductName,WindowsVersion,OsBuildNumber,CsProcessors,CsTotalPhysicalMemory,BiosManufacturer,BiosVersion; Get-WmiObject Win32_AntiVirusProduct -Namespace root\\SecurityCenter2 -ErrorAction SilentlyContinue | Select-Object displayName,productState"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "uname -a; lscpu 2>/dev/null | head -10; free -h 2>/dev/null; lsb_release -a 2>/dev/null || cat /etc/os-release 2>/dev/null"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "System profiling commands (systeminfo, lscpu, dmidecode)"
+    - source: "API Calls"
+      indicator: "WMI queries for system configuration"
+  is_safe: true
+
+- id: "T1595.002"
+  name: "Vulnerability Scanning"
+  description: "Adversaries may scan victims for vulnerabilities that can be used during targeting."
+  tactic: "reconnaissance"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "powershell"
+      command: "Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 10 HotFixID,Description,InstalledOn; [System.Environment]::OSVersion | Select-Object Version,ServicePack"
+      platform: "windows"
+      timeout: 120
+    - type: "bash"
+      command: "dpkg -l 2>/dev/null | tail -20 || rpm -qa --last 2>/dev/null | head -20; uname -r; cat /proc/version 2>/dev/null"
+      platform: "linux"
+      timeout: 120
+  detection:
+    - source: "Network Traffic"
+      indicator: "Port scanning activity or vulnerability scanner signatures"
+    - source: "IDS/IPS"
+      indicator: "Known vulnerability scanning tool patterns"
+  is_safe: true

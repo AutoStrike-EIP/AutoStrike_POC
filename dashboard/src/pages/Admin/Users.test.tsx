@@ -1268,6 +1268,65 @@ describe('Users Role Badges - All Roles', () => {
     const analystBadge = screen.getByText('Analyst');
     expect(analystBadge.className).toContain('bg-green-100');
   });
+
+  it('displays admin role badge with red styling', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('Administrator')).toBeInTheDocument();
+    });
+
+    const adminBadge = screen.getByText('Administrator');
+    expect(adminBadge.className).toContain('bg-red-100');
+  });
+
+  it('displays operator role badge with blue styling', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('Operator')).toBeInTheDocument();
+    });
+
+    const operatorBadge = screen.getByText('Operator');
+    expect(operatorBadge.className).toContain('bg-blue-100');
+  });
+
+  it('displays viewer role badge with gray styling', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('Viewer')).toBeInTheDocument();
+    });
+
+    const viewerBadge = screen.getByText('Viewer');
+    expect(viewerBadge.className).toContain('bg-gray-100');
+  });
+
+  it('displays all 5 roles with correct styling', async () => {
+    const { adminApi } = await import('../../lib/api');
+    vi.mocked(adminApi.listUsers).mockResolvedValueOnce({
+      data: {
+        users: [
+          { id: 'u1', username: 'admin1', email: 'a1@test.com', role: 'admin', is_active: true, last_login_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'u2', username: 'rssi1', email: 'r1@test.com', role: 'rssi', is_active: true, last_login_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'u3', username: 'op1', email: 'o1@test.com', role: 'operator', is_active: true, last_login_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'u4', username: 'an1', email: 'an1@test.com', role: 'analyst', is_active: true, last_login_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+          { id: 'u5', username: 'vi1', email: 'v1@test.com', role: 'viewer', is_active: true, last_login_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        ],
+        total: 5,
+      },
+    } as never);
+
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('Administrator')).toBeInTheDocument();
+      expect(screen.getByText('Security Officer (RSSI)')).toBeInTheDocument();
+      expect(screen.getByText('Operator')).toBeInTheDocument();
+      expect(screen.getByText('Analyst')).toBeInTheDocument();
+      expect(screen.getByText('Viewer')).toBeInTheDocument();
+    });
+  });
 });
 
 describe('Users Current User Indicator', () => {
@@ -1293,5 +1352,925 @@ describe('Users Current User Indicator', () => {
     });
 
     expect(screen.getByText('(you)')).toBeInTheDocument();
+  });
+
+  it('does not show (you) for other users', async () => {
+    const { useAuth } = await import('../../contexts/AuthContext');
+    vi.mocked(useAuth).mockReturnValue({
+      user: { id: 'no-match-id', username: 'someone', email: 'someone@example.com', role: 'admin', is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      authEnabled: true,
+    });
+
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('operator@example.com')).toBeInTheDocument();
+    });
+
+    // No user in the list matches 'no-match-id'
+    const youIndicators = screen.queryAllByText('(you)');
+    expect(youIndicators.length).toBe(0);
+  });
+});
+
+describe('Users Loading State', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows loading state while data is being fetched', async () => {
+    const { adminApi } = await import('../../lib/api');
+    // Create a never-resolving promise to keep loading state (use Once to avoid polluting later tests)
+    vi.mocked(adminApi.listUsers).mockImplementationOnce(() => new Promise(() => {}));
+
+    renderUsers();
+
+    expect(screen.getByText('Loading users...')).toBeInTheDocument();
+  });
+});
+
+describe('Users Avatar Display', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('displays first letter of username as avatar', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    });
+
+    // First letters: 'A' for admin, 'O' for operator, 'I' for inactive
+    expect(screen.getByText('A')).toBeInTheDocument();
+    expect(screen.getByText('O')).toBeInTheDocument();
+    expect(screen.getByText('I')).toBeInTheDocument();
+  });
+});
+
+describe('Users Last Login Display', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('displays formatted last login time for users who have logged in', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    });
+
+    // The admin user has a last_login_at set to new Date().toISOString()
+    // formatDistanceToNow would render something like "less than a minute ago"
+    const timeText = screen.getByText(/ago/);
+    expect(timeText).toBeInTheDocument();
+  });
+
+  it('shows Never for users who have not logged in', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('operator@example.com')).toBeInTheDocument();
+    });
+
+    const neverTexts = screen.getAllByText('Never');
+    expect(neverTexts.length).toBe(2); // operator and inactive both have null last_login_at
+  });
+});
+
+describe('Users Create Form - Role Selection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('changes role in create form', async () => {
+    const { adminApi } = await import('../../lib/api');
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Add User'));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Role')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'operator' } });
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'newop' } });
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'newop@test.com' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password123' } });
+    fireEvent.click(screen.getByRole('button', { name: /Create User/ }));
+
+    await waitFor(() => {
+      expect(adminApi.createUser).toHaveBeenCalledWith({
+        username: 'newop',
+        email: 'newop@test.com',
+        password: 'password123',
+        role: 'operator',
+      });
+    });
+  });
+
+  it('shows minimum password hint text', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Add User'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Minimum 8 characters')).toBeInTheDocument();
+    });
+  });
+
+  it('shows role options with descriptions', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Add User'));
+
+    await waitFor(() => {
+      const roleSelect = screen.getByLabelText('Role');
+      const options = roleSelect.querySelectorAll('option');
+      expect(options.length).toBe(5);
+      expect(options[0].textContent).toBe('Administrator - Full system access');
+      expect(options[1].textContent).toBe('Security Officer (RSSI) - View reports and analytics');
+      expect(options[2].textContent).toBe('Operator - Execute scenarios');
+      expect(options[3].textContent).toBe('Analyst - Read-only with analytics');
+      expect(options[4].textContent).toBe('Viewer - Read-only basic access');
+    });
+  });
+});
+
+describe('Users Edit Form - Field Updates', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('updates email field in edit form', async () => {
+    const { adminApi } = await import('../../lib/api');
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    });
+
+    const editButtons = screen.getAllByTitle('Edit user');
+    fireEvent.click(editButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Edit User' })).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'newemail@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save Changes/ }));
+
+    await waitFor(() => {
+      expect(adminApi.updateUser).toHaveBeenCalledWith('user-1', {
+        username: 'admin',
+        email: 'newemail@example.com',
+      });
+    });
+  });
+
+  it('pre-fills username in edit modal', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    });
+
+    const editButtons = screen.getAllByTitle('Edit user');
+    fireEvent.click(editButtons[0]);
+
+    await waitFor(() => {
+      const usernameInput = screen.getByDisplayValue('admin');
+      expect(usernameInput).toBeInTheDocument();
+    });
+  });
+});
+
+describe('Users Role Change Modal - Details', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows username in role change modal', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('operator@example.com')).toBeInTheDocument();
+    });
+
+    const roleButtons = screen.getAllByTitle('Change role');
+    const enabledButton = roleButtons.find(btn => !(btn as HTMLButtonElement).disabled);
+    if (enabledButton) {
+      fireEvent.click(enabledButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('Change Role')).toBeInTheDocument();
+      });
+
+      expect(screen.getByText(/Change role for/)).toBeInTheDocument();
+    }
+  });
+
+  it('shows role options in role change modal', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('operator@example.com')).toBeInTheDocument();
+    });
+
+    const roleButtons = screen.getAllByTitle('Change role');
+    const enabledButton = roleButtons.find(btn => !(btn as HTMLButtonElement).disabled);
+    if (enabledButton) {
+      fireEvent.click(enabledButton);
+
+      await waitFor(() => {
+        const roleSelect = screen.getByLabelText('Role');
+        const options = roleSelect.querySelectorAll('option');
+        expect(options.length).toBe(5);
+      });
+    }
+  });
+
+  it('pre-selects current role in role change modal', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('operator@example.com')).toBeInTheDocument();
+    });
+
+    // Click the second role button (for the operator user, index 1)
+    const roleButtons = screen.getAllByTitle('Change role');
+    fireEvent.click(roleButtons[1]);
+
+    await waitFor(() => {
+      const roleSelect = screen.getByLabelText('Role') as HTMLSelectElement;
+      expect(roleSelect.value).toBe('operator');
+    });
+  });
+
+  it('cancels role change modal', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('operator@example.com')).toBeInTheDocument();
+    });
+
+    const roleButtons = screen.getAllByTitle('Change role');
+    const enabledButton = roleButtons.find(btn => !(btn as HTMLButtonElement).disabled);
+    if (enabledButton) {
+      fireEvent.click(enabledButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Change Role' })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Cancel'));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('heading', { name: 'Change Role' })).not.toBeInTheDocument();
+      });
+    }
+  });
+});
+
+describe('Users Password Reset Modal - Details', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('opens password reset modal and shows username', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    });
+
+    const passwordButtons = screen.getAllByTitle('Reset password');
+    fireEvent.click(passwordButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Reset Password' })).toBeInTheDocument();
+      expect(screen.getByText(/Reset password for/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows minimum characters hint in password reset modal', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    });
+
+    const passwordButtons = screen.getAllByTitle('Reset password');
+    fireEvent.click(passwordButtons[0]);
+
+    await waitFor(() => {
+      const hints = screen.getAllByText('Minimum 8 characters');
+      expect(hints.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('cancels password reset modal', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    });
+
+    const passwordButtons = screen.getAllByTitle('Reset password');
+    fireEvent.click(passwordButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Reset Password' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Cancel'));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Reset Password' })).not.toBeInTheDocument();
+    });
+  });
+});
+
+describe('Users Deactivate Modal - Details', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows user data will be preserved message', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('operator@example.com')).toBeInTheDocument();
+    });
+
+    const deactivateButtons = screen.getAllByTitle('Deactivate user');
+    const enabledButton = deactivateButtons.find(btn => !(btn as HTMLButtonElement).disabled);
+    if (enabledButton) {
+      fireEvent.click(enabledButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/their data will be preserved/)).toBeInTheDocument();
+      });
+    }
+  });
+
+  it('cancels deactivate modal', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('operator@example.com')).toBeInTheDocument();
+    });
+
+    const deactivateButtons = screen.getAllByTitle('Deactivate user');
+    const enabledButton = deactivateButtons.find(btn => !(btn as HTMLButtonElement).disabled);
+    if (enabledButton) {
+      fireEvent.click(enabledButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Deactivate User' })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Cancel'));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('heading', { name: 'Deactivate User' })).not.toBeInTheDocument();
+      });
+    }
+  });
+});
+
+describe('Users Reactivate Modal - Details', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows existing credentials message in reactivate modal', async () => {
+    const { adminApi } = await import('../../lib/api');
+    vi.mocked(adminApi.listUsers).mockResolvedValueOnce({
+      data: {
+        users: [{
+          id: 'user-3',
+          username: 'inactive',
+          email: 'inactive@example.com',
+          role: 'viewer',
+          is_active: false,
+          last_login_at: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }],
+        total: 1,
+      },
+    } as never);
+
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('inactive@example.com')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle('Reactivate user'));
+
+    await waitFor(() => {
+      expect(screen.getByText(/existing credentials/)).toBeInTheDocument();
+    });
+  });
+
+  it('cancels reactivate modal', async () => {
+    const { adminApi } = await import('../../lib/api');
+    vi.mocked(adminApi.listUsers).mockResolvedValueOnce({
+      data: {
+        users: [{
+          id: 'user-3',
+          username: 'inactive',
+          email: 'inactive@example.com',
+          role: 'viewer',
+          is_active: false,
+          last_login_at: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }],
+        total: 1,
+      },
+    } as never);
+
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('inactive@example.com')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle('Reactivate user'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Reactivate User' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Cancel'));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Reactivate User' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows username in reactivate confirmation', async () => {
+    const { adminApi } = await import('../../lib/api');
+    vi.mocked(adminApi.listUsers).mockResolvedValueOnce({
+      data: {
+        users: [{
+          id: 'user-3',
+          username: 'deactivated-user',
+          email: 'deactivated@example.com',
+          role: 'viewer',
+          is_active: false,
+          last_login_at: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }],
+        total: 1,
+      },
+    } as never);
+
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('deactivated@example.com')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle('Reactivate user'));
+
+    await waitFor(() => {
+      // The paragraph contains "Are you sure you want to reactivate <strong>deactivated-user</strong>?"
+      const confirmText = screen.getByText((_content, element) => {
+        return element?.tagName === 'P' && !!element?.textContent?.includes('deactivated-user');
+      });
+      expect(confirmText).toBeInTheDocument();
+    });
+  });
+});
+
+describe('Users Modal Close via X Button', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('closes create modal via X button', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Add User'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Create User' })).toBeInTheDocument();
+    });
+
+    const closeButton = screen.getByLabelText('Close modal');
+    fireEvent.click(closeButton);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Create User' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('closes edit modal via X button', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    });
+
+    const editButtons = screen.getAllByTitle('Edit user');
+    fireEvent.click(editButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Edit User' })).toBeInTheDocument();
+    });
+
+    const closeButton = screen.getByLabelText('Close modal');
+    fireEvent.click(closeButton);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Edit User' })).not.toBeInTheDocument();
+    });
+  });
+});
+
+describe('Users Inactive Status Display', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('displays Inactive badge for inactive users', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('inactive@example.com')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Inactive')).toBeInTheDocument();
+  });
+
+  it('renders active users and inactive users with different row styling', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+      expect(screen.getByText('inactive@example.com')).toBeInTheDocument();
+    });
+
+    const activeStatuses = screen.getAllByText('Active');
+    expect(activeStatuses.length).toBe(2); // admin and operator are active
+
+    const inactiveStatuses = screen.getAllByText('Inactive');
+    expect(inactiveStatuses.length).toBe(1); // only inactive user
+  });
+});
+
+describe('Users Form Input Changes', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('updates all create form fields', async () => {
+    const { adminApi } = await import('../../lib/api');
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Add User'));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Username')).toBeInTheDocument();
+    });
+
+    const usernameInput = screen.getByLabelText('Username');
+    const emailInput = screen.getByLabelText('Email');
+    const passwordInput = screen.getByLabelText('Password');
+    const roleSelect = screen.getByLabelText('Role');
+
+    fireEvent.change(usernameInput, { target: { value: 'testuser' } });
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
+    fireEvent.change(passwordInput, { target: { value: 'securepass123' } });
+    fireEvent.change(roleSelect, { target: { value: 'admin' } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Create User/ }));
+
+    await waitFor(() => {
+      expect(adminApi.createUser).toHaveBeenCalledWith({
+        username: 'testuser',
+        email: 'test@example.com',
+        password: 'securepass123',
+        role: 'admin',
+      });
+    });
+  });
+
+  it('updates password form field', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    });
+
+    const passwordButtons = screen.getAllByTitle('Reset password');
+    fireEvent.click(passwordButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('New Password')).toBeInTheDocument();
+    });
+
+    const passwordInput = screen.getByLabelText('New Password');
+    fireEvent.change(passwordInput, { target: { value: 'newpass456' } });
+    expect(passwordInput).toHaveValue('newpass456');
+  });
+
+  it('updates role form select in role change modal', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('operator@example.com')).toBeInTheDocument();
+    });
+
+    const roleButtons = screen.getAllByTitle('Change role');
+    const enabledButton = roleButtons.find(btn => !(btn as HTMLButtonElement).disabled);
+    if (enabledButton) {
+      fireEvent.click(enabledButton);
+
+      await waitFor(() => {
+        expect(screen.getByLabelText('Role')).toBeInTheDocument();
+      });
+
+      const roleSelect = screen.getByLabelText('Role') as HTMLSelectElement;
+      fireEvent.change(roleSelect, { target: { value: 'rssi' } });
+      expect(roleSelect.value).toBe('rssi');
+    }
+  });
+});
+
+describe('Users Subtitle Text', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('displays page subtitle', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('Manage users and their permissions')).toBeInTheDocument();
+    });
+  });
+});
+
+describe('Users Table Headers', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders all table column headers', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('User')).toBeInTheDocument();
+      expect(screen.getByText('Role')).toBeInTheDocument();
+      expect(screen.getByText('Status')).toBeInTheDocument();
+      expect(screen.getByText('Last Login')).toBeInTheDocument();
+      expect(screen.getByText('Actions')).toBeInTheDocument();
+    });
+  });
+});
+
+describe('Users Mutation Success - Modal Closes', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('closes create modal after successful creation', async () => {
+    const { adminApi } = await import('../../lib/api');
+    vi.mocked(adminApi.createUser).mockResolvedValueOnce({ data: {} } as never);
+
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Add User'));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Username')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'newuser' } });
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'new@test.com' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password123' } });
+    fireEvent.click(screen.getByRole('button', { name: /Create User/ }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Create User' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('closes edit modal after successful update', async () => {
+    const { adminApi } = await import('../../lib/api');
+    vi.mocked(adminApi.updateUser).mockResolvedValueOnce({ data: {} } as never);
+
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    });
+
+    const editButtons = screen.getAllByTitle('Edit user');
+    fireEvent.click(editButtons[1]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Edit User' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Save Changes/ }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Edit User' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('closes role modal after successful role change', async () => {
+    const { adminApi } = await import('../../lib/api');
+    vi.mocked(adminApi.updateUserRole).mockResolvedValueOnce({ data: {} } as never);
+
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('operator@example.com')).toBeInTheDocument();
+    });
+
+    const roleButtons = screen.getAllByTitle('Change role');
+    const enabledButton = roleButtons.find(btn => !(btn as HTMLButtonElement).disabled);
+    if (enabledButton) {
+      fireEvent.click(enabledButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Change Role' })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /Update Role/ }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('heading', { name: 'Change Role' })).not.toBeInTheDocument();
+      });
+    }
+  });
+
+  it('closes password modal after successful reset', async () => {
+    const { adminApi } = await import('../../lib/api');
+    vi.mocked(adminApi.resetPassword).mockResolvedValueOnce({ data: {} } as never);
+
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin@example.com')).toBeInTheDocument();
+    });
+
+    const passwordButtons = screen.getAllByTitle('Reset password');
+    fireEvent.click(passwordButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('New Password')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByLabelText('New Password'), { target: { value: 'newpass123' } });
+    fireEvent.click(screen.getByRole('button', { name: /Reset Password/ }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Reset Password' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('closes deactivate modal after successful deactivation', async () => {
+    const { adminApi } = await import('../../lib/api');
+    vi.mocked(adminApi.deactivateUser).mockResolvedValueOnce({ data: {} } as never);
+
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('operator@example.com')).toBeInTheDocument();
+    });
+
+    const deactivateButtons = screen.getAllByTitle('Deactivate user');
+    const enabledButton = deactivateButtons.find(btn => !(btn as HTMLButtonElement).disabled);
+    if (enabledButton) {
+      fireEvent.click(enabledButton);
+
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: 'Deactivate User' })).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: /^Deactivate$/ }));
+
+      await waitFor(() => {
+        expect(screen.queryByRole('heading', { name: 'Deactivate User' })).not.toBeInTheDocument();
+      });
+    }
+  });
+
+  it('closes reactivate modal after successful reactivation', async () => {
+    const { adminApi } = await import('../../lib/api');
+    vi.mocked(adminApi.reactivateUser).mockResolvedValueOnce({ data: {} } as never);
+    vi.mocked(adminApi.listUsers).mockResolvedValueOnce({
+      data: {
+        users: [{
+          id: 'user-3',
+          username: 'inactive',
+          email: 'inactive@example.com',
+          role: 'viewer',
+          is_active: false,
+          last_login_at: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }],
+        total: 1,
+      },
+    } as never);
+
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('inactive@example.com')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTitle('Reactivate user'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Reactivate User' })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /^Reactivate$/ }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('heading', { name: 'Reactivate User' })).not.toBeInTheDocument();
+    });
+  });
+});
+
+describe('Users Deactivate Username Display', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows selected username in deactivate confirmation', async () => {
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('operator@example.com')).toBeInTheDocument();
+    });
+
+    const deactivateButtons = screen.getAllByTitle('Deactivate user');
+    const enabledButton = deactivateButtons.find(btn => !(btn as HTMLButtonElement).disabled);
+    if (enabledButton) {
+      fireEvent.click(enabledButton);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Are you sure you want to deactivate/)).toBeInTheDocument();
+      });
+    }
+  });
+});
+
+describe('Users Empty State Details', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows empty state description', async () => {
+    const { adminApi } = await import('../../lib/api');
+    vi.mocked(adminApi.listUsers).mockResolvedValueOnce({
+      data: { users: [], total: 0 },
+    } as never);
+
+    renderUsers();
+
+    await waitFor(() => {
+      expect(screen.getByText('Create a new user to get started')).toBeInTheDocument();
+    });
   });
 });

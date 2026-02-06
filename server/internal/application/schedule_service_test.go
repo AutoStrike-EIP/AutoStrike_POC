@@ -1720,3 +1720,128 @@ func TestScheduleService_checkAndRunDueSchedules_FutureScheduleNotRun(t *testing
 		t.Errorf("Expected 0 runs for future schedule, got %d", len(runs))
 	}
 }
+
+func TestScheduleService_runSchedule_CreateRunError(t *testing.T) {
+	repo := newMockScheduleRepo()
+	repo.createErr = errors.New("database error")
+	execSvc := buildTestExecutionService()
+	logger := zap.NewNop()
+
+	svc := &ScheduleService{
+		scheduleRepo:     repo,
+		executionService: execSvc,
+		logger:           logger,
+		stopChan:         make(chan struct{}),
+	}
+
+	now := time.Now()
+	schedule := &entity.Schedule{
+		ID:         "sched-1",
+		Name:       "Test Schedule",
+		ScenarioID: "scenario-1",
+		AgentPaw:   "agent-1",
+		Frequency:  entity.FrequencyDaily,
+		Status:     entity.ScheduleStatusActive,
+		NextRunAt:  &now,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+	repo.schedules[schedule.ID] = schedule
+
+	// Should not panic - CreateRun error is logged
+	svc.runSchedule(context.Background(), schedule)
+}
+
+func TestScheduleService_runSchedule_UpdateError(t *testing.T) {
+	repo := newMockScheduleRepo()
+	repo.updateErr = errors.New("database error")
+	execSvc := buildTestExecutionService()
+	logger := zap.NewNop()
+
+	svc := &ScheduleService{
+		scheduleRepo:     repo,
+		executionService: execSvc,
+		logger:           logger,
+		stopChan:         make(chan struct{}),
+	}
+
+	now := time.Now()
+	schedule := &entity.Schedule{
+		ID:         "sched-1",
+		Name:       "Test Schedule",
+		ScenarioID: "scenario-1",
+		AgentPaw:   "agent-1",
+		Frequency:  entity.FrequencyDaily,
+		Status:     entity.ScheduleStatusActive,
+		NextRunAt:  &now,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+	repo.schedules[schedule.ID] = schedule
+
+	// Should not panic - Update error is logged
+	svc.runSchedule(context.Background(), schedule)
+}
+
+func TestScheduleService_runSchedule_NoAgentPaw(t *testing.T) {
+	repo := newMockScheduleRepo()
+	execSvc := buildTestExecutionService()
+	logger := zap.NewNop()
+
+	svc := &ScheduleService{
+		scheduleRepo:     repo,
+		executionService: execSvc,
+		logger:           logger,
+		stopChan:         make(chan struct{}),
+	}
+
+	now := time.Now()
+	schedule := &entity.Schedule{
+		ID:         "sched-1",
+		Name:       "Test Schedule",
+		ScenarioID: "scenario-1",
+		AgentPaw:   "", // Empty - no specific agent
+		Frequency:  entity.FrequencyDaily,
+		Status:     entity.ScheduleStatusActive,
+		NextRunAt:  &now,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+	repo.schedules[schedule.ID] = schedule
+
+	svc.runSchedule(context.Background(), schedule)
+
+	// Run should be created
+	runs := repo.runs["sched-1"]
+	if len(runs) != 1 {
+		t.Fatalf("Expected 1 run, got %d", len(runs))
+	}
+}
+
+func TestScheduleService_RunNow_UpdateError(t *testing.T) {
+	repo := newMockScheduleRepo()
+	repo.updateErr = errors.New("database error")
+	execSvc := buildTestExecutionService()
+	logger := zap.NewNop()
+	svc := NewScheduleService(repo, execSvc, logger)
+
+	repo.schedules["sched-1"] = &entity.Schedule{
+		ID:         "sched-1",
+		Name:       "Test Schedule",
+		ScenarioID: "scenario-1",
+		AgentPaw:   "agent-1",
+		Frequency:  entity.FrequencyDaily,
+		Status:     entity.ScheduleStatusActive,
+		CreatedAt:  time.Now(),
+		UpdatedAt:  time.Now(),
+	}
+
+	// RunNow should still succeed (Update error is only logged as warning)
+	run, err := svc.RunNow(context.Background(), "sched-1")
+	if err != nil {
+		t.Fatalf("RunNow should not fail on update error: %v", err)
+	}
+	if run == nil {
+		t.Fatal("RunNow should return a run")
+	}
+}

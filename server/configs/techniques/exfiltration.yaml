@@ -1,0 +1,71 @@
+# Exfiltration techniques - MITRE ATT&CK
+# All techniques are safe/read-only (checking for exfiltration vectors, not exfiltrating data)
+
+- id: "T1048.003"
+  name: "Exfiltration Over Unencrypted Non-C2 Protocol"
+  description: "Adversaries may steal data by exfiltrating it over an un-encrypted network protocol other than that of the existing command and control channel."
+  tactic: "exfiltration"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "cmd"
+      command: "where ftp 2>nul && where tftp 2>nul && netstat -an | findstr :21 | findstr ESTABLISHED"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "which ftp tftp scp rsync 2>/dev/null; ss -tnp state established 2>/dev/null | grep -E ':(21|69|873)\\s' | head -10"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Network Traffic"
+      indicator: "Large outbound data transfers over FTP, TFTP, or HTTP"
+    - source: "Process Creation"
+      indicator: "ftp.exe, tftp.exe, or similar file transfer utilities"
+  is_safe: true
+
+- id: "T1041"
+  name: "Exfiltration Over C2 Channel"
+  description: "Adversaries may steal data by exfiltrating it over an existing command and control channel."
+  tactic: "exfiltration"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "powershell"
+      command: "Get-NetTCPConnection -State Established | Group-Object RemoteAddress | Sort-Object Count -Descending | Select-Object -First 10 Count,Name"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "ss -tnp state established 2>/dev/null | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -rn | head -10"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Network Traffic"
+      indicator: "Unusual volume of outbound data to known C2 addresses"
+    - source: "Endpoint Detection"
+      indicator: "Process sending large amounts of data over established connections"
+  is_safe: true
+
+- id: "T1567.002"
+  name: "Exfiltration to Cloud Storage"
+  description: "Adversaries may exfiltrate data to a cloud storage service rather than over their primary command and control channel."
+  tactic: "exfiltration"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "powershell"
+      command: "Get-Process -Name OneDrive,Dropbox,GoogleDrive*,rclone -ErrorAction SilentlyContinue | Select-Object Name,Id,Path; Get-NetTCPConnection -State Established -ErrorAction SilentlyContinue | Where-Object { $_.RemotePort -eq 443 } | Select-Object -First 10 RemoteAddress,OwningProcess"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "ps aux 2>/dev/null | grep -iE '(rclone|dropbox|gdrive|aws\\s+s3|gsutil|azcopy)' | grep -v grep; which rclone aws gsutil azcopy 2>/dev/null"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "Cloud sync tools or CLI utilities (rclone, aws, gsutil)"
+    - source: "Network Traffic"
+      indicator: "Large uploads to cloud storage provider IP ranges"
+  is_safe: true

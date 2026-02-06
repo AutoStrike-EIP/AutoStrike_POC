@@ -13,6 +13,8 @@ The AutoStrike agent is built in **Rust** for performance, memory safety, and cr
 - **Auto-cleanup** after technique execution
 - **Periodic heartbeat** to maintain connection (default: 30 seconds)
 - **Exponential backoff** for reconnection (1s → 60s max)
+- **Agent authentication** via `X-Agent-Key` header
+- **Output truncation** at 1 MB to prevent memory issues
 
 ---
 
@@ -64,6 +66,12 @@ agent/
 ./autostrike-agent --server https://server:8443 --paw AGENT_LIN_001
 ```
 
+### With Agent Authentication
+
+```bash
+./autostrike-agent --server https://server:8443 --paw AGENT_001 -k "your-agent-secret"
+```
+
 ---
 
 ## CLI Options
@@ -74,6 +82,7 @@ agent/
 | `-p, --paw` | Unique agent identifier | Auto-generated UUID |
 | `-c, --config` | Configuration file path | `agent.yaml` |
 | `-d, --debug` | Enable debug logging | `false` |
+| `-k, --agent-secret` | Agent authentication secret (`X-Agent-Key` header) | - |
 
 ---
 
@@ -85,6 +94,7 @@ File `agent.yaml`:
 server_url: "https://server:8443"
 paw: "agent-001"
 heartbeat_interval: 30  # seconds
+agent_secret: "your-agent-secret"  # optional, X-Agent-Key header
 
 tls:
   cert_file: "./certs/agent.crt"
@@ -227,6 +237,13 @@ The agent will retry indefinitely until connection is restored.
 - Commands have a configurable timeout (default: 300 seconds)
 - On timeout: returns `success: false`, `exit_code: None`, `output: "Command timed out"`
 
+### Output Truncation
+
+- Maximum output size: **1 MB** (1,048,576 bytes)
+- If output exceeds the limit, it is truncated at a safe UTF-8 character boundary
+- Truncated outputs are appended with `"\n... [output truncated]"`
+- This prevents memory issues with commands that produce large outputs
+
 ### Platform-Specific Executors
 
 **Windows:**
@@ -297,7 +314,7 @@ cargo test -- --nocapture  # With output
 ```
 
 Test coverage:
-- CLI argument parsing
+- CLI argument parsing (including `-k`/`--agent-secret`)
 - Configuration loading and merging
 - Message serialization/deserialization
 - Command execution
@@ -309,7 +326,9 @@ Test coverage:
 ## Security
 
 - **TLS/mTLS**: Encrypted communication with optional client certificates
+- **Agent authentication**: `X-Agent-Key` header for server-side verification
 - **No hardcoded credentials**: Configuration via file or CLI
 - **Automatic cleanup**: Cleanup commands run after each technique
 - **Non-root recommended**: Run without elevated privileges when possible
 - **Timeout protection**: Prevents command hangs
+- **Output truncation**: Prevents memory exhaustion from large outputs

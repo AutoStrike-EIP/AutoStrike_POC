@@ -55,7 +55,7 @@ func NewAuthService(userRepo repository.UserRepository, jwtSecret string) *AuthS
 		jwtSecret:        jwtSecret,
 		accessTokenTTL:   15 * time.Minute,
 		refreshTokenTTL:  7 * 24 * time.Hour, // 7 days
-		bcryptCost:       10,
+		bcryptCost:       12,
 	}
 }
 

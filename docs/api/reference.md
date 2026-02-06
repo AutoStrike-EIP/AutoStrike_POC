@@ -28,6 +28,8 @@ The JWT token is signed with the `JWT_SECRET` and contains:
 POST /api/v1/auth/login
 ```
 
+**Rate limit:** 5 attempts/minute per IP
+
 **Body:**
 ```json
 {
@@ -50,6 +52,8 @@ POST /api/v1/auth/login
 POST /api/v1/auth/refresh
 ```
 
+**Rate limit:** 10 attempts/minute per IP
+
 **Body:**
 ```json
 {
@@ -61,6 +65,8 @@ POST /api/v1/auth/refresh
 ```http
 POST /api/v1/auth/logout
 ```
+
+Invalidates the current token (added to blacklist).
 
 #### Get Current User
 ```http
@@ -131,6 +137,8 @@ The `auth_enabled` field indicates whether JWT authentication is enabled on the 
 GET /api/v1/agents
 ```
 
+**Permission:** `agents:view`
+
 **Query Parameters:**
 
 | Parameter | Type | Description |
@@ -160,11 +168,15 @@ GET /api/v1/agents
 GET /api/v1/agents/:paw
 ```
 
+**Permission:** `agents:view`
+
 ### Register Agent
 
 ```http
 POST /api/v1/agents
 ```
+
+**Permission:** `agents:create`
 
 **Body:**
 
@@ -184,11 +196,15 @@ POST /api/v1/agents
 DELETE /api/v1/agents/:paw
 ```
 
+**Permission:** `agents:delete`
+
 ### Heartbeat
 
 ```http
 POST /api/v1/agents/:paw/heartbeat
 ```
+
+**Permission:** `agents:view`
 
 Updates the agent's `last_seen` timestamp.
 
@@ -201,6 +217,8 @@ Updates the agent's `last_seen` timestamp.
 ```http
 GET /api/v1/techniques
 ```
+
+**Permission:** `techniques:view`
 
 **Response:**
 
@@ -237,18 +255,21 @@ GET /api/v1/techniques
 GET /api/v1/techniques/:id
 ```
 
+**Permission:** `techniques:view`
+
 ### Techniques by Tactic
 
 ```http
 GET /api/v1/techniques/tactic/:tactic
 ```
 
+**Permission:** `techniques:view`
+
 Available MITRE tactics:
 
 | Tactic | Description |
 |--------|-------------|
 | `reconnaissance` | Gathering information |
-| `resource-development` | Establishing resources |
 | `initial-access` | Getting into the network |
 | `execution` | Running malicious code |
 | `persistence` | Maintaining presence |
@@ -268,6 +289,8 @@ Available MITRE tactics:
 GET /api/v1/techniques/platform/:platform
 ```
 
+**Permission:** `techniques:view`
+
 Platforms: `windows`, `linux`, `darwin`
 
 ### MITRE Coverage
@@ -276,14 +299,25 @@ Platforms: `windows`, `linux`, `darwin`
 GET /api/v1/techniques/coverage
 ```
 
+**Permission:** `techniques:view`
+
 **Response:**
 
 ```json
 {
+  "reconnaissance": 2,
+  "initial-access": 3,
+  "execution": 5,
+  "persistence": 4,
+  "privilege-escalation": 4,
+  "defense-evasion": 6,
+  "credential-access": 4,
   "discovery": 9,
-  "execution": 3,
-  "persistence": 2,
-  "defense-evasion": 1
+  "lateral-movement": 3,
+  "collection": 4,
+  "command-and-control": 3,
+  "exfiltration": 3,
+  "impact": 3
 }
 ```
 
@@ -292,6 +326,8 @@ GET /api/v1/techniques/coverage
 ```http
 POST /api/v1/techniques/import
 ```
+
+**Permission:** `techniques:import`
 
 **Body:**
 
@@ -310,6 +346,8 @@ POST /api/v1/techniques/import
 ```http
 GET /api/v1/scenarios
 ```
+
+**Permission:** `scenarios:view`
 
 **Response:**
 
@@ -339,17 +377,51 @@ GET /api/v1/scenarios
 GET /api/v1/scenarios/:id
 ```
 
+**Permission:** `scenarios:view`
+
 ### Scenarios by Tag
 
 ```http
 GET /api/v1/scenarios/tag/:tag
 ```
 
+**Permission:** `scenarios:view`
+
+### Export Scenarios
+
+```http
+GET /api/v1/scenarios/export
+```
+
+**Permission:** `scenarios:export`
+
+Exports all scenarios as JSON.
+
+### Export Single Scenario
+
+```http
+GET /api/v1/scenarios/:id/export
+```
+
+**Permission:** `scenarios:export`
+
+### Import Scenarios
+
+```http
+POST /api/v1/scenarios/import
+```
+
+**Permission:** `scenarios:import`
+
+**Body:** JSON array of scenario objects.
+
 ### Create Scenario
 
 ```http
 POST /api/v1/scenarios
 ```
+
+**Permission:** `scenarios:create`
 
 **Body:**
 
@@ -394,6 +466,8 @@ POST /api/v1/scenarios
 PUT /api/v1/scenarios/:id
 ```
 
+**Permission:** `scenarios:edit`
+
 **Body:**
 
 ```json
@@ -425,6 +499,8 @@ PUT /api/v1/scenarios/:id
 DELETE /api/v1/scenarios/:id
 ```
 
+**Permission:** `scenarios:delete`
+
 **Response:** 204 No Content
 
 ---
@@ -436,6 +512,8 @@ DELETE /api/v1/scenarios/:id
 ```http
 GET /api/v1/executions
 ```
+
+**Permission:** `executions:view`
 
 Returns the 50 most recent executions.
 
@@ -477,11 +555,15 @@ Returns the 50 most recent executions.
 GET /api/v1/executions/:id
 ```
 
+**Permission:** `executions:view`
+
 ### Execution Results
 
 ```http
 GET /api/v1/executions/:id/results
 ```
+
+**Permission:** `executions:view`
 
 **Response:**
 
@@ -520,6 +602,8 @@ GET /api/v1/executions/:id/results
 POST /api/v1/executions
 ```
 
+**Permission:** `executions:start`
+
 **Body:**
 
 ```json
@@ -548,6 +632,8 @@ POST /api/v1/executions
 POST /api/v1/executions/:id/complete
 ```
 
+**Permission:** `executions:view`
+
 Manually marks an execution as completed and calculates the security score.
 
 ### Stop Execution
@@ -555,6 +641,8 @@ Manually marks an execution as completed and calculates the security score.
 ```http
 POST /api/v1/executions/:id/stop
 ```
+
+**Permission:** `executions:stop`
 
 Stops a running or pending execution.
 
@@ -605,6 +693,8 @@ score = (2*100 + 2*50) / (5*100) * 100 = 300/500 * 100 = 60%
 GET /api/v1/schedules
 ```
 
+**Permission:** `scheduler:view`
+
 **Response:**
 
 ```json
@@ -633,11 +723,15 @@ GET /api/v1/schedules
 GET /api/v1/schedules/:id
 ```
 
+**Permission:** `scheduler:view`
+
 ### Create Schedule
 
 ```http
 POST /api/v1/schedules
 ```
+
+**Permission:** `scheduler:create`
 
 **Body:**
 
@@ -662,11 +756,15 @@ POST /api/v1/schedules
 PUT /api/v1/schedules/:id
 ```
 
+**Permission:** `scheduler:edit`
+
 ### Delete Schedule
 
 ```http
 DELETE /api/v1/schedules/:id
 ```
+
+**Permission:** `scheduler:delete`
 
 ### Pause Schedule
 
@@ -674,17 +772,33 @@ DELETE /api/v1/schedules/:id
 POST /api/v1/schedules/:id/pause
 ```
 
+**Permission:** `scheduler:edit`
+
 ### Resume Schedule
 
 ```http
 POST /api/v1/schedules/:id/resume
 ```
 
+**Permission:** `scheduler:edit`
+
+### Run Schedule Now
+
+```http
+POST /api/v1/schedules/:id/run
+```
+
+**Permission:** `executions:start`
+
+Triggers an immediate execution of the schedule's scenario.
+
 ### Get Schedule Runs
 
 ```http
 GET /api/v1/schedules/:id/runs?limit=10
 ```
+
+**Permission:** `scheduler:view`
 
 ---
 
@@ -694,6 +808,12 @@ GET /api/v1/schedules/:id/runs?limit=10
 
 ```http
 GET /api/v1/notifications?unread_only=false&limit=50
+```
+
+### Unread Count
+
+```http
+GET /api/v1/notifications/unread/count
 ```
 
 ### Get Notification Settings
@@ -719,10 +839,22 @@ GET /api/v1/notifications/settings
 }
 ```
 
+### Create Notification Settings
+
+```http
+POST /api/v1/notifications/settings
+```
+
 ### Update Notification Settings
 
 ```http
-PUT /api/v1/notifications/settings
+PUT /api/v1/notifications/settings/:id
+```
+
+### Delete Notification Settings
+
+```http
+DELETE /api/v1/notifications/settings/:id
 ```
 
 ### Mark Notification as Read
@@ -737,15 +869,41 @@ POST /api/v1/notifications/:id/read
 POST /api/v1/notifications/read-all
 ```
 
+### Get SMTP Configuration (Admin)
+
+```http
+GET /api/v1/notifications/smtp
+```
+
+**Permission:** admin role required
+
+### Test SMTP Connection (Admin)
+
+```http
+POST /api/v1/notifications/smtp/test
+```
+
+**Permission:** admin role required
+
 ---
 
 ## Analytics
+
+### Get Period Stats
+
+```http
+GET /api/v1/analytics/period?days=30
+```
+
+**Permission:** `analytics:view`
 
 ### Get Score Trend
 
 ```http
 GET /api/v1/analytics/trend?days=30
 ```
+
+**Permission:** `analytics:view`
 
 **Response:**
 
@@ -775,14 +933,18 @@ GET /api/v1/analytics/trend?days=30
 ### Compare Periods
 
 ```http
-GET /api/v1/analytics/compare?days=7
+GET /api/v1/analytics/comparison?days=7
 ```
+
+**Permission:** `analytics:compare`
 
 ### Get Execution Summary
 
 ```http
 GET /api/v1/analytics/summary?days=30
 ```
+
+**Permission:** `analytics:view`
 
 ---
 
@@ -793,6 +955,8 @@ GET /api/v1/analytics/summary?days=30
 ```http
 GET /api/v1/admin/users
 ```
+
+**Permission:** admin role required
 
 **Response:**
 
@@ -841,22 +1005,48 @@ POST /api/v1/admin/users
 PUT /api/v1/admin/users/:id
 ```
 
-### Delete User
+### Update User Role
 
 ```http
-DELETE /api/v1/admin/users/:id
+PUT /api/v1/admin/users/:id/role
 ```
 
-### Activate User
+**Body:**
 
-```http
-POST /api/v1/admin/users/:id/activate
+```json
+{
+  "role": "analyst"
+}
 ```
 
 ### Deactivate User
 
 ```http
-POST /api/v1/admin/users/:id/deactivate
+DELETE /api/v1/admin/users/:id
+```
+
+Deactivates the user (soft delete).
+
+### Reactivate User
+
+```http
+POST /api/v1/admin/users/:id/reactivate
+```
+
+Reactivates a previously deactivated user.
+
+### Reset User Password
+
+```http
+POST /api/v1/admin/users/:id/reset-password
+```
+
+**Body:**
+
+```json
+{
+  "new_password": "newsecurepassword"
+}
 ```
 
 ---
@@ -1137,9 +1327,10 @@ The agent uses exponential backoff for reconnection:
 |------|-------------|
 | 400 | Invalid request |
 | 401 | Not authenticated |
-| 403 | Access denied |
+| 403 | Access denied (insufficient permissions) |
 | 404 | Resource not found |
 | 409 | Conflict (e.g., execution already completed) |
+| 429 | Too many requests (rate limited) |
 | 500 | Server error |
 
 **Error Response Format:**
@@ -1157,8 +1348,17 @@ The agent uses exponential backoff for reconnection:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `JWT_SECRET` | JWT signing secret (enables auth when set) | - |
+| `ENABLE_AUTH` | Explicit auth override (`true`/`false`) | - |
 | `AGENT_SECRET` | Agent authentication secret | - |
+| `DEFAULT_ADMIN_PASSWORD` | Initial admin password | Random |
 | `DATABASE_PATH` | SQLite database path | `./data/autostrike.db` |
+| `DASHBOARD_PATH` | Path to dashboard dist folder | `../dashboard/dist` |
 | `ALLOWED_ORIGINS` | CORS allowed origins | `localhost:3000,localhost:8443` |
-| `DASHBOARD_PATH` | Path to dashboard dist folder | - |
 | `LOG_LEVEL` | Logging level (debug, info, warn, error) | `info` |
+| `SMTP_HOST` | SMTP server hostname | - |
+| `SMTP_PORT` | SMTP server port | `587` |
+| `SMTP_USERNAME` | SMTP username | - |
+| `SMTP_PASSWORD` | SMTP password | - |
+| `SMTP_FROM` | Sender email address | - |
+| `SMTP_USE_TLS` | Use TLS for SMTP | `false` |
+| `DASHBOARD_URL` | Dashboard URL for email links | `https://localhost:8443` |

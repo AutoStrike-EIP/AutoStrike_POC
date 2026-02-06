@@ -1716,6 +1716,249 @@ func TestNotificationService_SendEmailTLS_ConnectionFailure(t *testing.T) {
 	}
 }
 
+// ============================================================================
+// Error-returning mock for testing error paths in Notify* functions
+// ============================================================================
+
+// errMockNotificationRepo wraps mockNotificationRepo with configurable errors
+type errMockNotificationRepo struct {
+	*mockNotificationRepo
+	findAllEnabledErr     error
+	createNotificationErr error
+	findUnreadErr         error
+	findByIDErr           error
+	createCallCount       int
+}
+
+func newErrMockNotificationRepo() *errMockNotificationRepo {
+	return &errMockNotificationRepo{
+		mockNotificationRepo: newMockNotificationRepo(),
+	}
+}
+
+func (m *errMockNotificationRepo) FindAllEnabledSettings(ctx context.Context) ([]*entity.NotificationSettings, error) {
+	if m.findAllEnabledErr != nil {
+		return nil, m.findAllEnabledErr
+	}
+	return m.mockNotificationRepo.FindAllEnabledSettings(ctx)
+}
+
+func (m *errMockNotificationRepo) CreateNotification(ctx context.Context, notification *entity.Notification) error {
+	m.createCallCount++
+	if m.createNotificationErr != nil {
+		return m.createNotificationErr
+	}
+	return m.mockNotificationRepo.CreateNotification(ctx, notification)
+}
+
+func (m *errMockNotificationRepo) FindUnreadByUserID(ctx context.Context, userID string) ([]*entity.Notification, error) {
+	if m.findUnreadErr != nil {
+		return nil, m.findUnreadErr
+	}
+	return m.mockNotificationRepo.FindUnreadByUserID(ctx, userID)
+}
+
+func (m *errMockNotificationRepo) FindNotificationByID(ctx context.Context, id string) (*entity.Notification, error) {
+	if m.findByIDErr != nil {
+		return nil, m.findByIDErr
+	}
+	return m.mockNotificationRepo.FindNotificationByID(ctx, id)
+}
+
+// ============================================================================
+// Tests for error paths in notification service
+// ============================================================================
+
+func TestNotificationService_GetUnreadCount_Error(t *testing.T) {
+	repo := newErrMockNotificationRepo()
+	repo.findUnreadErr = fmt.Errorf("database error")
+	userRepo := &mockUserRepoForNotification{}
+	svc := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	_, err := svc.GetUnreadCount(context.Background(), "user-1")
+	if err == nil {
+		t.Error("GetUnreadCount should fail when FindUnreadByUserID fails")
+	}
+}
+
+func TestNotificationService_NotifyExecutionStarted_FindAllEnabledError(t *testing.T) {
+	repo := newErrMockNotificationRepo()
+	repo.findAllEnabledErr = fmt.Errorf("database error")
+	userRepo := &mockUserRepoForNotification{}
+	svc := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	execution := &entity.Execution{ID: "exec-1", StartedAt: time.Now()}
+	err := svc.NotifyExecutionStarted(context.Background(), execution, "Test")
+	if err == nil {
+		t.Error("NotifyExecutionStarted should fail when FindAllEnabledSettings fails")
+	}
+}
+
+func TestNotificationService_NotifyExecutionStarted_CreateNotificationError(t *testing.T) {
+	repo := newErrMockNotificationRepo()
+	repo.createNotificationErr = fmt.Errorf("create failed")
+	userRepo := &mockUserRepoForNotification{}
+	svc := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	repo.settings["s1"] = &entity.NotificationSettings{
+		ID: "s1", UserID: "user-1", Channel: entity.ChannelEmail,
+		Enabled: true, NotifyOnStart: true,
+	}
+
+	execution := &entity.Execution{ID: "exec-1", StartedAt: time.Now(), SafeMode: true}
+	err := svc.NotifyExecutionStarted(context.Background(), execution, "Test")
+	// Should not return error - individual notification errors are silently continued
+	if err != nil {
+		t.Fatalf("NotifyExecutionStarted should not return error: %v", err)
+	}
+	// No notifications stored because CreateNotification returned error
+	if len(repo.notifications) != 0 {
+		t.Errorf("len(notifications) = %d, want 0", len(repo.notifications))
+	}
+}
+
+func TestNotificationService_NotifyExecutionCompleted_FindAllEnabledError(t *testing.T) {
+	repo := newErrMockNotificationRepo()
+	repo.findAllEnabledErr = fmt.Errorf("database error")
+	userRepo := &mockUserRepoForNotification{}
+	svc := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	execution := &entity.Execution{ID: "exec-1", StartedAt: time.Now()}
+	err := svc.NotifyExecutionCompleted(context.Background(), execution, "Test")
+	if err == nil {
+		t.Error("NotifyExecutionCompleted should fail when FindAllEnabledSettings fails")
+	}
+}
+
+func TestNotificationService_NotifyExecutionCompleted_CreateNotificationError(t *testing.T) {
+	repo := newErrMockNotificationRepo()
+	repo.createNotificationErr = fmt.Errorf("create failed")
+	userRepo := &mockUserRepoForNotification{}
+	svc := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	repo.settings["s1"] = &entity.NotificationSettings{
+		ID: "s1", UserID: "user-1", Channel: entity.ChannelEmail,
+		Enabled: true, NotifyOnComplete: true,
+	}
+
+	execution := &entity.Execution{
+		ID: "exec-1", StartedAt: time.Now(),
+		Score: &entity.SecurityScore{Overall: 85.0, Total: 5},
+	}
+	err := svc.NotifyExecutionCompleted(context.Background(), execution, "Test")
+	if err != nil {
+		t.Fatalf("NotifyExecutionCompleted should not return error: %v", err)
+	}
+	if len(repo.notifications) != 0 {
+		t.Errorf("len(notifications) = %d, want 0", len(repo.notifications))
+	}
+}
+
+func TestNotificationService_NotifyExecutionFailed_FindAllEnabledError(t *testing.T) {
+	repo := newErrMockNotificationRepo()
+	repo.findAllEnabledErr = fmt.Errorf("database error")
+	userRepo := &mockUserRepoForNotification{}
+	svc := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	execution := &entity.Execution{ID: "exec-1", StartedAt: time.Now()}
+	err := svc.NotifyExecutionFailed(context.Background(), execution, "Test", "error")
+	if err == nil {
+		t.Error("NotifyExecutionFailed should fail when FindAllEnabledSettings fails")
+	}
+}
+
+func TestNotificationService_NotifyExecutionFailed_CreateNotificationError(t *testing.T) {
+	repo := newErrMockNotificationRepo()
+	repo.createNotificationErr = fmt.Errorf("create failed")
+	userRepo := &mockUserRepoForNotification{}
+	svc := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	repo.settings["s1"] = &entity.NotificationSettings{
+		ID: "s1", UserID: "user-1", Channel: entity.ChannelEmail,
+		Enabled: true, NotifyOnFailure: true,
+	}
+
+	execution := &entity.Execution{ID: "exec-1", StartedAt: time.Now()}
+	err := svc.NotifyExecutionFailed(context.Background(), execution, "Test", "error msg")
+	if err != nil {
+		t.Fatalf("NotifyExecutionFailed should not return error: %v", err)
+	}
+	if len(repo.notifications) != 0 {
+		t.Errorf("len(notifications) = %d, want 0", len(repo.notifications))
+	}
+}
+
+func TestNotificationService_NotifyAgentOffline_FindAllEnabledError(t *testing.T) {
+	repo := newErrMockNotificationRepo()
+	repo.findAllEnabledErr = fmt.Errorf("database error")
+	userRepo := &mockUserRepoForNotification{}
+	svc := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	agent := &entity.Agent{Paw: "p1", Hostname: "h1", Platform: "linux", LastSeen: time.Now()}
+	err := svc.NotifyAgentOffline(context.Background(), agent)
+	if err == nil {
+		t.Error("NotifyAgentOffline should fail when FindAllEnabledSettings fails")
+	}
+}
+
+func TestNotificationService_NotifyAgentOffline_CreateNotificationError(t *testing.T) {
+	repo := newErrMockNotificationRepo()
+	repo.createNotificationErr = fmt.Errorf("create failed")
+	userRepo := &mockUserRepoForNotification{}
+	svc := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	repo.settings["s1"] = &entity.NotificationSettings{
+		ID: "s1", UserID: "user-1", Channel: entity.ChannelEmail,
+		Enabled: true, NotifyOnAgentOffline: true,
+	}
+
+	agent := &entity.Agent{Paw: "p1", Hostname: "h1", Platform: "linux", LastSeen: time.Now()}
+	err := svc.NotifyAgentOffline(context.Background(), agent)
+	if err != nil {
+		t.Fatalf("NotifyAgentOffline should not return error: %v", err)
+	}
+	if len(repo.notifications) != 0 {
+		t.Errorf("len(notifications) = %d, want 0", len(repo.notifications))
+	}
+}
+
+func TestNotificationService_ProcessScoreAlert_CreateNotificationError(t *testing.T) {
+	repo := newErrMockNotificationRepo()
+	repo.createNotificationErr = fmt.Errorf("create failed")
+	userRepo := &mockUserRepoForNotification{}
+	svc := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	setting := &entity.NotificationSettings{
+		ID: "s1", UserID: "user-1", Channel: entity.ChannelEmail,
+		Enabled: true, NotifyOnScoreAlert: true, ScoreAlertThreshold: 70.0,
+	}
+
+	data := map[string]any{
+		"ScenarioName": "Test", "ExecutionID": "exec-1",
+		"Score": "50.0", "DashboardURL": "https://localhost:8443",
+	}
+
+	// Call processScoreAlert directly - score 50 < threshold 70 -> should try to create
+	svc.processScoreAlert(context.Background(), setting, data, 50.0)
+
+	// CreateNotification fails but processScoreAlert just returns
+	if len(repo.notifications) != 0 {
+		t.Errorf("len(notifications) = %d, want 0", len(repo.notifications))
+	}
+}
+
+func TestNotificationService_MarkAsReadForUser_FindByIDError(t *testing.T) {
+	repo := newErrMockNotificationRepo()
+	repo.findByIDErr = fmt.Errorf("database error")
+	userRepo := &mockUserRepoForNotification{}
+	svc := NewNotificationService(repo, userRepo, nil, "https://localhost:8443", nil)
+
+	err := svc.MarkAsReadForUser(context.Background(), "notif-1", "user-1")
+	if err == nil {
+		t.Error("MarkAsReadForUser should fail when FindNotificationByID fails")
+	}
+}
+
 func TestNotificationService_NotifyExecutionStarted_WithEmailSend(t *testing.T) {
 	addr, dataCh := fakeSMTPServer(t)
 	parts := strings.Split(addr, ":")

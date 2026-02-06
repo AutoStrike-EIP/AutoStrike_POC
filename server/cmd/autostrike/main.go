@@ -101,11 +101,13 @@ func main() {
 			logger.Warn("Failed to create default admin user", zap.Error(err))
 		} else if result.Created {
 			if result.GeneratedPassword != "" {
-				// Log the generated password so the operator can use it
+				// Print password to stderr only - never to structured logs
 				logger.Info("=======================================================")
 				logger.Info("Default admin user created with auto-generated password")
 				logger.Info("Username: admin")
-				logger.Info("Password: " + result.GeneratedPassword)
+				// Password printed to stderr to avoid exposure in log aggregation systems
+				_, _ = os.Stderr.WriteString("Default admin password: " + result.GeneratedPassword + "\n")
+				logger.Info("Password printed to stderr (not logged)")
 				logger.Info("IMPORTANT: Change this password immediately after first login!")
 				logger.Info("Or set DEFAULT_ADMIN_PASSWORD env var before first startup.")
 				logger.Info("=======================================================")
@@ -184,18 +186,27 @@ func main() {
 
 	// Stop the scheduler
 	scheduleService.Stop()
+
+	// Close server resources (rate limiters, token blacklist)
+	server.Close()
 }
 
 func autoImportTechniques(service *application.TechniqueService, logger *zap.Logger) {
 	// Import techniques from all YAML files in configs/techniques
 	paths := []string{
+		"./configs/techniques/reconnaissance.yaml",
+		"./configs/techniques/initial-access.yaml",
 		"./configs/techniques/discovery.yaml",
 		"./configs/techniques/execution.yaml",
 		"./configs/techniques/persistence.yaml",
+		"./configs/techniques/privilege-escalation.yaml",
 		"./configs/techniques/defense-evasion.yaml",
 		"./configs/techniques/credential-access.yaml",
 		"./configs/techniques/collection.yaml",
 		"./configs/techniques/lateral-movement.yaml",
+		"./configs/techniques/command-and-control.yaml",
+		"./configs/techniques/exfiltration.yaml",
+		"./configs/techniques/impact.yaml",
 	}
 
 	imported := 0

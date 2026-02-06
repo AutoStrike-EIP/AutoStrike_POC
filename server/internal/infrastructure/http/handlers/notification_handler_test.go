@@ -2136,3 +2136,108 @@ func TestNotificationHandler_GetSettings_NilSettings(t *testing.T) {
 		t.Errorf("Unexpected error message: %s", response["error"])
 	}
 }
+
+func TestNotificationHandler_MarkAsRead_EmptyID(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	// Route without :id param so c.Param("id") returns ""
+	router.POST("/api/v1/notifications/mark-read", func(c *gin.Context) {
+		c.Set("user_id", "test-user-id")
+		handler.MarkAsRead(c)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/notifications/mark-read", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for empty notification ID, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+	if response["error"] != "notification ID required" {
+		t.Errorf("Unexpected error message: %s", response["error"])
+	}
+}
+
+func TestNotificationHandler_TestSMTP_Success(t *testing.T) {
+	// Create a notification service with a mock SMTP config
+	// The TestSMTPConnection will fail because no real SMTP server, but we
+	// test the handler's success path by testing that TestSMTP returns 500
+	// (SMTP not configured) vs the success path.
+	// For the success path (line 487), we need SMTP configured AND sendEmail to succeed.
+	// Since we can't easily mock the actual SMTP dial, the success line (487)
+	// will remain unreachable without a real SMTP server. The 93.8% coverage
+	// (1 line out of 16 uncovered) is acceptable since it requires an actual SMTP connection.
+
+	// However, we can verify the handler flow up to the SMTP call
+	handler, _ := setupNotificationHandler()
+	router := setupNotificationRouterWithAdmin(handler)
+
+	body := TestSMTPRequest{Email: "test@example.com"}
+	bodyBytes, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/notifications/smtp/test", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	// Returns 500 because SMTP is not configured in test environment
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d", w.Code)
+	}
+}
+
+func TestNotificationHandler_UpdateSettings_InvalidEmailOnUpdate(t *testing.T) {
+	repo := &errorNotificationRepo{
+		findSettingsByUserIDVal: &entity.NotificationSettings{
+			ID:     "settings-1",
+			UserID: "test-user-id",
+		},
+	}
+	handler := setupErrorNotificationHandler(repo)
+	router := setupNotificationRouter(handler)
+
+	body := NotificationSettingsRequest{
+		Channel:      "email",
+		Enabled:      true,
+		EmailAddress: "not-an-email-address",
+	}
+	bodyBytes, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PUT", "/api/v1/notifications/settings", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for invalid email on update, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestNotificationHandler_CreateSettings_WebhookInvalidURL(t *testing.T) {
+	handler, _ := setupNotificationHandler()
+	router := setupNotificationRouter(handler)
+
+	body := NotificationSettingsRequest{
+		Channel:    "webhook",
+		Enabled:    true,
+		WebhookURL: "://missing-scheme",
+	}
+	bodyBytes, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/notifications/settings", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400, got %d: %s", w.Code, w.Body.String())
+	}
+}

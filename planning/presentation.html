@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoStrike - Team Onboarding</title>
+    <title>AutoStrike - Breach and Attack Simulation</title>
     <style>
         * {
             margin: 0;
@@ -91,6 +91,10 @@
             background: linear-gradient(90deg, #f59e0b, #d97706);
         }
 
+        .badge-red {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+
         .architecture-box {
             background: #1e1e3f;
             border: 2px solid #7c3aed;
@@ -145,6 +149,10 @@
             grid-template-columns: repeat(2, 1fr);
         }
 
+        .grid-4 {
+            grid-template-columns: repeat(4, 1fr);
+        }
+
         .card {
             background: rgba(124, 58, 237, 0.1);
             border: 1px solid rgba(124, 58, 237, 0.3);
@@ -174,44 +182,16 @@
             border: 2px solid #00d4ff;
         }
 
+        .card-green {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.15));
+            border: 2px solid #10b981;
+        }
+
         .card code {
             background: #1e1e3f;
             padding: 2px 6px;
             border-radius: 4px;
             font-size: 0.9rem;
-        }
-
-        .tech-stack {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 2rem;
-        }
-
-        .tech-item {
-            background: linear-gradient(135deg, #1e1e3f, #2a2a5f);
-            border: 1px solid #3a3a6f;
-            border-radius: 10px;
-            padding: 20px 30px;
-            text-align: center;
-            min-width: 150px;
-        }
-
-        .tech-item .icon {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-        }
-
-        .tech-item .name {
-            font-weight: 600;
-            color: #00d4ff;
-        }
-
-        .tech-item .desc {
-            font-size: 0.85rem;
-            color: #888;
-            margin-top: 5px;
         }
 
         .flow-diagram {
@@ -306,7 +286,7 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 10px;
-            max-width: 900px;
+            max-width: 1100px;
             margin-top: 2rem;
         }
 
@@ -322,6 +302,7 @@
             color: #00d4ff;
             font-weight: 600;
             margin-bottom: 8px;
+            font-size: 0.9rem;
         }
 
         .mitre-tactic .count {
@@ -350,7 +331,8 @@
         }
 
         ul.check li::before {
-            content: "✓";
+            content: "\2713";
+            color: #10b981;
         }
 
         .quote {
@@ -424,6 +406,10 @@
             color: #f59e0b;
         }
 
+        .file-tree .comment {
+            color: #6a9955;
+        }
+
         .task-list {
             max-width: 900px;
             width: 100%;
@@ -440,26 +426,26 @@
             margin-bottom: 10px;
         }
 
-        .task-item .difficulty {
+        .task-item .priority {
             padding: 5px 12px;
             border-radius: 20px;
             font-size: 0.8rem;
             font-weight: 600;
         }
 
-        .task-item .difficulty.easy {
-            background: rgba(16, 185, 129, 0.2);
-            color: #10b981;
+        .task-item .priority.high {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
         }
 
-        .task-item .difficulty.medium {
+        .task-item .priority.medium {
             background: rgba(245, 158, 11, 0.2);
             color: #f59e0b;
         }
 
-        .task-item .difficulty.hard {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
+        .task-item .priority.stretch {
+            background: rgba(124, 58, 237, 0.2);
+            color: #a78bfa;
         }
 
         .task-item .tech {
@@ -470,6 +456,48 @@
             color: #00d4ff;
         }
 
+        .comparison-table td.us {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .comparison-table td.them {
+            color: #ef4444;
+        }
+
+        .comparison-table td.both {
+            color: #f59e0b;
+        }
+
+        .v2-pillar {
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(0, 212, 255, 0.1));
+            border: 1px solid rgba(124, 58, 237, 0.4);
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .v2-pillar .pillar-num {
+            display: inline-block;
+            width: 35px;
+            height: 35px;
+            background: linear-gradient(90deg, #7c3aed, #00d4ff);
+            border-radius: 50%;
+            line-height: 35px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .v2-pillar h4 {
+            color: #00d4ff;
+            margin-bottom: 8px;
+        }
+
+        .v2-pillar p {
+            font-size: 0.95rem;
+            color: #b0b0b0;
+        }
+
         @media (max-width: 768px) {
             h1 { font-size: 2.5rem; }
             h2 { font-size: 1.8rem; }
@@ -477,29 +505,13 @@
             .stat-grid { grid-template-columns: repeat(2, 1fr); }
             .mitre-grid { grid-template-columns: repeat(2, 1fr); }
             .nav-dots { display: none; }
-            .grid-3, .grid-2 { grid-template-columns: 1fr; }
+            .grid-3, .grid-2, .grid-4 { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
     <!-- Navigation dots -->
-    <div class="nav-dots">
-        <div class="nav-dot active" onclick="scrollToSlide(0)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(1)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(2)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(3)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(4)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(5)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(6)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(7)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(8)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(9)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(10)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(11)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(12)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(13)"></div>
-        <div class="nav-dot" onclick="scrollToSlide(14)"></div>
-    </div>
+    <div class="nav-dots" id="nav-dots"></div>
 
     <!-- Slide 1: Title -->
     <section class="slide">
@@ -523,7 +535,7 @@
         <div style="margin-bottom: 2rem;">
             <span class="badge">MITRE ATT&CK</span>
             <span class="badge">Go + Rust + React</span>
-            <span class="badge">Team Onboarding</span>
+            <span class="badge">48 Techniques</span>
         </div>
         <p style="color: #888; font-size: 1rem;">Fleches haut/bas | Espace | Scroll</p>
     </section>
@@ -532,23 +544,23 @@
     <section class="slide">
         <h2>C'est quoi AutoStrike ?</h2>
         <p class="quote">
-            "Une plateforme qui simule des cyberattaques basees sur MITRE ATT&CK pour tester si les defenses d'un reseau detectent vraiment les menaces."
+            "Une plateforme de Breach and Attack Simulation. On simule des attaques basees sur le framework MITRE ATT&CK pour tester si les defenses d'un reseau detectent bien les menaces. C'est ce qu'utilisent les equipes SOC et les pentesters pour valider leurs detections."
         </p>
         <div class="grid grid-3" style="max-width: 1100px;">
             <div class="card">
-                <div class="feature-icon">🎯</div>
+                <div class="feature-icon">&#x1F3AF;</div>
                 <h4>BAS Platform</h4>
                 <p>Breach and Attack Simulation - on simule des attaques connues pour tester les detections.</p>
             </div>
             <div class="card">
-                <div class="feature-icon">🛡️</div>
+                <div class="feature-icon">&#x1F6E1;&#xFE0F;</div>
                 <h4>Pour les SOC</h4>
                 <p>Les equipes securite valident leurs regles de detection sans attendre une vraie attaque.</p>
             </div>
             <div class="card">
-                <div class="feature-icon">📊</div>
+                <div class="feature-icon">&#x1F4CA;</div>
                 <h4>MITRE ATT&CK</h4>
-                <p>Framework standard qui catalogue toutes les techniques d'attaque connues.</p>
+                <p>Framework standard qui catalogue toutes les techniques d'attaque connues. 48 techniques implementees.</p>
             </div>
         </div>
     </section>
@@ -556,6 +568,9 @@
     <!-- Slide 3: Architecture Overview -->
     <section class="slide">
         <h2>Architecture Globale</h2>
+        <p style="text-align: center; margin-bottom: 1rem; color: #a0a0a0;">
+            Un seul serveur Go sur le port 8443 qui fait tout : dashboard, API REST, WebSockets.
+        </p>
         <div class="architecture-box">
 +------------------------------------------------------------------+
 |                    SERVER (Go) - Port 8443                        |
@@ -593,7 +608,7 @@
 
     <!-- Slide 4: Stack Technique -->
     <section class="slide">
-        <h2>Stack Technique</h2>
+        <h2>Pourquoi ces Technos ?</h2>
         <table>
             <tr>
                 <th>Composant</th>
@@ -603,7 +618,7 @@
             <tr>
                 <td><strong>Backend</strong></td>
                 <td>Go 1.21 + Gin</td>
-                <td>Binaire unique, goroutines pour gerer plein d'agents, performant</td>
+                <td>Performant, binaire unique, goroutines pour gerer plein d'agents en parallele</td>
             </tr>
             <tr>
                 <td><strong>Agent</strong></td>
@@ -631,39 +646,42 @@
                 <td>Bidirectionnel, temps reel, push des taches aux agents</td>
             </tr>
         </table>
+        <p class="quote" style="margin-top: 2rem; font-size: 1.1rem;">
+            "Kubernetes, Docker, Terraform, Caldera sont en Go. C'est LE standard pour les outils d'infra et secu."
+        </p>
     </section>
 
-    <!-- Slide 5: Structure du Projet -->
+    <!-- Slide 5: Architecture Hexagonale + Structure -->
     <section class="slide">
-        <h2>Structure du Projet</h2>
+        <h2>Architecture Hexagonale</h2>
         <div class="grid grid-2" style="max-width: 1100px;">
             <div class="file-tree">
 <span class="folder">autostrike/</span>
-├── <span class="folder">server/</span>              <span class="comment"># Backend Go</span>
-│   ├── <span class="folder">cmd/autostrike/</span>  <span class="important"># main.go</span>
-│   ├── <span class="folder">internal/</span>
-│   │   ├── <span class="folder">domain/</span>      <span class="comment"># Logique metier</span>
-│   │   ├── <span class="folder">application/</span> <span class="comment"># Use cases</span>
-│   │   └── <span class="folder">infrastructure/</span> <span class="comment"># HTTP, DB, WS</span>
-│   └── <span class="folder">configs/</span>         <span class="comment"># Techniques YAML</span>
-│
-├── <span class="folder">agent/</span>               <span class="comment"># Agent Rust</span>
-│   └── <span class="folder">src/</span>
-│       ├── <span class="important">main.rs</span>
-│       └── <span class="important">executor.rs</span>  <span class="comment"># Execution cmds</span>
-│
-├── <span class="folder">dashboard/</span>           <span class="comment"># Frontend React</span>
-│   └── <span class="folder">src/</span>
-│       ├── <span class="folder">pages/</span>       <span class="comment"># 6 pages</span>
-│       ├── <span class="folder">components/</span>  <span class="comment"># UI components</span>
-│       └── <span class="folder">lib/</span>         <span class="important"># api.ts</span>
-│
-└── <span class="folder">docs/</span>                <span class="comment"># MkDocs</span>
+&#x251C;&#x2500;&#x2500; <span class="folder">server/</span>              <span class="comment"># Backend Go</span>
+&#x2502;   &#x251C;&#x2500;&#x2500; <span class="folder">cmd/autostrike/</span>  <span class="important"># main.go</span>
+&#x2502;   &#x251C;&#x2500;&#x2500; <span class="folder">internal/</span>
+&#x2502;   &#x2502;   &#x251C;&#x2500;&#x2500; <span class="folder">domain/</span>      <span class="comment"># Logique metier</span>
+&#x2502;   &#x2502;   &#x251C;&#x2500;&#x2500; <span class="folder">application/</span> <span class="comment"># Use cases</span>
+&#x2502;   &#x2502;   &#x2514;&#x2500;&#x2500; <span class="folder">infrastructure/</span> <span class="comment"># HTTP, DB, WS</span>
+&#x2502;   &#x2514;&#x2500;&#x2500; <span class="folder">configs/</span>         <span class="comment"># Techniques YAML</span>
+&#x2502;
+&#x251C;&#x2500;&#x2500; <span class="folder">agent/</span>               <span class="comment"># Agent Rust</span>
+&#x2502;   &#x2514;&#x2500;&#x2500; <span class="folder">src/</span>
+&#x2502;       &#x251C;&#x2500;&#x2500; <span class="important">main.rs</span>
+&#x2502;       &#x2514;&#x2500;&#x2500; <span class="important">executor.rs</span>  <span class="comment"># Execution cmds</span>
+&#x2502;
+&#x251C;&#x2500;&#x2500; <span class="folder">dashboard/</span>           <span class="comment"># Frontend React</span>
+&#x2502;   &#x2514;&#x2500;&#x2500; <span class="folder">src/</span>
+&#x2502;       &#x251C;&#x2500;&#x2500; <span class="folder">pages/</span>       <span class="comment"># 10+ pages</span>
+&#x2502;       &#x251C;&#x2500;&#x2500; <span class="folder">components/</span>  <span class="comment"># UI components</span>
+&#x2502;       &#x2514;&#x2500;&#x2500; <span class="folder">lib/</span>         <span class="important"># api.ts</span>
+&#x2502;
+&#x2514;&#x2500;&#x2500; <span class="folder">docs/</span>                <span class="comment"># MkDocs</span>
             </div>
             <div>
                 <div class="card" style="margin-bottom: 20px;">
-                    <h4>Architecture Hexagonale</h4>
-                    <p>Le server suit le pattern Clean Architecture :</p>
+                    <h4>Clean Architecture</h4>
+                    <p>Les dependances vont toujours vers l'interieur. Le domain ne connait pas la DB ni HTTP.</p>
                     <ul style="font-size: 0.95rem; margin-top: 10px;">
                         <li><code>domain/</code> = logique pure, pas de deps externes</li>
                         <li><code>application/</code> = orchestration des use cases</li>
@@ -671,116 +689,104 @@
                     </ul>
                 </div>
                 <div class="card">
-                    <h4>Fichiers cles a connaitre</h4>
-                    <ul style="font-size: 0.95rem; margin-top: 10px;">
-                        <li><code>server/cmd/autostrike/main.go</code></li>
-                        <li><code>server/internal/domain/entity/</code></li>
-                        <li><code>dashboard/src/lib/api.ts</code></li>
-                        <li><code>agent/src/executor.rs</code></li>
-                    </ul>
+                    <h4>L'avantage</h4>
+                    <p>Changer SQLite &#x2192; PostgreSQL = <strong>1 fichier</strong>.<br>
+                    Changer le framework HTTP = <strong>1 dossier</strong>.<br>
+                    Le code metier ne bouge pas.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Slide 6: Setup Dev Environment -->
+    <!-- Slide 6: Flux d'execution -->
     <section class="slide">
-        <h2>Setup Environnement Dev</h2>
-        <div class="grid grid-2" style="max-width: 1000px;">
-            <div>
-                <h3>Prerequisites</h3>
-                <div class="code-box">
-<span class="comment"># Installer</span>
-- Go 1.21+
-- Rust 1.75+
-- Node.js 18+
-- Make
-                </div>
-            </div>
-            <div>
-                <h3>Clone & Run</h3>
-                <div class="code-box">
-<span class="command">git clone</span> [repo]
-<span class="command">cd</span> autostrike
-
-<span class="comment"># Tout lancer en une commande</span>
-<span class="command">make dev</span>
-
-<span class="comment"># Ou separement</span>
-<span class="command">make run</span>      <span class="comment"># Server :8443</span>
-<span class="command">make agent</span>   <span class="comment"># Agent Rust</span>
-                </div>
-            </div>
-        </div>
-
-        <h3 style="margin-top: 2rem;">Commandes utiles</h3>
-        <table style="max-width: 800px;">
-            <tr><th>Commande</th><th>Description</th></tr>
-            <tr><td><code>make run</code></td><td>Lance le server Go sur :8443</td></tr>
-            <tr><td><code>make agent</code></td><td>Lance un agent Rust</td></tr>
-            <tr><td><code>make test</code></td><td>Lance tous les tests</td></tr>
-            <tr><td><code>make build</code></td><td>Build tous les composants</td></tr>
-            <tr><td><code>make lint</code></td><td>Lint Go + Rust + TS</td></tr>
-        </table>
-    </section>
-
-    <!-- Slide 7: Comment ca marche -->
-    <section class="slide">
-        <h2>Comment ca marche ?</h2>
+        <h2>Flux d'une Execution</h2>
         <div class="flow-diagram">
             <div class="flow-step">
                 <div class="num">1</div>
-                <div><strong>Agent se connecte</strong> - WebSocket vers le server, envoie ses infos (hostname, OS, etc.)</div>
+                <div><strong>User clique "Run"</strong> sur un scenario dans le Dashboard</div>
             </div>
-            <div class="arrow">↓</div>
+            <div class="arrow">&#x2193;</div>
             <div class="flow-step">
                 <div class="num">2</div>
-                <div><strong>User lance un scenario</strong> - Depuis le dashboard, selectionne agents + scenario</div>
+                <div><strong>Dashboard appelle</strong> <code>POST /api/v1/executions</code></div>
             </div>
-            <div class="arrow">↓</div>
+            <div class="arrow">&#x2193;</div>
             <div class="flow-step">
                 <div class="num">3</div>
-                <div><strong>Server orchestre</strong> - Cree l'execution, envoie les taches aux agents via WebSocket</div>
+                <div><strong>Server orchestre</strong> - Cree l'execution en DB, notifie les agents via WebSocket</div>
             </div>
-            <div class="arrow">↓</div>
+            <div class="arrow">&#x2193;</div>
             <div class="flow-step">
                 <div class="num">4</div>
-                <div><strong>Agent execute</strong> - Execute les commandes MITRE (ex: <code>systeminfo</code>, <code>ps aux</code>)</div>
+                <div><strong>Agent execute</strong> les commandes MITRE (ex: <code>systeminfo</code>, <code>ps aux</code>)</div>
             </div>
-            <div class="arrow">↓</div>
+            <div class="arrow">&#x2193;</div>
             <div class="flow-step">
                 <div class="num">5</div>
-                <div><strong>Resultats temps reel</strong> - Agent renvoie les outputs, dashboard les affiche live</div>
+                <div><strong>Resultats temps reel</strong> - Agent renvoie les outputs, Dashboard affiche live</div>
             </div>
         </div>
     </section>
 
-    <!-- Slide 8: MITRE ATT&CK explique -->
+    <!-- Slide 7: MITRE ATT&CK -->
     <section class="slide">
-        <h2>MITRE ATT&CK en 2 minutes</h2>
-        <p style="text-align: center; max-width: 800px; margin-bottom: 2rem;">
-            C'est un framework qui organise les techniques d'attaque en <strong style="color: #00d4ff;">Tactiques</strong> (le "quoi") et <strong style="color: #7c3aed;">Techniques</strong> (le "comment").
+        <h2>MITRE ATT&CK - 48 Techniques</h2>
+        <p style="text-align: center; max-width: 800px; margin-bottom: 1rem;">
+            Framework qui organise les techniques d'attaque en <strong style="color: #00d4ff;">Tactiques</strong> (le "quoi") et <strong style="color: #7c3aed;">Techniques</strong> (le "comment"). On couvre <strong style="color: #10b981;">13 tactiques sur 14</strong>.
         </p>
         <div class="mitre-grid">
             <div class="mitre-tactic">
+                <div class="name">Reconnaissance</div>
+                <div class="count">2</div>
+            </div>
+            <div class="mitre-tactic">
+                <div class="name">Initial Access</div>
+                <div class="count">2</div>
+            </div>
+            <div class="mitre-tactic">
                 <div class="name">Discovery</div>
                 <div class="count">9</div>
-                <div style="font-size: 0.75rem; color: #888;">techniques</div>
             </div>
             <div class="mitre-tactic">
                 <div class="name">Execution</div>
                 <div class="count">3</div>
-                <div style="font-size: 0.75rem; color: #888;">techniques</div>
             </div>
             <div class="mitre-tactic">
                 <div class="name">Persistence</div>
-                <div class="count">2</div>
-                <div style="font-size: 0.75rem; color: #888;">techniques</div>
+                <div class="count">4</div>
+            </div>
+            <div class="mitre-tactic">
+                <div class="name">Priv. Escalation</div>
+                <div class="count">3</div>
             </div>
             <div class="mitre-tactic">
                 <div class="name">Defense Evasion</div>
-                <div class="count">1</div>
-                <div style="font-size: 0.75rem; color: #888;">techniques</div>
+                <div class="count">3</div>
+            </div>
+            <div class="mitre-tactic">
+                <div class="name">Credential Access</div>
+                <div class="count">4</div>
+            </div>
+            <div class="mitre-tactic">
+                <div class="name">Collection</div>
+                <div class="count">4</div>
+            </div>
+            <div class="mitre-tactic">
+                <div class="name">Lateral Movement</div>
+                <div class="count">3</div>
+            </div>
+            <div class="mitre-tactic">
+                <div class="name">C2</div>
+                <div class="count">3</div>
+            </div>
+            <div class="mitre-tactic">
+                <div class="name">Exfiltration</div>
+                <div class="count">3</div>
+            </div>
+            <div class="mitre-tactic">
+                <div class="name">Impact</div>
+                <div class="count">3</div>
             </div>
         </div>
         <div class="card" style="margin-top: 2rem; max-width: 700px;">
@@ -796,74 +802,25 @@
         </div>
     </section>
 
-    <!-- Slide 9: API Endpoints -->
-    <section class="slide">
-        <h2>API REST - Endpoints Principaux</h2>
-        <p style="text-align: center; margin-bottom: 1rem;">Base URL: <code>https://localhost:8443/api/v1</code></p>
-        <table style="max-width: 1000px;">
-            <tr>
-                <th>Method</th>
-                <th>Endpoint</th>
-                <th>Description</th>
-            </tr>
-            <tr>
-                <td><span class="badge badge-green" style="font-size: 0.7rem;">GET</span></td>
-                <td><code>/agents</code></td>
-                <td>Liste tous les agents connectes</td>
-            </tr>
-            <tr>
-                <td><span class="badge badge-green" style="font-size: 0.7rem;">GET</span></td>
-                <td><code>/techniques</code></td>
-                <td>Liste toutes les techniques MITRE</td>
-            </tr>
-            <tr>
-                <td><span class="badge badge-green" style="font-size: 0.7rem;">GET</span></td>
-                <td><code>/scenarios</code></td>
-                <td>Liste tous les scenarios</td>
-            </tr>
-            <tr>
-                <td><span class="badge badge-orange" style="font-size: 0.7rem;">POST</span></td>
-                <td><code>/executions</code></td>
-                <td>Lance une execution (scenario + agents)</td>
-            </tr>
-            <tr>
-                <td><span class="badge badge-green" style="font-size: 0.7rem;">GET</span></td>
-                <td><code>/executions/:id/results</code></td>
-                <td>Resultats d'une execution</td>
-            </tr>
-            <tr>
-                <td><span class="badge badge-green" style="font-size: 0.7rem;">GET</span></td>
-                <td><code>/techniques/coverage</code></td>
-                <td>Couverture MITRE par tactique</td>
-            </tr>
-        </table>
-        <div class="code-box" style="margin-top: 2rem;">
-<span class="comment"># Exemple: Lancer une execution</span>
-<span class="command">curl -X POST</span> https://localhost:8443/api/v1/executions \
-  -H "Content-Type: application/json" \
-  -d '{"scenario_id": "scenario-quick-scan", "agent_paws": ["abc123"], "safe_mode": true}'
-        </div>
-    </section>
-
-    <!-- Slide 10: Ce qui est fait -->
+    <!-- Slide 8: Etat du Projet -->
     <section class="slide">
         <h2>Etat du Projet</h2>
         <div class="stat-grid">
             <div class="stat-card">
-                <div class="number">~15k</div>
+                <div class="number">~18k</div>
                 <div class="label">Lignes de code</div>
             </div>
             <div class="stat-card">
-                <div class="number">447</div>
+                <div class="number">780+</div>
                 <div class="label">Tests</div>
             </div>
             <div class="stat-card">
-                <div class="number">15</div>
-                <div class="label">Techniques</div>
+                <div class="number">48</div>
+                <div class="label">Techniques MITRE</div>
             </div>
             <div class="stat-card">
-                <div class="number">4</div>
-                <div class="label">Scenarios</div>
+                <div class="number">95%+</div>
+                <div class="label">Coverage domaine</div>
             </div>
         </div>
 
@@ -871,30 +828,260 @@
             <div>
                 <h3 style="color: #10b981;">Fait</h3>
                 <ul class="check">
-                    <li>API REST complete</li>
+                    <li>API REST complete (50+ endpoints)</li>
                     <li>WebSocket bidirectionnel</li>
-                    <li>Dashboard 6 pages</li>
-                    <li>Agent multi-plateforme</li>
-                    <li>Import YAML techniques</li>
-                    <li>CI/CD GitHub Actions</li>
-                    <li>Documentation MkDocs</li>
+                    <li>Dashboard 10+ pages</li>
+                    <li>Agent multi-plateforme (Rust)</li>
+                    <li>Auth JWT + RBAC (5 roles, 28 perms)</li>
+                    <li>Security hardening (rate limiting, CSP, HSTS)</li>
+                    <li>Scheduling (cron, daily, weekly, monthly)</li>
+                    <li>Notifications (email SMTP + webhooks)</li>
+                    <li>Analytics (tendances, comparaisons)</li>
+                    <li>CI/CD + Docker ready</li>
                 </ul>
             </div>
             <div>
-                <h3 style="color: #f59e0b;">A faire</h3>
-                <ul>
-                    <li>Login UI (auth existe cote server)</li>
-                    <li>Export PDF rapports</li>
-                    <li>Plus de techniques MITRE</li>
-                    <li>Scheduling executions</li>
-                    <li>Tests E2E</li>
-                    <li>Deploy Docker prod</li>
-                </ul>
+                <h3 style="color: #f59e0b;">Repartition</h3>
+                <table style="margin-top: 0;">
+                    <tr><td>Server (Go)</td><td>~14,000 lignes</td></tr>
+                    <tr><td>Dashboard (React)</td><td>~16,400 lignes</td></tr>
+                    <tr><td>Agent (Rust)</td><td>~1,700 lignes</td></tr>
+                    <tr><td>Techniques YAML</td><td>~1,200 lignes</td></tr>
+                    <tr><td>Docs + CI/CD</td><td>~4,300 lignes</td></tr>
+                </table>
+                <p style="font-size: 0.9rem; color: #888; margin-top: 10px;">
+                    Code source : ~18k lignes (hors tests, docs et fichiers auto-generes)
+                </p>
             </div>
         </div>
     </section>
 
-    <!-- Slide 11: Pourquoi ne pas changer -->
+    <!-- Slide 9: Auth & Securite -->
+    <section class="slide">
+        <h2>Authentification & Securite</h2>
+        <div class="grid grid-3" style="max-width: 1100px;">
+            <div class="card card-highlight">
+                <h4>JWT + RBAC</h4>
+                <p><strong>5 roles</strong> : Super Admin, Admin, Operator, Analyst, Viewer</p>
+                <p style="margin-top: 8px;"><strong>28 permissions</strong> granulaires</p>
+                <p style="margin-top: 8px;">Access/Refresh tokens + token blacklist</p>
+            </div>
+            <div class="card card-highlight">
+                <h4>Security Headers</h4>
+                <p>Rate limiting sur toutes les routes</p>
+                <p style="margin-top: 8px;">CSP, HSTS, X-Frame-Options</p>
+                <p style="margin-top: 8px;">CORS configurables</p>
+            </div>
+            <div class="card card-highlight">
+                <h4>Agent Security</h4>
+                <p>AGENT_SECRET pour authentifier les agents</p>
+                <p style="margin-top: 8px;">mTLS en production</p>
+                <p style="margin-top: 8px;">Safe Mode pour simulations sans risque</p>
+            </div>
+        </div>
+        <div class="card" style="margin-top: 2rem; max-width: 800px;">
+            <h4>Security Score</h4>
+            <div class="code-box" style="margin-top: 10px;">
+score = (blocked * 100 + detected * 50) / (total * 100) * 100
+
+<span class="comment"># Blocked  = 100 pts (attaque prevenue)</span>
+<span class="comment"># Detected =  50 pts (attaque vue mais pas stoppee)</span>
+<span class="comment"># Success  =   0 pts (attaque reussie non detectee)</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 10: Comparaison Caldera -->
+    <section class="slide">
+        <h2>AutoStrike vs MITRE Caldera</h2>
+        <p class="quote" style="font-size: 1.1rem; margin-bottom: 1rem;">
+            "AutoStrike c'est comme un Caldera custom. On couvre ~80% de ses features core, mais on a des trucs qu'il n'a pas."
+        </p>
+        <div class="grid grid-2" style="max-width: 1100px;">
+            <div>
+                <h3 style="color: #10b981;">Ce qu'on a que Caldera n'a pas</h3>
+                <table style="margin-top: 0;">
+                    <tr><td><strong>Scheduling</strong></td><td>Cron, daily, weekly, monthly</td></tr>
+                    <tr><td><strong>Security Score</strong></td><td>Score 0-100 avec formule</td></tr>
+                    <tr><td><strong>Analytics</strong></td><td>Tendances, comparaisons</td></tr>
+                    <tr><td><strong>RBAC</strong></td><td>5 roles, 28 permissions</td></tr>
+                    <tr><td><strong>Notifications</strong></td><td>Email SMTP + webhooks</td></tr>
+                </table>
+            </div>
+            <div>
+                <h3 style="color: #f59e0b;">Ce qui nous manque</h3>
+                <table style="margin-top: 0;">
+                    <tr><td><strong>Planners intelligents</strong></td><td>Enchainement conditionnel</td></tr>
+                    <tr><td><strong>Facts system</strong></td><td>Donnees entre techniques</td></tr>
+                    <tr><td><strong>Profils APT</strong></td><td>Scenarios predefinis</td></tr>
+                    <tr><td><strong>Recommandations</strong></td><td>Mitigations ATT&CK</td></tr>
+                </table>
+            </div>
+        </div>
+        <div class="card" style="margin-top: 2rem; max-width: 800px;">
+            <h4>Pourquoi pas juste utiliser Caldera ?</h4>
+            <p>Caldera c'est Python, c'est plus lourd a deployer, et il n'a pas de scoring, pas de scheduling, pas d'analytics. Notre agent Rust est plus leger et plus discret qu'un agent Python. Et on a une architecture hexagonale propre qui permet d'evoluer facilement.</p>
+        </div>
+    </section>
+
+    <!-- Slide 11: Ce qui reste a faire -->
+    <section class="slide">
+        <h2>Ce qui reste a faire</h2>
+        <div class="task-list">
+            <h3 style="color: #ef4444;">Priorite haute</h3>
+            <div class="task-item">
+                <span class="priority high">High</span>
+                <span class="tech">YAML + Go</span>
+                <div>Profils adversaires APT : scenarios predefinis APT29, Ransomware, Insider Threat</div>
+            </div>
+            <div class="task-item">
+                <span class="priority high">High</span>
+                <span class="tech">Go + React</span>
+                <div>Export PDF rapports : handler backend + generateur PDF + page Reports</div>
+            </div>
+
+            <h3 style="color: #f59e0b; margin-top: 1.5rem;">Priorite moyenne</h3>
+            <div class="task-item">
+                <span class="priority medium">Medium</span>
+                <span class="tech">React</span>
+                <div>ScenarioBuilder visuel : editeur drag &amp; drop de phases/techniques</div>
+            </div>
+            <div class="task-item">
+                <span class="priority medium">Medium</span>
+                <span class="tech">Go + Rust</span>
+                <div>Cleanup automatique : commandes de nettoyage post-execution</div>
+            </div>
+            <div class="task-item">
+                <span class="priority medium">Medium</span>
+                <span class="tech">React + WS</span>
+                <div>LiveLogs : page logs temps reel via WebSocket</div>
+            </div>
+
+            <h3 style="color: #a78bfa; margin-top: 1.5rem;">Stretch Goals (Caldera-like)</h3>
+            <div class="task-item">
+                <span class="priority stretch">Stretch</span>
+                <span class="tech">Go</span>
+                <div>Planners intelligents, Facts system, Obfuscation, Recommandations remediation</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 12: Vision V2 -->
+    <section class="slide">
+        <h2>Vision V2 : Autonomous Threat Emulation</h2>
+        <p class="quote" style="margin-bottom: 1rem;">
+            "On passe d'un test statique (l'utilisateur choisit tout) a un test dynamique (l'outil decide seul). On ne change pas le but, on change la qualite du test."
+        </p>
+
+        <table style="max-width: 800px; margin-bottom: 2rem;">
+            <tr>
+                <th>Avant (V1)</th>
+                <th>Apres (V2)</th>
+            </tr>
+            <tr>
+                <td>L'utilisateur cree un scenario</td>
+                <td><strong>L'utilisateur donne une IP cible</strong></td>
+            </tr>
+            <tr>
+                <td>L'agent execute une liste fixe</td>
+                <td><strong>L'agent s'adapte aux resultats</strong></td>
+            </tr>
+            <tr>
+                <td>Resultat = rapport statique</td>
+                <td><strong>Resultat = graphe de propagation live</strong></td>
+            </tr>
+            <tr>
+                <td>Test ponctuel</td>
+                <td><strong>Simulation d'une vraie APT</strong></td>
+            </tr>
+        </table>
+
+        <div class="grid grid-3" style="max-width: 1100px;">
+            <div class="v2-pillar">
+                <div class="pillar-num">1</div>
+                <h4>Decision Engine</h4>
+                <p>Le serveur maintient une "memoire" de la cible et decide de la prochaine action (boucle OODA)</p>
+            </div>
+            <div class="v2-pillar">
+                <div class="pillar-num">2</div>
+                <h4>Agent Avance</h4>
+                <p>Self-propagation, pivoting reseau, safety rails (garde-fous contre les actions destructrices)</p>
+            </div>
+            <div class="v2-pillar">
+                <div class="pillar-num">3</div>
+                <h4>Dashboard V2</h4>
+                <p>Attack Graph, Live Terminal IA, Approvals System, Blast Radius View</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 13: Objectif Demo -->
+    <section class="slide">
+        <h2>Objectif Demo (Soutenance 2028)</h2>
+        <div class="flow-diagram">
+            <div class="flow-step" style="border-color: rgba(124, 58, 237, 0.5);">
+                <div class="num">1</div>
+                <div><strong>L'operateur entre une IP cible</strong> (ou un range) dans le dashboard</div>
+            </div>
+            <div class="arrow">&#x2193;</div>
+            <div class="flow-step" style="border-color: rgba(124, 58, 237, 0.5);">
+                <div class="num">2</div>
+                <div><strong>AutoStrike lance le mode Blackbox</strong> - zero configuration</div>
+            </div>
+            <div class="arrow">&#x2193;</div>
+            <div class="flow-step" style="border-color: rgba(124, 58, 237, 0.5);">
+                <div class="num">3</div>
+                <div><strong>Le jury voit en temps reel :</strong> le graphe de propagation, les decisions de l'IA, la matrice MITRE qui se remplit</div>
+            </div>
+            <div class="arrow">&#x2193;</div>
+            <div class="flow-step" style="border-color: rgba(16, 185, 129, 0.5);">
+                <div class="num" style="background: linear-gradient(90deg, #10b981, #059669);">&#x2713;</div>
+                <div><strong>Scan &#x2192; Exploit &#x2192; Root &#x2192; Rapport genere</strong> en quelques minutes</div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 2rem; max-width: 700px;">
+            <h4>C'est pas du malware ?</h4>
+            <p style="font-size: 0.95rem;">C'est 100% dans l'esprit BAS. Une vraie menace (APT, ransomware) ne suit pas une liste, elle s'adapte. Nos <strong>Safety Rails</strong> empechent toute action destructrice. L'agent prouve qu'il POURRAIT le faire sans le faire.</p>
+        </div>
+    </section>
+
+    <!-- Slide 14: Timeline -->
+    <section class="slide">
+        <h2>Planning 2026-2028</h2>
+        <p style="text-align: center; margin-bottom: 1rem; color: #a0a0a0;">
+            Projet EIP - Promotion 2028 | 5 semestres de developpement
+        </p>
+        <div class="grid grid-2" style="max-width: 1100px;">
+            <div class="card">
+                <h4>S1 2026 (fev-juil)</h4>
+                <p><strong>Quick Wins + Fondations V2</strong></p>
+                <p style="margin-top: 8px;">Profils APT, Export PDF, Target Knowledge DB, Moteur de regles basique</p>
+            </div>
+            <div class="card">
+                <h4>S2 2026 (sept-dec)</h4>
+                <p><strong>Dashboard V2 + Decision Engine</strong></p>
+                <p style="margin-top: 8px;">Attack Graph, Live Terminal IA, Approvals System, Mode Blackbox API</p>
+            </div>
+            <div class="card">
+                <h4>S1 2027 (jan-juil)</h4>
+                <p><strong>Agent Avance</strong></p>
+                <p style="margin-top: 8px;">Network scan, Self-propagation, Safety Rails, Kill Switch, Remediations</p>
+            </div>
+            <div class="card">
+                <h4>S2 2027 (sept-dec)</h4>
+                <p><strong>Polish + Features avancees</strong></p>
+                <p style="margin-top: 8px;">Achievements, Timeline, Multiple agent types, Integration PDF</p>
+            </div>
+            <div class="card card-green" style="grid-column: 1 / -1;">
+                <h4 style="color: #10b981;">S1 2028 (jan-juin) - Soutenance</h4>
+                <p><strong>Autonomie Avancee + Preparation Demo</strong></p>
+                <p style="margin-top: 8px;">Decision Engine v2, CTF autonome (HackTheBox Easy), Mode Blackbox complet, Tests E2E, Documentation finale, Demo "wahou" pour le jury</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Slide 15: Pourquoi ne pas changer -->
     <section class="slide">
         <h2>Pourquoi Garder Cette Stack ?</h2>
         <p class="quote" style="margin-bottom: 2rem;">
@@ -914,140 +1101,48 @@
                 <p>Framework le plus populaire. <strong>Tout le monde peut contribuer</strong>. TypeScript evite les bugs runtime.</p>
             </div>
         </div>
-        <div class="card" style="margin-top: 2rem; max-width: 800px;">
-            <h4>L'avantage de l'architecture hexagonale</h4>
-            <p>Changer SQLite → PostgreSQL = <strong>1 fichier</strong>. Changer le framework HTTP = <strong>1 dossier</strong>. Le code metier ne bouge pas.</p>
-        </div>
         <div style="margin-top: 2rem;">
-            <span class="badge badge-green">447 tests</span>
-            <span class="badge badge-green">97% coverage</span>
+            <span class="badge badge-green">780+ tests</span>
+            <span class="badge badge-green">95%+ coverage</span>
             <span class="badge badge-green">CI/CD complet</span>
             <span class="badge badge-green">Doc complete</span>
+            <span class="badge badge-green">Docker ready</span>
         </div>
     </section>
 
-    <!-- Slide 12: Taches disponibles -->
+    <!-- Slide 16: FAQ -->
     <section class="slide">
-        <h2>Taches Disponibles</h2>
-        <p style="text-align: center; margin-bottom: 2rem;">Choisissez selon votre niveau et vos preferences !</p>
-
-        <div class="task-list">
-            <div class="task-item">
-                <span class="difficulty easy">Easy</span>
-                <span class="tech">YAML</span>
-                <div>Ajouter 10 nouvelles techniques MITRE (copier le format existant)</div>
-            </div>
-            <div class="task-item">
-                <span class="difficulty easy">Easy</span>
-                <span class="tech">React</span>
-                <div>Ameliorer le design du dashboard (dark mode, animations)</div>
-            </div>
-            <div class="task-item">
-                <span class="difficulty medium">Medium</span>
-                <span class="tech">React</span>
-                <div>Ajouter la page Login avec formulaire + JWT storage</div>
-            </div>
-            <div class="task-item">
-                <span class="difficulty medium">Medium</span>
-                <span class="tech">Go</span>
-                <div>Endpoint d'export PDF des rapports d'execution</div>
-            </div>
-            <div class="task-item">
-                <span class="difficulty medium">Medium</span>
-                <span class="tech">Rust</span>
-                <div>Ajouter de nouveaux executors (Python, PowerShell avance)</div>
-            </div>
-            <div class="task-item">
-                <span class="difficulty hard">Hard</span>
-                <span class="tech">Go + React</span>
-                <div>Scheduling d'executions (cron-like) avec UI</div>
-            </div>
-            <div class="task-item">
-                <span class="difficulty hard">Hard</span>
-                <span class="tech">DevOps</span>
-                <div>Deploy Kubernetes avec Helm charts</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Slide 13: Comment contribuer -->
-    <section class="slide">
-        <h2>Comment Contribuer</h2>
-        <div class="grid grid-2" style="max-width: 1000px;">
-            <div>
-                <h3>Workflow Git</h3>
-                <div class="code-box">
-<span class="comment"># 1. Creer une branche</span>
-<span class="command">git checkout -b</span> feat/ma-feature
-
-<span class="comment"># 2. Faire les modifs + tests</span>
-<span class="command">make test</span>
-<span class="command">make lint</span>
-
-<span class="comment"># 3. Commit avec message clair</span>
-<span class="command">git commit -m</span> "feat: add login page"
-
-<span class="comment"># 4. Push + PR</span>
-<span class="command">git push origin</span> feat/ma-feature
-                </div>
-            </div>
-            <div>
-                <h3>Conventions</h3>
-                <div class="card">
-                    <h4>Commits</h4>
-                    <p style="font-size: 0.9rem;"><code>feat:</code> nouvelle feature<br>
-                    <code>fix:</code> bug fix<br>
-                    <code>docs:</code> documentation<br>
-                    <code>refactor:</code> refactoring</p>
-                </div>
-                <div class="card" style="margin-top: 15px;">
-                    <h4>Avant de push</h4>
-                    <p style="font-size: 0.9rem;">
-                        - <code>make test</code> doit passer<br>
-                        - <code>make lint</code> doit passer<br>
-                        - Pas de secrets dans le code
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Slide 14: Resources -->
-    <section class="slide">
-        <h2>Ressources</h2>
-        <div class="grid grid-3" style="max-width: 1100px;">
+        <h2>Questions Probables</h2>
+        <div class="grid grid-2" style="max-width: 1100px;">
             <div class="card">
-                <div class="feature-icon">📚</div>
-                <h4>Documentation</h4>
-                <p>MkDocs complete avec guides utilisateur et API reference.</p>
-                <p style="margin-top: 10px;"><code>docs/</code></p>
+                <h4>"Pourquoi pas Python pour l'agent ?"</h4>
+                <p>"Python c'est facile a detecter et bloquer par les antivirus. Rust compile en binaire natif, c'est plus discret et performant."</p>
             </div>
             <div class="card">
-                <div class="feature-icon">📝</div>
-                <h4>CLAUDE.md</h4>
-                <p>Fichier de contexte projet pour Claude Code / Cursor.</p>
-                <p style="margin-top: 10px;"><code>CLAUDE.md</code></p>
+                <h4>"C'est quoi le Safe Mode ?"</h4>
+                <p>"L'agent n'execute pas les commandes, il simule juste. C'est pour tester sans risquer de casser quelque chose."</p>
             </div>
             <div class="card">
-                <div class="feature-icon">🔗</div>
-                <h4>MITRE ATT&CK</h4>
-                <p>Reference officielle des techniques.</p>
-                <p style="margin-top: 10px;">attack.mitre.org</p>
+                <h4>"Comment on ajoute une technique ?"</h4>
+                <p>"Fichier YAML dans <code>configs/techniques/</code> avec l'ID MITRE, le nom, la tactique, et les commandes par OS."</p>
+            </div>
+            <div class="card">
+                <h4>"C'est securise ?"</h4>
+                <p>"JWT + RBAC pour l'API, mTLS pour les agents en prod, AGENT_SECRET pour l'auth agents, rate limiting, CSP, HSTS."</p>
+            </div>
+            <div class="card">
+                <h4>"Comment les tests ?"</h4>
+                <p>"Vitest pour le front avec mocks. Tests Go classiques pour le back avec mocks des repositories. 780+ tests au total."</p>
+            </div>
+            <div class="card">
+                <h4>"Pourquoi un seul port ?"</h4>
+                <p>"Simplifie le deploiement et la config firewall. Le serveur Go sert tout : fichiers statiques, API REST, WebSockets."</p>
             </div>
         </div>
-
-        <h3 style="margin-top: 3rem;">Liens utiles</h3>
-        <table style="max-width: 700px;">
-            <tr><td>Dashboard local</td><td><code>https://localhost:8443</code></td></tr>
-            <tr><td>API docs</td><td><code>docs/api/</code></td></tr>
-            <tr><td>Techniques YAML</td><td><code>server/configs/techniques/</code></td></tr>
-            <tr><td>Scenarios YAML</td><td><code>server/configs/scenarios/</code></td></tr>
-        </table>
     </section>
 
-    <!-- Slide 15: Questions -->
+    <!-- Slide 17: Questions -->
     <section class="slide">
-        <h2>Questions ?</h2>
         <div class="logo-container" style="margin-top: 2rem;">
             <svg viewBox="0 0 100 100">
                 <defs>
@@ -1063,26 +1158,40 @@
                 <line x1="50" y1="70" x2="50" y2="85" stroke="url(#grad2)" stroke-width="3"/>
             </svg>
         </div>
-        <p class="subtitle" style="margin-top: 2rem;">Let's build something awesome together!</p>
+        <h2>Questions ?</h2>
+        <p class="subtitle" style="margin-top: 1rem;">AutoStrike - Autonomous Threat Emulation</p>
         <div style="margin-top: 2rem;">
-            <span class="badge">make dev</span>
-            <span class="badge">localhost:8443</span>
+            <span class="badge">48 Techniques</span>
+            <span class="badge">13/14 Tactiques</span>
+            <span class="badge">780+ Tests</span>
         </div>
-        <div class="code-box" style="margin-top: 3rem; text-align: center;">
+        <div style="margin-top: 1.5rem;">
+            <span class="badge badge-green">make run</span>
+            <span class="badge badge-green">localhost:8443</span>
+        </div>
+        <div class="code-box" style="margin-top: 2rem; text-align: center;">
 <span class="comment"># TL;DR pour commencer</span>
-<span class="command">git clone</span> [repo] && <span class="command">cd</span> autostrike && <span class="command">make dev</span>
+<span class="command">git clone</span> [repo] && <span class="command">cd</span> autostrike && <span class="command">make run</span>
         </div>
     </section>
 
     <script>
+        // Generate nav dots dynamically
+        const slides = document.querySelectorAll('.slide');
+        const navDots = document.getElementById('nav-dots');
+        slides.forEach((_, i) => {
+            const dot = document.createElement('div');
+            dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+            dot.onclick = () => scrollToSlide(i);
+            navDots.appendChild(dot);
+        });
+
         function scrollToSlide(index) {
-            const slides = document.querySelectorAll('.slide');
             if (slides[index]) {
                 slides[index].scrollIntoView({ behavior: 'smooth' });
             }
         }
 
-        const slides = document.querySelectorAll('.slide');
         const dots = document.querySelectorAll('.nav-dot');
 
         const observer = new IntersectionObserver((entries) => {

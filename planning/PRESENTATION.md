@@ -140,16 +140,19 @@ make agent
 | **Rust** | "Les agents Python se font bloquer par Windows Defender. Rust compile en natif, passe sous les radars. C'est un choix de sécurité, pas de confort." |
 | **React** | "Framework le plus populaire, tout le monde peut contribuer. TypeScript évite les bugs runtime." |
 
-### Réponses aux objections
+### Reponses aux objections
 
 **"On aurait pu faire plus simple"**
-> "Simple = Python partout. Mais un agent Python se fait détecter en 2 secondes par un AV. On a fait les choix d'un outil de sécu **professionnel**."
+> "Simple = Python partout. Mais un agent Python se fait detecter en 2 secondes par un AV. On a fait les choix d'un outil de secu **professionnel**."
 
 **"Je connais pas Go/Rust"**
-> "Pas besoin de tout maîtriser. Tu peux contribuer sur React (dashboard), YAML (techniques), ou Markdown (docs). L'archi découplée permet de bosser isolément."
+> "Pas besoin de tout maitriser. Tu peux contribuer sur React (dashboard), YAML (techniques), ou Markdown (docs). L'archi decouplée permet de bosser isolement."
 
-**"Pourquoi pas repartir de zéro ?"**
-> "On a 447 tests qui passent, une API complète, un agent fonctionnel, de la doc. Repartir = perdre minimum 2-3 semaines. Autant avancer sur les features."
+**"Pourquoi pas repartir de zero ?"**
+> "On a 780+ tests qui passent, 48 techniques MITRE, une auth complete avec RBAC, du scheduling, des notifications, Docker ready. Repartir = perdre des mois de travail."
+
+**"Pourquoi pas utiliser Caldera directement ?"**
+> "Caldera est en Python, plus lourd. Notre agent Rust est plus discret. Et on a des features que Caldera n'a pas : scoring, analytics, scheduling, RBAC granulaire. On peut meme aller plus loin avec les planners et facts."
 
 ### L'avantage de l'architecture hexagonale
 
@@ -194,37 +197,107 @@ make agent
 
 ---
 
-## 12. Points forts à mentionner
+## 12. Points forts a mentionner
 
-- **447 tests** qui passent (193 server + 193 dashboard + 61 agent)
-- **Documentation complète** (MkDocs déployé sur GitHub Pages)
-- **CI/CD** déjà en place (GitHub Actions)
-- **Code coverage** avec SonarCloud (97%+ sur le domaine)
-- Architecture **modulaire** et **découplée**
-- Prêt pour une **démo fonctionnelle**
-
----
-
-## 13. Ce qui reste à faire
-
-- Authentification complète (login UI)
-- Plus de techniques MITRE
-- Export PDF des rapports
-- Tests end-to-end
-- Déploiement production (Docker Compose)
+- **780+ tests** qui passent (200+ server + 513 dashboard + 67 agent)
+- **48 techniques MITRE** couvrant **13 tactiques sur 14** (de Reconnaissance a Impact)
+- **Documentation complete** (MkDocs deploye sur GitHub Pages)
+- **CI/CD** deja en place (GitHub Actions : build Go/Rust/Node, tests, Docker, SonarCloud)
+- **Code coverage** 95%+ sur le domaine
+- **Authentification complete** : JWT, 5 roles, 28 permissions, token blacklist
+- **Scheduling** : executions planifiees (cron, daily, weekly, monthly)
+- **Notifications** : email SMTP + webhooks
+- **Security hardening** : rate limiting, security headers, CSP, HSTS
+- **Docker ready** : docker-compose prod + dev + 3 Dockerfiles multi-stage
+- Architecture **modulaire** et **decouplee** (hexagonale)
+- Pret pour une **demo fonctionnelle**
+- Couvre **~80% des features de MITRE Caldera** avec des avantages uniques (scoring, analytics, scheduling)
 
 ---
 
-## 14. Répartition des 55k lignes
+## 13. Ce qui reste a faire
+
+### Priorite haute
+- **Profils adversaires APT** : scenarios predefinis APT29, Ransomware, Insider Threat (specs deja ecrites)
+- **Export PDF rapports** : handler backend + generateur PDF + page Reports
+
+### Priorite moyenne
+- **ScenarioBuilder visuel** : editeur drag & drop de phases/techniques
+- **Cleanup automatique** : commandes de nettoyage post-execution (champ deja dans le protocole)
+- **Agent auto-deploy** : endpoints pour generer les scripts d'installation
+- **LiveLogs** : page logs temps reel via WebSocket
+
+### Stretch Goals (features Caldera-like)
+- **Planners intelligents** : enchainement conditionnel (si echec → skip, si succes → continuer)
+- **Facts system** : passer des donnees entre techniques (ex: users decouverts → cibles brute force)
+- **Obfuscation** : encoder les commandes (Base64, concatenation)
+- **Recommandations remediation** : mapping mitigations ATT&CK automatique post-execution
+
+---
+
+## 14. Repartition du code
 
 | Composant | Lignes | Notes |
 |-----------|--------|-------|
-| Server (Go) | ~13,200 | Code + tests |
-| Dashboard (React) | ~5,800 | Code + tests |
-| Agent (Rust) | ~1,500 | |
+| Server (Go) | ~14,000 | Code + 200+ tests |
+| Dashboard (React) | ~16,400 | Code + 513 tests |
+| Agent (Rust) | ~1,700 | 67 tests |
+| Techniques YAML | ~1,200 | 48 techniques, 13 tactiques |
 | Docs (MkDocs) | ~2,300 | |
-| package-lock.json | ~5,500 | Auto-généré |
-| Cargo.lock | ~2,100 | Auto-généré |
-| CI/CD, configs | ~25,000 | YAML, Docker, etc. |
+| CI/CD, Docker, configs | ~2,000 | GitHub Actions, Dockerfiles, Makefile |
 
-**Code réel : ~15k lignes** (le reste c'est des fichiers auto-générés et configs)
+**Code source : ~18k lignes** (server + agent + dashboard, hors tests, docs et fichiers auto-generes)
+
+## 15. Comparaison avec MITRE Caldera
+
+> "AutoStrike c'est comme un Caldera custom. On couvre 80% de ses features core, mais on a des trucs qu'il n'a pas."
+
+### Ce qu'on a que Caldera n'a pas
+| Feature | Detail |
+|---------|--------|
+| **Scheduling** | Cron, daily, weekly, monthly (Caldera n'a pas ca nativement) |
+| **Security Score** | Score 0-100 avec formule blocked/detected/success |
+| **Analytics** | Comparaison entre periodes, tendances, graphiques |
+| **RBAC** | 5 roles, 28 permissions granulaires |
+| **Notifications** | Email SMTP + webhooks automatiques |
+
+### Ce qui nous manque vs Caldera
+| Feature | Description | Effort |
+|---------|-------------|--------|
+| **Planners intelligents** | Enchainement conditionnel des techniques | 22h |
+| **Facts system** | Passer des donnees entre techniques | 18h |
+| **Profils APT** | Scenarios predefinis (specs deja ecrites) | 5h |
+| **Recommandations** | Mitigations ATT&CK post-execution | 13h |
+
+### Reponse a "Pourquoi pas juste utiliser Caldera ?"
+> "Caldera c'est Python, c'est plus lourd a deployer, et il n'a pas de scoring, pas de scheduling, pas d'analytics. Notre agent Rust est plus leger et plus discret qu'un agent Python. Et on a une architecture hexagonale propre qui permet d'evoluer facilement."
+
+---
+
+## 16. Vision V2 : Autonomous Threat Emulation
+
+> Detail complet dans [VISION_V2.md](./VISION_V2.md)
+
+### Le pivot strategique
+> "On passe d'un test statique (l'utilisateur choisit tout) a un test dynamique (l'outil decide seul). On ne change pas le but (tester la defense), on change la qualite du test."
+
+### Ce que ca change concrètement
+
+| Avant (V1) | Apres (V2) |
+|-------------|------------|
+| L'utilisateur cree un scenario | L'utilisateur donne une IP cible |
+| L'agent execute une liste fixe | L'agent s'adapte aux resultats |
+| Resultat = rapport statique | Resultat = graphe de propagation live |
+| Test ponctuel | Simulation d'une vraie APT |
+
+### Les 3 piliers V2
+
+1. **Decision Engine** : Le serveur Go maintient une "memoire" de la cible et decide de la prochaine action (boucle OODA)
+2. **Agent Avance** : Self-propagation, pivoting reseau, safety rails (garde-fous)
+3. **Dashboard V2** : Attack Graph, Live Terminal IA, Approvals System, Blast Radius
+
+### Objectif demo (soutenance 2028)
+> "On donne une IP a AutoStrike, et le jury voit en temps reel : le graphe de propagation s'etendre, les decisions de l'IA defiler, et la matrice MITRE se remplir. Scan → Exploit → Root → Rapport."
+
+### Reponse a "C'est pas du malware ?"
+> "C'est 100% dans l'esprit BAS. Une vraie menace (APT, ransomware) ne suit pas une liste, elle s'adapte. Si on simule des menaces realistes, notre outil doit s'adapter aussi. La difference avec un vrai virus : nos Safety Rails empechent toute action destructrice. L'agent prouve qu'il POURRAIT le faire sans le faire."

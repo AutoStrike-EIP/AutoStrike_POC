@@ -2,7 +2,10 @@ package handlers
 
 import (
 	"bytes"
+	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -1216,5 +1219,798 @@ func TestAdminHandler_ResetPassword_EmptyID(t *testing.T) {
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// --- Error-returning mock for admin handler to test generic service error paths ---
+
+// errorUserRepo is a mock user repo that can return configurable errors per operation
+type errorUserRepo struct {
+	users          map[string]*entity.User
+	findAllErr     error
+	findByIDErr    error
+	findByUserErr  error
+	findByEmailErr error
+	createErr      error
+	updateErr      error
+	deactivateErr  error
+	reactivateErr  error
+}
+
+func newErrorUserRepo() *errorUserRepo {
+	return &errorUserRepo{users: make(map[string]*entity.User)}
+}
+
+func (m *errorUserRepo) Create(_ context.Context, user *entity.User) error {
+	if m.createErr != nil {
+		return m.createErr
+	}
+	m.users[user.ID] = user
+	return nil
+}
+
+func (m *errorUserRepo) Update(_ context.Context, user *entity.User) error {
+	if m.updateErr != nil {
+		return m.updateErr
+	}
+	m.users[user.ID] = user
+	return nil
+}
+
+func (m *errorUserRepo) Delete(_ context.Context, id string) error {
+	delete(m.users, id)
+	return nil
+}
+
+func (m *errorUserRepo) FindByID(_ context.Context, id string) (*entity.User, error) {
+	if m.findByIDErr != nil {
+		return nil, m.findByIDErr
+	}
+	user, ok := m.users[id]
+	if !ok {
+		return nil, sql.ErrNoRows
+	}
+	return user, nil
+}
+
+func (m *errorUserRepo) FindByUsername(_ context.Context, username string) (*entity.User, error) {
+	if m.findByUserErr != nil {
+		return nil, m.findByUserErr
+	}
+	for _, user := range m.users {
+		if user.Username == username {
+			return user, nil
+		}
+	}
+	return nil, sql.ErrNoRows
+}
+
+func (m *errorUserRepo) FindByEmail(_ context.Context, email string) (*entity.User, error) {
+	if m.findByEmailErr != nil {
+		return nil, m.findByEmailErr
+	}
+	for _, user := range m.users {
+		if user.Email == email {
+			return user, nil
+		}
+	}
+	return nil, sql.ErrNoRows
+}
+
+func (m *errorUserRepo) FindAll(_ context.Context) ([]*entity.User, error) {
+	if m.findAllErr != nil {
+		return nil, m.findAllErr
+	}
+	result := make([]*entity.User, 0, len(m.users))
+	for _, user := range m.users {
+		result = append(result, user)
+	}
+	return result, nil
+}
+
+func (m *errorUserRepo) FindActive(_ context.Context) ([]*entity.User, error) {
+	result := make([]*entity.User, 0)
+	for _, user := range m.users {
+		if user.IsActive {
+			result = append(result, user)
+		}
+	}
+	return result, nil
+}
+
+func (m *errorUserRepo) UpdateLastLogin(_ context.Context, id string) error {
+	return nil
+}
+
+func (m *errorUserRepo) Deactivate(_ context.Context, id string) error {
+	if m.deactivateErr != nil {
+		return m.deactivateErr
+	}
+	if user, ok := m.users[id]; ok {
+		user.IsActive = false
+	}
+	return nil
+}
+
+func (m *errorUserRepo) Reactivate(_ context.Context, id string) error {
+	if m.reactivateErr != nil {
+		return m.reactivateErr
+	}
+	if user, ok := m.users[id]; ok {
+		user.IsActive = true
+	}
+	return nil
+}
+
+func (m *errorUserRepo) CountByRole(_ context.Context, role entity.UserRole) (int, error) {
+	count := 0
+	for _, user := range m.users {
+		if user.Role == role && user.IsActive {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (m *errorUserRepo) DeactivateAdminIfNotLast(_ context.Context, id string) error {
+	if m.deactivateErr != nil {
+		return m.deactivateErr
+	}
+	user, ok := m.users[id]
+	if !ok {
+		return errors.New("user not found")
+	}
+	user.IsActive = false
+	return nil
+}
+
+// --- Tests for generic error paths in admin handler ---
+
+func TestAdminHandler_ListUsers_ServiceError(t *testing.T) {
+	repo := newErrorUserRepo()
+	repo.findAllErr = errors.New("database connection lost")
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	router := gin.New()
+	router.GET("/users", func(c *gin.Context) {
+		c.Set("role", "admin")
+		handler.ListUsers(c)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/users", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if response["error"] != "failed to get users" {
+		t.Errorf("Expected error 'failed to get users', got %q", response["error"])
+	}
+}
+
+func TestAdminHandler_GetUser_GenericServiceError(t *testing.T) {
+	repo := newErrorUserRepo()
+	repo.findByIDErr = errors.New("database connection lost")
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	router := gin.New()
+	router.GET("/users/:id", func(c *gin.Context) {
+		c.Set("role", "admin")
+		handler.GetUser(c)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/users/user-1", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if response["error"] != "failed to get user" {
+		t.Errorf("Expected error 'failed to get user', got %q", response["error"])
+	}
+}
+
+func TestAdminHandler_CreateUser_GenericServiceError(t *testing.T) {
+	repo := newErrorUserRepo()
+	repo.createErr = errors.New("database write error")
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	router := gin.New()
+	router.POST("/users", func(c *gin.Context) {
+		c.Set("role", "admin")
+		handler.CreateUser(c)
+	})
+
+	body := CreateUserRequest{
+		Username: "newuser",
+		Email:    "new@example.com",
+		Password: "password123",
+		Role:     "viewer",
+	}
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/users", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if response["error"] != "failed to create user" {
+		t.Errorf("Expected error 'failed to create user', got %q", response["error"])
+	}
+}
+
+func TestAdminHandler_UpdateUser_GenericGetError(t *testing.T) {
+	// Tests the generic error path in UpdateUser when GetUser fails with non-ErrUserNotFound
+	repo := newErrorUserRepo()
+	repo.findByIDErr = errors.New("database connection lost")
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	router := gin.New()
+	router.PUT("/users/:id", func(c *gin.Context) {
+		c.Set("role", "admin")
+		handler.UpdateUser(c)
+	})
+
+	body := UpdateUserRequest{Username: "newname"}
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PUT", "/users/user-1", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if response["error"] != "failed to get user" {
+		t.Errorf("Expected error 'failed to get user', got %q", response["error"])
+	}
+}
+
+func TestAdminHandler_UpdateUser_GenericUpdateError(t *testing.T) {
+	// Tests the generic error path in UpdateUser when authService.UpdateUser fails with generic error
+	repo := newErrorUserRepo()
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password"), 10)
+	repo.users["user-1"] = &entity.User{
+		ID:           "user-1",
+		Username:     "testuser",
+		Email:        "test@example.com",
+		PasswordHash: string(hashedPassword),
+		Role:         entity.RoleViewer,
+		IsActive:     true,
+	}
+	repo.updateErr = errors.New("database write error")
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	router := gin.New()
+	router.PUT("/users/:id", func(c *gin.Context) {
+		c.Set("role", "admin")
+		handler.UpdateUser(c)
+	})
+
+	body := UpdateUserRequest{Email: "newemail@example.com"}
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PUT", "/users/user-1", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if response["error"] != "failed to update user" {
+		t.Errorf("Expected error 'failed to update user', got %q", response["error"])
+	}
+}
+
+func TestAdminHandler_UpdateUserRole_GenericServiceError(t *testing.T) {
+	// Tests generic error path in UpdateUserRole when service returns non-ErrUserNotFound
+	repo := newErrorUserRepo()
+	repo.findByIDErr = errors.New("database connection lost")
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	router := gin.New()
+	router.PUT("/users/:id/role", func(c *gin.Context) {
+		c.Set("role", "admin")
+		handler.UpdateUserRole(c)
+	})
+
+	body := UpdateRoleRequest{Role: "viewer"}
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PUT", "/users/user-1/role", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if response["error"] != "failed to update user role" {
+		t.Errorf("Expected error 'failed to update user role', got %q", response["error"])
+	}
+}
+
+func TestAdminHandler_DeactivateUser_GenericServiceError(t *testing.T) {
+	// Tests generic error path in DeactivateUser when service returns unknown error
+	repo := newErrorUserRepo()
+	repo.users["user-1"] = &entity.User{
+		ID:       "user-1",
+		Username: "testuser",
+		Email:    "test@example.com",
+		Role:     entity.RoleViewer,
+		IsActive: true,
+	}
+	repo.deactivateErr = errors.New("database connection lost")
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	router := gin.New()
+	router.DELETE("/users/:id", func(c *gin.Context) {
+		c.Set("role", "admin")
+		c.Set("user_id", "admin-1") // Different user
+		handler.DeactivateUser(c)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("DELETE", "/users/user-1", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if response["error"] != "failed to deactivate user" {
+		t.Errorf("Expected error 'failed to deactivate user', got %q", response["error"])
+	}
+}
+
+func TestAdminHandler_ReactivateUser_GenericServiceError(t *testing.T) {
+	// Tests generic error path in ReactivateUser when service returns non-ErrUserNotFound
+	repo := newErrorUserRepo()
+	repo.findByIDErr = errors.New("database connection lost")
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	router := gin.New()
+	router.POST("/users/:id/reactivate", func(c *gin.Context) {
+		c.Set("role", "admin")
+		handler.ReactivateUser(c)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/users/user-1/reactivate", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if response["error"] != "failed to reactivate user" {
+		t.Errorf("Expected error 'failed to reactivate user', got %q", response["error"])
+	}
+}
+
+func TestAdminHandler_ResetPassword_GenericServiceError(t *testing.T) {
+	// Tests generic error path in ResetPassword when service returns non-ErrUserNotFound
+	repo := newErrorUserRepo()
+	repo.findByIDErr = errors.New("database connection lost")
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	router := gin.New()
+	router.POST("/users/:id/reset-password", func(c *gin.Context) {
+		c.Set("role", "admin")
+		handler.ResetPassword(c)
+	})
+
+	body := ResetPasswordRequest{NewPassword: "newpassword123"}
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/users/user-1/reset-password", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if response["error"] != "failed to reset password" {
+		t.Errorf("Expected error 'failed to reset password', got %q", response["error"])
+	}
+}
+
+func TestAdminHandler_CreateUser_DuplicateEmail(t *testing.T) {
+	repo := newMockUserRepo()
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	repo.users["user-1"] = &entity.User{
+		ID:       "user-1",
+		Username: "existinguser",
+		Email:    "existing@example.com",
+		Role:     entity.RoleViewer,
+		IsActive: true,
+	}
+
+	router := gin.New()
+	router.POST("/users", func(c *gin.Context) {
+		c.Set("role", "admin")
+		handler.CreateUser(c)
+	})
+
+	body := CreateUserRequest{
+		Username: "newuser",
+		Email:    "existing@example.com", // Duplicate email
+		Password: "password123",
+		Role:     "viewer",
+	}
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/users", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusConflict {
+		t.Errorf("Expected status 409 for duplicate email, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAdminHandler_CreateUser_ShortPassword(t *testing.T) {
+	repo := newMockUserRepo()
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	router := gin.New()
+	router.POST("/users", func(c *gin.Context) {
+		c.Set("role", "admin")
+		handler.CreateUser(c)
+	})
+
+	body := CreateUserRequest{
+		Username: "newuser",
+		Email:    "new@example.com",
+		Password: "short", // Less than 8 chars
+		Role:     "viewer",
+	}
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/users", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for short password, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAdminHandler_CreateUser_ShortUsername(t *testing.T) {
+	repo := newMockUserRepo()
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	router := gin.New()
+	router.POST("/users", func(c *gin.Context) {
+		c.Set("role", "admin")
+		handler.CreateUser(c)
+	})
+
+	body := CreateUserRequest{
+		Username: "ab", // Less than 3 chars
+		Email:    "new@example.com",
+		Password: "password123",
+		Role:     "viewer",
+	}
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/users", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for short username, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAdminHandler_CreateUser_InvalidEmail(t *testing.T) {
+	repo := newMockUserRepo()
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	router := gin.New()
+	router.POST("/users", func(c *gin.Context) {
+		c.Set("role", "admin")
+		handler.CreateUser(c)
+	})
+
+	body := CreateUserRequest{
+		Username: "newuser",
+		Email:    "not-an-email",
+		Password: "password123",
+		Role:     "viewer",
+	}
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/users", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for invalid email, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAdminHandler_UpdateUser_DuplicateEmail(t *testing.T) {
+	repo := newMockUserRepo()
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password"), 10)
+	repo.users["user-1"] = &entity.User{
+		ID:           "user-1",
+		Username:     "user1",
+		Email:        "user1@example.com",
+		PasswordHash: string(hashedPassword),
+		Role:         entity.RoleViewer,
+	}
+	repo.users["user-2"] = &entity.User{
+		ID:           "user-2",
+		Username:     "user2",
+		Email:        "user2@example.com",
+		PasswordHash: string(hashedPassword),
+		Role:         entity.RoleViewer,
+	}
+
+	router := gin.New()
+	router.PUT("/users/:id", func(c *gin.Context) {
+		c.Set("role", "admin")
+		handler.UpdateUser(c)
+	})
+
+	body := UpdateUserRequest{Email: "user2@example.com"} // Duplicate email
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PUT", "/users/user-1", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusConflict {
+		t.Errorf("Expected status 409 for duplicate email, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAdminHandler_DeactivateUser_NoUserIDInContext(t *testing.T) {
+	// Tests the edge case where user_id is not set in context for DeactivateUser
+	repo := newMockUserRepo()
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	repo.users["user-1"] = &entity.User{
+		ID:       "user-1",
+		Username: "testuser",
+		Email:    "test@example.com",
+		Role:     entity.RoleViewer,
+		IsActive: true,
+	}
+
+	router := gin.New()
+	router.DELETE("/users/:id", func(c *gin.Context) {
+		c.Set("role", "admin")
+		// No user_id set - currentUserID will be empty string
+		handler.DeactivateUser(c)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("DELETE", "/users/user-1", nil)
+	router.ServeHTTP(w, req)
+
+	// Should succeed because empty string != "user-1"
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAdminHandler_ResetPassword_WeakPassword(t *testing.T) {
+	repo := newMockUserRepo()
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("oldpassword"), 10)
+	repo.users["user-1"] = &entity.User{
+		ID:           "user-1",
+		Username:     "testuser",
+		Email:        "test@example.com",
+		PasswordHash: string(hashedPassword),
+		Role:         entity.RoleViewer,
+		IsActive:     true,
+	}
+
+	router := gin.New()
+	router.POST("/users/:id/reset-password", func(c *gin.Context) {
+		c.Set("role", "admin")
+		handler.ResetPassword(c)
+	})
+
+	// Password less than 8 characters should fail validation
+	body := ResetPasswordRequest{NewPassword: "short"}
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/users/user-1/reset-password", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for weak password, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAdminHandler_UpdateUser_InvalidEmailFormat(t *testing.T) {
+	repo := newMockUserRepo()
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password"), 10)
+	repo.users["user-1"] = &entity.User{
+		ID:           "user-1",
+		Username:     "testuser",
+		Email:        "test@example.com",
+		PasswordHash: string(hashedPassword),
+		Role:         entity.RoleViewer,
+	}
+
+	router := gin.New()
+	router.PUT("/users/:id", func(c *gin.Context) {
+		c.Set("role", "admin")
+		handler.UpdateUser(c)
+	})
+
+	body := UpdateUserRequest{Email: "not-an-email"}
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PUT", "/users/user-1", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for invalid email format, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestAdminHandler_UpdateUser_WithValidRole(t *testing.T) {
+	// Tests the mergeUserFields path where a valid non-empty role is provided
+	repo := newMockUserRepo()
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password"), 10)
+	repo.users["user-1"] = &entity.User{
+		ID:           "user-1",
+		Username:     "testuser",
+		Email:        "test@example.com",
+		PasswordHash: string(hashedPassword),
+		Role:         entity.RoleViewer,
+		IsActive:     true,
+	}
+
+	router := gin.New()
+	router.PUT("/users/:id", func(c *gin.Context) {
+		c.Set("role", "admin")
+		handler.UpdateUser(c)
+	})
+
+	// Provide a valid role in the update request to exercise the mergeUserFields valid-role path
+	body := UpdateUserRequest{Role: "operator"}
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PUT", "/users/user-1", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var response UserResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if response.Role != "operator" {
+		t.Errorf("Expected role 'operator', got %q", response.Role)
+	}
+}
+
+func TestAdminHandler_UpdateUser_ShortUsername(t *testing.T) {
+	repo := newMockUserRepo()
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAdminHandler(service)
+
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password"), 10)
+	repo.users["user-1"] = &entity.User{
+		ID:           "user-1",
+		Username:     "testuser",
+		Email:        "test@example.com",
+		PasswordHash: string(hashedPassword),
+		Role:         entity.RoleViewer,
+	}
+
+	router := gin.New()
+	router.PUT("/users/:id", func(c *gin.Context) {
+		c.Set("role", "admin")
+		handler.UpdateUser(c)
+	})
+
+	body := UpdateUserRequest{Username: "ab"} // Less than 3 chars
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PUT", "/users/user-1", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for short username, got %d: %s", w.Code, w.Body.String())
 	}
 }

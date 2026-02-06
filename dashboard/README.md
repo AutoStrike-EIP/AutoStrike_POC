@@ -12,9 +12,21 @@ dashboard/
 │   ├── index.css             # Styles globaux + Tailwind
 │   ├── components/
 │   │   ├── Layout.tsx        # Layout avec sidebar + logout
-│   │   └── ProtectedRoute.tsx # Protection des routes
+│   │   ├── ProtectedRoute.tsx # Protection des routes
+│   │   ├── MitreMatrix.tsx   # Matrice MITRE ATT&CK interactive
+│   │   ├── RunExecutionModal.tsx # Modal de lancement d'exécution
+│   │   ├── SecurityScore.tsx # Visualisation du score de sécurité
+│   │   ├── CoverageReport.tsx # Rapport de couverture MITRE
+│   │   ├── Modal.tsx         # Composant modal réutilisable
+│   │   ├── Table.tsx         # Composant table réutilisable
+│   │   ├── ThemeToggle.tsx   # Toggle thème sombre/clair
+│   │   ├── LoadingState.tsx  # Spinner de chargement
+│   │   ├── EmptyState.tsx    # État vide
+│   │   └── ErrorBoundary.tsx # Gestion d'erreurs
 │   ├── contexts/
 │   │   └── AuthContext.tsx   # État d'authentification
+│   ├── hooks/
+│   │   └── useWebSocket.ts  # Hook WebSocket temps réel
 │   ├── pages/
 │   │   ├── Dashboard.tsx     # Vue d'ensemble, graphiques
 │   │   ├── Agents.tsx        # Gestion des agents
@@ -44,12 +56,18 @@ dashboard/
 |-------------|---------|-------|
 | React | 18.2 | Framework UI |
 | TypeScript | 5.3 | Typage statique |
-| Vite | 5.0 | Build tool |
+| Vite | 7.3 | Build tool |
 | TailwindCSS | 3.4 | Styling |
 | TanStack Query | 5.17 | Data fetching |
 | React Router | 6.21 | Routing |
 | Chart.js | 4.4 | Graphiques |
 | Axios | 1.6 | HTTP client |
+| Zustand | 4.4 | State management |
+| Headless UI | 1.7 | Composants accessibles |
+| Heroicons | 2.1 | Icônes SVG |
+| date-fns | 3.2 | Formatage de dates |
+| react-hot-toast | 2.4 | Notifications toast |
+| Vitest | 4.0 | Tests unitaires |
 
 ## Prérequis
 
@@ -77,7 +95,8 @@ npm run build
 | `npm run build` | Build de production |
 | `npm run preview` | Preview du build |
 | `npm run lint` | Vérification ESLint |
-| `npm run test` | Tests Vitest |
+| `npm run type-check` | Vérification TypeScript |
+| `npm test` | Tests Vitest (513 tests) |
 
 ## Configuration
 
@@ -110,11 +129,11 @@ server: {
 import { api } from '@/lib/api';
 ```
 
-## Pages
+## Pages (13 pages)
 
 ### Dashboard (`/dashboard`)
 - Statistiques agents online/total
-- Score de sécurité global
+- Score de sécurité global (composant SecurityScore)
 - Graphique donut des résultats (blocked/detected/successful)
 - Activité récente
 
@@ -124,27 +143,31 @@ import { api } from '@/lib/api';
 - Last seen avec formatage relatif
 
 ### Techniques (`/techniques`)
-- Tableau des techniques MITRE ATT&CK
+- Tableau des 48 techniques MITRE ATT&CK
 - Filtrage par tactique et plateforme
 - Badge safe/unsafe
 - Import depuis fichiers YAML
 
+### Matrix (`/matrix`)
+- Matrice MITRE ATT&CK interactive (14 colonnes)
+- Statistiques de couverture (composant CoverageReport)
+- Filtrage par plateforme
+
 ### Scenarios (`/scenarios`)
 - Cartes de scénarios avec phases
 - Tags et nombre de techniques
-- Bouton Run
+- Bouton Run → RunExecutionModal
+- Import/export
 
 ### Executions (`/executions`)
 - Historique des exécutions
 - Score, statut, mode (safe/full)
-- Détails des résultats par technique
+- Mises à jour temps réel via WebSocket
 
-### Settings (`/settings`)
-- Configuration serveur
-- Mode safe par défaut
-- Paramètres agents (heartbeat, timeout)
-- Chemins certificats TLS
-- Paramètres de notification
+### ExecutionDetails (`/executions/:id`)
+- Détails des résultats par technique
+- Breakdown blocked/detected/successful
+- Output extensible
 
 ### Analytics (`/analytics`)
 - Graphiques de tendance du score (7j, 30j, 90j)
@@ -153,55 +176,49 @@ import { api } from '@/lib/api';
 - Score par tactique
 
 ### Scheduler (`/scheduler`)
-- Liste des planifications
 - Création/modification de schedules
 - Fréquences (once, hourly, daily, weekly, monthly, cron)
 - Historique des exécutions par schedule
-- Pause/reprise des schedules
+- Pause/reprise
+
+### Settings (`/settings`)
+- Configuration serveur
+- Mode safe par défaut
+- Paramètres de notification
+
+### Login (`/login`)
+- Formulaire de connexion
 
 ### Admin/Users (`/admin/users`)
-- Liste des utilisateurs
-- Création/modification d'utilisateurs
-- Attribution des rôles (admin, rssi, operator, analyst, viewer)
+- Gestion des utilisateurs (5 rôles: admin, rssi, operator, analyst, viewer)
 - Activation/désactivation
 
 ### Admin/Permissions (`/admin/permissions`)
-- Matrice des permissions par rôle
-- Permissions de l'utilisateur courant
-- Catégories de permissions
+- Matrice des 28 permissions par rôle
 
-## Composants UI
+## Composants (12)
 
-### Classes CSS Personnalisées
-
-```css
-.btn-primary    /* Bouton bleu */
-.btn-danger     /* Bouton rouge */
-.card           /* Carte avec ombre */
-.input          /* Champ de saisie */
-.badge          /* Badge inline */
-.badge-success  /* Badge vert */
-.badge-danger   /* Badge rouge */
-.badge-warning  /* Badge orange */
-```
-
-### Couleurs (Tailwind)
-
-```javascript
-colors: {
-  primary: { 50-950 },   // Bleu
-  danger: { 50, 500, 600 },
-  success: { 50, 500, 600 },
-  warning: { 50, 500, 600 },
-}
-```
+| Composant | Description |
+|-----------|-------------|
+| Layout | Sidebar navigation + logout |
+| ProtectedRoute | Protection des routes |
+| MitreMatrix | Matrice MITRE ATT&CK interactive |
+| RunExecutionModal | Modal de configuration d'exécution |
+| SecurityScore | Visualisation du score |
+| CoverageReport | Rapport de couverture MITRE |
+| Modal | Modal réutilisable |
+| Table | Table réutilisable |
+| ThemeToggle | Toggle thème sombre/clair |
+| LoadingState | Spinner de chargement |
+| EmptyState | État vide |
+| ErrorBoundary | Gestion d'erreurs |
 
 ## API Client
 
 Le client API (`src/lib/api.ts`) :
-- Base URL: `/api`
+- Base URL: `/api/v1`
 - Intercepteur pour token JWT
-- Redirection vers `/login` sur 401
+- Gestion du 401 (redirection login)
 
 ```typescript
 import { api } from '@/lib/api';
@@ -238,14 +255,19 @@ Le conteneur utilise Nginx pour servir les fichiers statiques avec :
 
 ## Tests
 
+513 tests across 25 fichiers :
+
 ```bash
-npm run test
+npm test          # Mode watch
+npm test -- --run # Une seule exécution
+npm test -- --coverage # Avec couverture
 ```
 
 ## Linting
 
 ```bash
 npm run lint
+npm run type-check
 ```
 
 Configuration ESLint stricte avec `max-warnings: 0`.

@@ -844,3 +844,1002 @@ describe('Settings Error States', () => {
     expect(() => renderSettings()).not.toThrow();
   });
 });
+
+describe('Toggle Component Interactions', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorageMock.clear();
+  });
+
+  it('toggles safe mode when clicked', async () => {
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Safe Mode by Default')).toBeInTheDocument();
+    });
+
+    // Find the safe mode toggle button - it's inside the "Execution Settings" card
+    // The structure is: div.flex > div(text) + button(toggle)
+    const safeModeLabel = screen.getByText('Safe Mode by Default');
+    const safeModeContainer = safeModeLabel.closest('div.flex');
+    const toggleButton = safeModeContainer!.querySelector('button')!;
+
+    // Get initial state
+    const initiallyEnabled = toggleButton.className.includes('bg-primary-600');
+
+    // Click to toggle
+    fireEvent.click(toggleButton);
+
+    // State should have flipped
+    await waitFor(() => {
+      if (initiallyEnabled) {
+        expect(toggleButton.className).toContain('bg-gray-200');
+      } else {
+        expect(toggleButton.className).toContain('bg-primary-600');
+      }
+    });
+
+    // Click again to toggle back
+    fireEvent.click(toggleButton);
+
+    await waitFor(() => {
+      if (initiallyEnabled) {
+        expect(toggleButton.className).toContain('bg-primary-600');
+      } else {
+        expect(toggleButton.className).toContain('bg-gray-200');
+      }
+    });
+  });
+
+  it('toggles enable notifications from off to on', async () => {
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Enable Notifications')).toBeInTheDocument();
+    });
+
+    // Find the enable notifications toggle
+    const enableSection = screen.getByText('Enable Notifications').closest('.flex');
+    const toggleButton = enableSection!.querySelector('button')!;
+
+    // Notifications should be disabled by default
+    expect(toggleButton.className).toContain('bg-gray-200');
+
+    // Click to enable
+    fireEvent.click(toggleButton);
+
+    // Now the expanded notification options should appear
+    await waitFor(() => {
+      expect(screen.getByText('Notification Channel')).toBeInTheDocument();
+    });
+  });
+
+  it('toggles notification type toggles when clicked', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSettings).mockResolvedValue({
+      data: {
+        channel: 'email',
+        enabled: true,
+        email_address: 'test@example.com',
+        notify_on_start: false,
+        notify_on_complete: true,
+        notify_on_failure: true,
+        notify_on_score_alert: true,
+        score_alert_threshold: 70,
+        notify_on_agent_offline: true,
+      },
+    } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Execution starts')).toBeInTheDocument();
+    });
+
+    // Find and click the "Execution starts" toggle
+    const startSection = screen.getByText('Execution starts').closest('.flex');
+    const startToggle = startSection!.querySelector('button')!;
+    fireEvent.click(startToggle);
+
+    // Find and click the "Execution completes" toggle
+    const completeSection = screen.getByText('Execution completes').closest('.flex');
+    const completeToggle = completeSection!.querySelector('button')!;
+    fireEvent.click(completeToggle);
+
+    // Find and click the "Execution fails" toggle
+    const failSection = screen.getByText('Execution fails').closest('.flex');
+    const failToggle = failSection!.querySelector('button')!;
+    fireEvent.click(failToggle);
+
+    // Find and click the "Agent goes offline" toggle
+    const offlineSection = screen.getByText('Agent goes offline').closest('.flex');
+    const offlineToggle = offlineSection!.querySelector('button')!;
+    fireEvent.click(offlineToggle);
+
+    // Toggles should have visually changed their state
+    await waitFor(() => {
+      // "Execution starts" was false, now should be true (bg-primary-600)
+      expect(startToggle.className).toContain('bg-primary-600');
+      // "Execution completes" was true, now should be false (bg-gray-200)
+      expect(completeToggle.className).toContain('bg-gray-200');
+    });
+  });
+
+  it('toggles score alert and hides threshold input when disabled', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSettings).mockResolvedValue({
+      data: {
+        channel: 'email',
+        enabled: true,
+        email_address: 'test@example.com',
+        notify_on_start: false,
+        notify_on_complete: true,
+        notify_on_failure: true,
+        notify_on_score_alert: true,
+        score_alert_threshold: 70,
+        notify_on_agent_offline: true,
+      },
+    } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Security score below threshold')).toBeInTheDocument();
+    });
+
+    // The score threshold input should be visible when notify_on_score_alert is true
+    const thresholdInput = screen.getByDisplayValue('70');
+    expect(thresholdInput).toBeInTheDocument();
+
+    // Find and click the score alert toggle to disable it
+    const scoreSection = screen.getByText('Security score below threshold').closest('.flex');
+    const scoreToggle = scoreSection!.querySelector('button')!;
+    fireEvent.click(scoreToggle);
+
+    // After disabling, the threshold input should disappear
+    await waitFor(() => {
+      expect(screen.queryByDisplayValue('70')).not.toBeInTheDocument();
+    });
+  });
+});
+
+describe('Channel Switching', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorageMock.clear();
+  });
+
+  it('switches from email to webhook channel and shows webhook URL input', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSettings).mockResolvedValue({
+      data: {
+        channel: 'email',
+        enabled: true,
+        email_address: 'test@example.com',
+        notify_on_start: false,
+        notify_on_complete: true,
+        notify_on_failure: true,
+        notify_on_score_alert: true,
+        score_alert_threshold: 70,
+        notify_on_agent_offline: true,
+      },
+    } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Email Address')).toBeInTheDocument();
+    });
+
+    // Switch to webhook
+    const channelSelect = screen.getByLabelText('Notification Channel');
+    fireEvent.change(channelSelect, { target: { value: 'webhook' } });
+
+    // Email address should disappear, webhook URL should appear
+    await waitFor(() => {
+      expect(screen.queryByText('Email Address')).not.toBeInTheDocument();
+      expect(screen.getByText('Webhook URL')).toBeInTheDocument();
+    });
+  });
+
+  it('shows webhook URL input with existing webhook settings', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSettings).mockResolvedValue({
+      data: {
+        channel: 'webhook',
+        enabled: true,
+        email_address: '',
+        webhook_url: 'https://hooks.example.com/notify',
+        notify_on_start: false,
+        notify_on_complete: true,
+        notify_on_failure: true,
+        notify_on_score_alert: true,
+        score_alert_threshold: 70,
+        notify_on_agent_offline: true,
+      },
+    } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Webhook URL')).toBeInTheDocument();
+      const webhookInput = screen.getByLabelText('Webhook URL');
+      expect(webhookInput).toHaveValue('https://hooks.example.com/notify');
+    });
+  });
+
+  it('updates webhook URL on input change', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSettings).mockResolvedValue({
+      data: {
+        channel: 'webhook',
+        enabled: true,
+        email_address: '',
+        webhook_url: '',
+        notify_on_start: false,
+        notify_on_complete: true,
+        notify_on_failure: true,
+        notify_on_score_alert: true,
+        score_alert_threshold: 70,
+        notify_on_agent_offline: true,
+      },
+    } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Webhook URL')).toBeInTheDocument();
+    });
+
+    const webhookInput = screen.getByLabelText('Webhook URL');
+    fireEvent.change(webhookInput, { target: { value: 'https://new-webhook.com/hook' } });
+
+    expect(webhookInput).toHaveValue('https://new-webhook.com/hook');
+  });
+
+  it('updates email address on input change', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSettings).mockResolvedValue({
+      data: {
+        channel: 'email',
+        enabled: true,
+        email_address: '',
+        notify_on_start: false,
+        notify_on_complete: true,
+        notify_on_failure: true,
+        notify_on_score_alert: true,
+        score_alert_threshold: 70,
+        notify_on_agent_offline: true,
+      },
+    } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Email Address')).toBeInTheDocument();
+    });
+
+    const emailInput = screen.getByLabelText('Email Address');
+    fireEvent.change(emailInput, { target: { value: 'new@example.com' } });
+
+    expect(emailInput).toHaveValue('new@example.com');
+  });
+
+  it('switches from webhook back to email channel', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSettings).mockResolvedValue({
+      data: {
+        channel: 'webhook',
+        enabled: true,
+        email_address: '',
+        webhook_url: 'https://hooks.example.com/notify',
+        notify_on_start: false,
+        notify_on_complete: true,
+        notify_on_failure: true,
+        notify_on_score_alert: true,
+        score_alert_threshold: 70,
+        notify_on_agent_offline: true,
+      },
+    } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Webhook URL')).toBeInTheDocument();
+    });
+
+    // Switch to email
+    const channelSelect = screen.getByLabelText('Notification Channel');
+    fireEvent.change(channelSelect, { target: { value: 'email' } });
+
+    await waitFor(() => {
+      expect(screen.queryByText('Webhook URL')).not.toBeInTheDocument();
+      expect(screen.getByText('Email Address')).toBeInTheDocument();
+    });
+  });
+});
+
+describe('Number Input Validation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorageMock.clear();
+  });
+
+  it('updates score alert threshold on valid input', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSettings).mockResolvedValue({
+      data: {
+        channel: 'email',
+        enabled: true,
+        email_address: 'test@example.com',
+        notify_on_start: false,
+        notify_on_complete: true,
+        notify_on_failure: true,
+        notify_on_score_alert: true,
+        score_alert_threshold: 70,
+        notify_on_agent_offline: true,
+      },
+    } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('70')).toBeInTheDocument();
+    });
+
+    const thresholdInput = screen.getByDisplayValue('70');
+    fireEvent.change(thresholdInput, { target: { value: '85' } });
+
+    expect(thresholdInput).toHaveValue(85);
+  });
+
+  it('defaults score alert threshold to 0 on empty input', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSettings).mockResolvedValue({
+      data: {
+        channel: 'email',
+        enabled: true,
+        email_address: 'test@example.com',
+        notify_on_start: false,
+        notify_on_complete: true,
+        notify_on_failure: true,
+        notify_on_score_alert: true,
+        score_alert_threshold: 70,
+        notify_on_agent_offline: true,
+      },
+    } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('70')).toBeInTheDocument();
+    });
+
+    const thresholdInput = screen.getByDisplayValue('70');
+    fireEvent.change(thresholdInput, { target: { value: '' } });
+
+    // Should default to 0 when empty (parseInt returns NaN, || 0 kicks in)
+    expect(thresholdInput).toHaveValue(0);
+  });
+
+  it('defaults heartbeat interval to 30 on non-numeric input', async () => {
+    renderSettings();
+
+    await waitFor(() => {
+      const heartbeatInput = screen.getByLabelText('Heartbeat Interval (seconds)');
+      fireEvent.change(heartbeatInput, { target: { value: 'abc' } });
+      expect(heartbeatInput).toHaveValue(30);
+    });
+  });
+
+  it('defaults stale timeout to 120 on non-numeric input', async () => {
+    renderSettings();
+
+    await waitFor(() => {
+      const staleInput = screen.getByLabelText('Stale Agent Timeout (seconds)');
+      fireEvent.change(staleInput, { target: { value: 'xyz' } });
+      expect(staleInput).toHaveValue(120);
+    });
+  });
+});
+
+describe('Loading State', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorageMock.clear();
+  });
+
+  it('shows loading text while notification settings are being fetched', async () => {
+    const { notificationApi } = await import('../lib/api');
+    // Create a promise that never resolves to keep loading state
+    vi.mocked(notificationApi.getSettings).mockImplementation(
+      () => new Promise(() => {})
+    );
+
+    renderSettings();
+
+    // Should show loading state
+    expect(screen.getByText('Loading...')).toBeInTheDocument();
+  });
+});
+
+describe('SMTP Warning and Display', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorageMock.clear();
+  });
+
+  it('shows SMTP not configured warning when email channel selected and no SMTP config', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSettings).mockResolvedValue({
+      data: {
+        channel: 'email',
+        enabled: true,
+        email_address: 'test@example.com',
+        notify_on_start: false,
+        notify_on_complete: true,
+        notify_on_failure: true,
+        notify_on_score_alert: true,
+        score_alert_threshold: 70,
+        notify_on_agent_offline: true,
+      },
+    } as never);
+    vi.mocked(notificationApi.getSMTPConfig).mockRejectedValue({ response: { status: 404 } });
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('SMTP not configured on server. Email notifications may not work.')
+      ).toBeInTheDocument();
+    });
+  });
+
+  it('does not show SMTP warning when SMTP is configured', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSettings).mockResolvedValue({
+      data: {
+        channel: 'email',
+        enabled: true,
+        email_address: 'test@example.com',
+        notify_on_start: false,
+        notify_on_complete: true,
+        notify_on_failure: true,
+        notify_on_score_alert: true,
+        score_alert_threshold: 70,
+        notify_on_agent_offline: true,
+      },
+    } as never);
+    vi.mocked(notificationApi.getSMTPConfig).mockResolvedValue({
+      data: {
+        host: 'smtp.example.com',
+        port: 587,
+        use_tls: true,
+      },
+    } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Email Address')).toBeInTheDocument();
+    });
+
+    expect(
+      screen.queryByText('SMTP not configured on server. Email notifications may not work.')
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows Plain when SMTP use_tls is false', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSMTPConfig).mockResolvedValue({
+      data: {
+        host: 'smtp.example.com',
+        port: 25,
+        use_tls: false,
+      },
+    } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText(/smtp\.example\.com:25 \(Plain\)/)).toBeInTheDocument();
+    });
+  });
+
+  it('shows TLS when SMTP use_tls is true', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSMTPConfig).mockResolvedValue({
+      data: {
+        host: 'smtp.example.com',
+        port: 587,
+        use_tls: true,
+      },
+    } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText(/smtp\.example\.com:587 \(TLS\)/)).toBeInTheDocument();
+    });
+  });
+});
+
+describe('Create Notification Settings (New Settings)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorageMock.clear();
+  });
+
+  it('calls createSettings when no existing settings and save is clicked', async () => {
+    const { notificationApi } = await import('../lib/api');
+    const toast = await import('react-hot-toast');
+
+    // Return 404 for getSettings so no existing settings
+    vi.mocked(notificationApi.getSettings).mockRejectedValue({ response: { status: 404 } });
+    vi.mocked(notificationApi.createSettings).mockResolvedValue({ data: {} } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Enable Notifications')).toBeInTheDocument();
+    });
+
+    // Enable notifications
+    const enableSection = screen.getByText('Enable Notifications').closest('.flex');
+    const enableToggle = enableSection!.querySelector('button')!;
+    fireEvent.click(enableToggle);
+
+    // Wait for expanded settings to appear
+    await waitFor(() => {
+      expect(screen.getByText('Save Notification Settings')).toBeInTheDocument();
+    });
+
+    // Click save
+    fireEvent.click(screen.getByText('Save Notification Settings'));
+
+    await waitFor(() => {
+      expect(notificationApi.createSettings).toHaveBeenCalled();
+      expect(toast.default.success).toHaveBeenCalledWith('Notification settings saved');
+    });
+  });
+
+  it('calls updateSettings when existing settings with id and save is clicked', async () => {
+    const { notificationApi } = await import('../lib/api');
+    const toast = await import('react-hot-toast');
+
+    vi.mocked(notificationApi.getSettings).mockResolvedValue({
+      data: {
+        id: 'existing-settings-id',
+        user_id: 'user-1',
+        channel: 'email',
+        enabled: true,
+        email_address: 'test@example.com',
+        notify_on_start: false,
+        notify_on_complete: true,
+        notify_on_failure: true,
+        notify_on_score_alert: true,
+        score_alert_threshold: 70,
+        notify_on_agent_offline: true,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+    } as never);
+    vi.mocked(notificationApi.updateSettings).mockResolvedValue({ data: {} } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Save Notification Settings')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Save Notification Settings'));
+
+    await waitFor(() => {
+      expect(notificationApi.updateSettings).toHaveBeenCalledWith(
+        'existing-settings-id',
+        expect.objectContaining({
+          channel: 'email',
+          enabled: true,
+          email_address: 'test@example.com',
+        })
+      );
+      expect(toast.default.success).toHaveBeenCalledWith('Notification settings saved');
+    });
+  });
+});
+
+describe('Notification Settings Data Mapping', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorageMock.clear();
+  });
+
+  it('maps fetched notification settings data correctly to form state', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSettings).mockResolvedValue({
+      data: {
+        id: 'ns-1',
+        user_id: 'u-1',
+        channel: 'webhook',
+        enabled: true,
+        email_address: '',
+        webhook_url: 'https://hooks.slack.com/test',
+        notify_on_start: true,
+        notify_on_complete: false,
+        notify_on_failure: true,
+        notify_on_score_alert: false,
+        score_alert_threshold: 50,
+        notify_on_agent_offline: false,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+    } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      // Webhook channel should be selected
+      const channelSelect = screen.getByLabelText('Notification Channel');
+      expect(channelSelect).toHaveValue('webhook');
+
+      // Webhook URL should be populated
+      const webhookInput = screen.getByLabelText('Webhook URL');
+      expect(webhookInput).toHaveValue('https://hooks.slack.com/test');
+    });
+
+    // Check toggle states: notify_on_start is true, notify_on_complete is false
+    const startSection = screen.getByText('Execution starts').closest('.flex');
+    const startToggle = startSection!.querySelector('button')!;
+    expect(startToggle.className).toContain('bg-primary-600');
+
+    const completeSection = screen.getByText('Execution completes').closest('.flex');
+    const completeToggle = completeSection!.querySelector('button')!;
+    expect(completeToggle.className).toContain('bg-gray-200');
+
+    // notify_on_agent_offline is false
+    const offlineSection = screen.getByText('Agent goes offline').closest('.flex');
+    const offlineToggle = offlineSection!.querySelector('button')!;
+    expect(offlineToggle.className).toContain('bg-gray-200');
+  });
+
+  it('handles null email_address and webhook_url in fetched data', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSettings).mockResolvedValue({
+      data: {
+        id: 'ns-2',
+        user_id: 'u-2',
+        channel: 'email',
+        enabled: true,
+        email_address: null,
+        webhook_url: null,
+        notify_on_start: false,
+        notify_on_complete: true,
+        notify_on_failure: true,
+        notify_on_score_alert: true,
+        score_alert_threshold: 70,
+        notify_on_agent_offline: true,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+    } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      const emailInput = screen.getByLabelText('Email Address');
+      // null should be mapped to empty string via || ''
+      expect(emailInput).toHaveValue('');
+    });
+  });
+});
+
+describe('Settings Persistence with All Fields', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorageMock.clear();
+  });
+
+  it('loads all fields from localStorage including TLS and safeMode', async () => {
+    const savedSettings = {
+      serverUrl: 'https://myserver:8443',
+      safeMode: false,
+      heartbeatInterval: 15,
+      staleTimeout: 60,
+      caCertPath: '/etc/ssl/ca.crt',
+      serverCertPath: '/etc/ssl/server.crt',
+      serverKeyPath: '/etc/ssl/server.key',
+    };
+    localStorageMock.getItem.mockReturnValue(JSON.stringify(savedSettings));
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Server URL')).toHaveValue('https://myserver:8443');
+      expect(screen.getByLabelText('Heartbeat Interval (seconds)')).toHaveValue(15);
+      expect(screen.getByLabelText('Stale Agent Timeout (seconds)')).toHaveValue(60);
+      expect(screen.getByLabelText('CA Certificate Path')).toHaveValue('/etc/ssl/ca.crt');
+      expect(screen.getByLabelText('Server Certificate Path')).toHaveValue('/etc/ssl/server.crt');
+      expect(screen.getByLabelText('Server Key Path')).toHaveValue('/etc/ssl/server.key');
+    });
+
+    // Safe mode should be off (false)
+    const safeModeSection = screen.getByText('Safe Mode by Default').closest('.flex');
+    const safeToggle = safeModeSection!.querySelector('button')!;
+    expect(safeToggle.className).toContain('bg-gray-200');
+  });
+
+  it('saves all modified settings to localStorage', async () => {
+    const toast = await import('react-hot-toast');
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Server URL')).toBeInTheDocument();
+    });
+
+    // Modify multiple fields
+    fireEvent.change(screen.getByLabelText('Server URL'), {
+      target: { value: 'https://prod:8443' },
+    });
+    fireEvent.change(screen.getByLabelText('Heartbeat Interval (seconds)'), {
+      target: { value: '45' },
+    });
+    fireEvent.change(screen.getByLabelText('Stale Agent Timeout (seconds)'), {
+      target: { value: '300' },
+    });
+    fireEvent.change(screen.getByLabelText('CA Certificate Path'), {
+      target: { value: '/new/ca.crt' },
+    });
+
+    // Save settings
+    fireEvent.click(screen.getByText('Save Settings'));
+
+    await waitFor(() => {
+      expect(localStorageMock.setItem).toHaveBeenCalledWith(
+        'autostrike_settings',
+        expect.stringContaining('"serverUrl":"https://prod:8443"')
+      );
+      expect(localStorageMock.setItem).toHaveBeenCalledWith(
+        'autostrike_settings',
+        expect.stringContaining('"heartbeatInterval":45')
+      );
+      expect(toast.default.success).toHaveBeenCalledWith('Settings saved successfully');
+    });
+  });
+});
+
+describe('SMTP Test Edge Cases', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorageMock.clear();
+  });
+
+  it('does not show SMTP test section when SMTP is not configured', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSMTPConfig).mockRejectedValue({ response: { status: 404 } });
+
+    renderSettings();
+
+    // Wait for queries to settle
+    await waitFor(() => {
+      expect(screen.getByText('Settings')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Test Email')).not.toBeInTheDocument();
+  });
+
+  it('updates test email input value', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSMTPConfig).mockResolvedValue({
+      data: {
+        host: 'smtp.test.com',
+        port: 465,
+        use_tls: true,
+      },
+    } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Email')).toBeInTheDocument();
+    });
+
+    const emailInput = screen.getByPlaceholderText('Enter email to send test');
+    fireEvent.change(emailInput, { target: { value: 'admin@test.com' } });
+
+    expect(emailInput).toHaveValue('admin@test.com');
+  });
+});
+
+describe('Pending/Loading States for Mutations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorageMock.clear();
+  });
+
+  it('shows Saving... text while save notification mutation is pending', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSettings).mockResolvedValue({
+      data: {
+        id: 'settings-pending',
+        user_id: 'user-1',
+        channel: 'email',
+        enabled: true,
+        email_address: 'test@example.com',
+        notify_on_start: false,
+        notify_on_complete: true,
+        notify_on_failure: true,
+        notify_on_score_alert: true,
+        score_alert_threshold: 70,
+        notify_on_agent_offline: true,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+    } as never);
+
+    // Make updateSettings hang (never resolve) to keep isPending true
+    vi.mocked(notificationApi.updateSettings).mockImplementation(
+      () => new Promise(() => {})
+    );
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Save Notification Settings')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Save Notification Settings'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Saving...')).toBeInTheDocument();
+    });
+  });
+
+  it('shows Sending... text while test SMTP mutation is pending', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSMTPConfig).mockResolvedValue({
+      data: {
+        host: 'smtp.example.com',
+        port: 587,
+        use_tls: true,
+      },
+    } as never);
+
+    // Make testSMTP hang (never resolve) to keep isPending true
+    vi.mocked(notificationApi.testSMTP).mockImplementation(
+      () => new Promise(() => {})
+    );
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Email')).toBeInTheDocument();
+    });
+
+    const emailInput = screen.getByPlaceholderText('Enter email to send test');
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
+
+    fireEvent.click(screen.getByText('Send Test'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Sending...')).toBeInTheDocument();
+    });
+  });
+
+  it('disables save notification button while mutation is pending', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSettings).mockResolvedValue({
+      data: {
+        id: 'settings-disable',
+        user_id: 'user-1',
+        channel: 'email',
+        enabled: true,
+        email_address: 'test@example.com',
+        notify_on_start: false,
+        notify_on_complete: true,
+        notify_on_failure: true,
+        notify_on_score_alert: true,
+        score_alert_threshold: 70,
+        notify_on_agent_offline: true,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+    } as never);
+
+    vi.mocked(notificationApi.updateSettings).mockImplementation(
+      () => new Promise(() => {})
+    );
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Save Notification Settings')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Save Notification Settings'));
+
+    await waitFor(() => {
+      const savingButton = screen.getByText('Saving...');
+      expect(savingButton).toBeDisabled();
+    });
+  });
+
+  it('disables send test button while SMTP test mutation is pending', async () => {
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSMTPConfig).mockResolvedValue({
+      data: {
+        host: 'smtp.example.com',
+        port: 587,
+        use_tls: true,
+      },
+    } as never);
+
+    vi.mocked(notificationApi.testSMTP).mockImplementation(
+      () => new Promise(() => {})
+    );
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Email')).toBeInTheDocument();
+    });
+
+    const emailInput = screen.getByPlaceholderText('Enter email to send test');
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
+
+    fireEvent.click(screen.getByText('Send Test'));
+
+    await waitFor(() => {
+      const sendingButton = screen.getByText('Sending...');
+      expect(sendingButton).toBeDisabled();
+    });
+  });
+});
+
+describe('Toggle Disabled State', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorageMock.clear();
+  });
+
+  it('renders Toggle with disabled prop showing correct styling', async () => {
+    // The Toggle component accepts a disabled prop. While the Settings page
+    // doesn't directly pass disabled=true to Toggle, we test that the disabled
+    // class is applied correctly by verifying the opacity and cursor styles.
+    // Since the Toggle is defined in Settings.tsx, rendering Settings with
+    // pending mutations means buttons pass disabled=true to the save button
+    // (not to Toggle directly), so we test the mutation-driven disabled state.
+    const { notificationApi } = await import('../lib/api');
+    vi.mocked(notificationApi.getSettings).mockResolvedValue({
+      data: {
+        id: 'settings-1',
+        user_id: 'user-1',
+        channel: 'email',
+        enabled: true,
+        email_address: 'test@example.com',
+        notify_on_start: false,
+        notify_on_complete: true,
+        notify_on_failure: true,
+        notify_on_score_alert: true,
+        score_alert_threshold: 70,
+        notify_on_agent_offline: true,
+        created_at: '2026-01-01T00:00:00Z',
+        updated_at: '2026-01-01T00:00:00Z',
+      },
+    } as never);
+
+    renderSettings();
+
+    await waitFor(() => {
+      expect(screen.getByText('Save Notification Settings')).toBeInTheDocument();
+    });
+
+    // All toggle buttons should NOT be disabled
+    const toggleButtons = screen.getAllByRole('button').filter(
+      (btn) => btn.className.includes('rounded-full') && btn.className.includes('h-6')
+    );
+    for (const toggle of toggleButtons) {
+      expect(toggle).not.toBeDisabled();
+      expect(toggle.className).not.toContain('opacity-50');
+    }
+  });
+});

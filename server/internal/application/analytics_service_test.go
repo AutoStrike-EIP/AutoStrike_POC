@@ -490,3 +490,145 @@ func TestPeriodLabel(t *testing.T) {
 		}
 	}
 }
+
+func TestCalculateTrendSummary_StartScoreZero_EndScorePositive(t *testing.T) {
+	tracker := &scoreTracker{maxScore: 80, minScore: 0}
+	scores := []float64{0, 40, 80}
+
+	summary := calculateTrendSummary(scores, 3, tracker)
+
+	if summary.StartScore != 0 {
+		t.Errorf("StartScore = %f, want 0", summary.StartScore)
+	}
+	if summary.EndScore != 80 {
+		t.Errorf("EndScore = %f, want 80", summary.EndScore)
+	}
+	// StartScore == 0 && EndScore > 0 → PercentageChange = 100
+	if summary.PercentageChange != 100 {
+		t.Errorf("PercentageChange = %f, want 100", summary.PercentageChange)
+	}
+}
+
+func TestCalculateTrendSummary_BothZero(t *testing.T) {
+	tracker := &scoreTracker{maxScore: 0, minScore: 0}
+	scores := []float64{0, 0}
+
+	summary := calculateTrendSummary(scores, 2, tracker)
+
+	if summary.PercentageChange != 0 {
+		t.Errorf("PercentageChange = %f, want 0 when both start and end are 0", summary.PercentageChange)
+	}
+}
+
+func TestCalculateTrendSummary_Empty(t *testing.T) {
+	tracker := &scoreTracker{firstSet: true}
+
+	summary := calculateTrendSummary(nil, 0, tracker)
+
+	if summary.TotalExecutions != 0 {
+		t.Errorf("TotalExecutions = %d, want 0", summary.TotalExecutions)
+	}
+	if summary.AverageScore != 0 {
+		t.Errorf("AverageScore = %f, want 0", summary.AverageScore)
+	}
+}
+
+func TestProcessDayExecutions_NilScoresSkipped(t *testing.T) {
+	tracker := &scoreTracker{firstSet: true}
+	executions := []*entity.Execution{
+		{ID: "e1", Score: nil},
+		{ID: "e2", Score: &entity.SecurityScore{Overall: 80, Blocked: 3, Detected: 1, Successful: 1}},
+	}
+
+	point, avg := processDayExecutions(executions, "2026-02-01", tracker)
+
+	if point.ExecutionCount != 2 {
+		t.Errorf("ExecutionCount = %d, want 2", point.ExecutionCount)
+	}
+	if avg != 80 {
+		t.Errorf("Average = %f, want 80", avg)
+	}
+	if point.Blocked != 3 {
+		t.Errorf("Blocked = %d, want 3", point.Blocked)
+	}
+}
+
+func TestProcessDayExecutions_Empty(t *testing.T) {
+	tracker := &scoreTracker{firstSet: true}
+
+	point, avg := processDayExecutions(nil, "2026-02-01", tracker)
+
+	if point.ExecutionCount != 0 {
+		t.Errorf("ExecutionCount = %d, want 0", point.ExecutionCount)
+	}
+	if avg != 0 {
+		t.Errorf("Average = %f, want 0", avg)
+	}
+}
+
+func TestAnalyticsService_GetPeriodStats_WithNilScores(t *testing.T) {
+	now := time.Now()
+	repo := &mockResultRepoForAnalytics{
+		executions: []*entity.Execution{
+			{ID: "e1", Status: entity.ExecutionCompleted, StartedAt: now.Add(-1 * time.Hour), Score: nil},
+			createTestExecution("e2", "s1", 80.0, 3, 1, 1, 5, now.Add(-30*time.Minute), entity.ExecutionCompleted),
+		},
+	}
+	service := NewAnalyticsService(repo)
+
+	stats, err := service.GetPeriodStats(context.Background(), now.Add(-2*time.Hour), now, "test")
+	if err != nil {
+		t.Fatalf("GetPeriodStats failed: %v", err)
+	}
+
+	if stats.ExecutionCount != 2 {
+		t.Errorf("ExecutionCount = %d, want 2", stats.ExecutionCount)
+	}
+	// Average should be based on the one scored execution
+	if stats.AverageScore != 80.0 {
+		t.Errorf("AverageScore = %f, want 80.0", stats.AverageScore)
+	}
+}
+
+func TestAnalyticsService_GetExecutionSummary_MixedStatuses(t *testing.T) {
+	now := time.Now()
+	repo := &mockResultRepoForAnalytics{
+		executions: []*entity.Execution{
+			createTestExecution("e1", "s1", 80.0, 3, 1, 1, 5, now.Add(-1*time.Hour), entity.ExecutionCompleted),
+			{ID: "e2", ScenarioID: "s1", Status: entity.ExecutionRunning, StartedAt: now.Add(-30 * time.Minute), Score: nil},
+			{ID: "e3", ScenarioID: "s2", Status: entity.ExecutionFailed, StartedAt: now.Add(-15 * time.Minute), Score: nil},
+			createTestExecution("e4", "s2", 60.0, 2, 1, 2, 5, now.Add(-5*time.Minute), entity.ExecutionCompleted),
+		},
+	}
+	service := NewAnalyticsService(repo)
+
+	summary, err := service.GetExecutionSummary(context.Background(), 7)
+	if err != nil {
+		t.Fatalf("GetExecutionSummary failed: %v", err)
+	}
+
+	if summary.TotalExecutions != 4 {
+		t.Errorf("TotalExecutions = %d, want 4", summary.TotalExecutions)
+	}
+	if summary.CompletedExecutions != 2 {
+		t.Errorf("CompletedExecutions = %d, want 2", summary.CompletedExecutions)
+	}
+	if summary.AverageScore != 70.0 {
+		t.Errorf("AverageScore = %f, want 70.0", summary.AverageScore)
+	}
+	if summary.BestScore != 80.0 {
+		t.Errorf("BestScore = %f, want 80.0", summary.BestScore)
+	}
+	if summary.WorstScore != 60.0 {
+		t.Errorf("WorstScore = %f, want 60.0", summary.WorstScore)
+	}
+	if summary.ExecutionsByStatus["running"] != 1 {
+		t.Errorf("ExecutionsByStatus[running] = %d, want 1", summary.ExecutionsByStatus["running"])
+	}
+	if summary.ExecutionsByStatus["failed"] != 1 {
+		t.Errorf("ExecutionsByStatus[failed] = %d, want 1", summary.ExecutionsByStatus["failed"])
+	}
+	if len(summary.ScoresByScenario) != 2 {
+		t.Errorf("ScoresByScenario count = %d, want 2", len(summary.ScoresByScenario))
+	}
+}

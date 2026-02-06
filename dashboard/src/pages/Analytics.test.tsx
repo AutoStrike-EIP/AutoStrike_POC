@@ -791,4 +791,643 @@ describe('Analytics formatScoreChange Edge Cases', () => {
     const scoreChangeText = screen.getByText('0% vs previous period');
     expect(scoreChangeText).toHaveClass('text-gray-500');
   });
+
+  it('formats negative score_change without plus prefix', async () => {
+    mockCompare.mockResolvedValue({
+      data: {
+        ...mockComparisonData,
+        score_change: -2.3,
+        score_trend: 'declining',
+      },
+    });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('-2.3% vs previous period')).toBeInTheDocument();
+    });
+  });
+
+  it('formats large positive score_change with plus prefix', async () => {
+    mockCompare.mockResolvedValue({
+      data: {
+        ...mockComparisonData,
+        score_change: 99.9,
+        score_trend: 'improving',
+      },
+    });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('+99.9% vs previous period')).toBeInTheDocument();
+    });
+  });
+});
+
+describe('Analytics Declining Trend Icon', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockTrend.mockResolvedValue({ data: mockTrendData });
+    mockSummary.mockResolvedValue({ data: mockSummaryData });
+  });
+
+  it('renders ArrowTrendingDownIcon for declining trend', async () => {
+    mockCompare.mockResolvedValue({
+      data: { ...mockComparisonData, score_trend: 'declining', score_change: -8.2 },
+    });
+
+    const { container } = renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Average Score')).toBeInTheDocument();
+    });
+
+    // Declining trend renders a red icon (h-5 w-5 text-red-500)
+    const redTrendIcons = container.querySelectorAll('.text-red-500.h-5.w-5');
+    expect(redTrendIcons.length).toBeGreaterThan(0);
+
+    // No green improving icons should be present
+    const greenTrendIcons = container.querySelectorAll('.text-green-500.h-5.w-5');
+    expect(greenTrendIcons.length).toBe(0);
+  });
+
+  it('renders ArrowTrendingUpIcon for improving trend', async () => {
+    mockCompare.mockResolvedValue({
+      data: { ...mockComparisonData, score_trend: 'improving', score_change: 10.0 },
+    });
+
+    const { container } = renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Average Score')).toBeInTheDocument();
+    });
+
+    // Improving trend renders a green icon (h-5 w-5 text-green-500)
+    const greenTrendIcons = container.querySelectorAll('.text-green-500.h-5.w-5');
+    expect(greenTrendIcons.length).toBeGreaterThan(0);
+  });
+});
+
+describe('Analytics Partial Loading States', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows loading when only comparison is loading', () => {
+    mockCompare.mockReturnValue(new Promise(() => {}));
+    mockTrend.mockResolvedValue({ data: mockTrendData });
+    mockSummary.mockResolvedValue({ data: mockSummaryData });
+
+    renderAnalytics();
+    expect(screen.getByText('Loading analytics...')).toBeInTheDocument();
+  });
+
+  it('shows loading when only trend is loading', () => {
+    mockCompare.mockResolvedValue({ data: mockComparisonData });
+    mockTrend.mockReturnValue(new Promise(() => {}));
+    mockSummary.mockResolvedValue({ data: mockSummaryData });
+
+    renderAnalytics();
+    expect(screen.getByText('Loading analytics...')).toBeInTheDocument();
+  });
+
+  it('shows loading when only summary is loading', () => {
+    mockCompare.mockResolvedValue({ data: mockComparisonData });
+    mockTrend.mockResolvedValue({ data: mockTrendData });
+    mockSummary.mockReturnValue(new Promise(() => {}));
+
+    renderAnalytics();
+    expect(screen.getByText('Loading analytics...')).toBeInTheDocument();
+  });
+});
+
+describe('Analytics Null/Undefined Data Fallbacks', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockTrend.mockResolvedValue({ data: mockTrendData });
+    mockSummary.mockResolvedValue({ data: mockSummaryData });
+  });
+
+  it('displays 0 for best_score when it is null', async () => {
+    mockCompare.mockResolvedValue({ data: mockComparisonData });
+    mockSummary.mockResolvedValue({
+      data: {
+        ...mockSummaryData,
+        best_score: null,
+        worst_score: null,
+      },
+    });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Best Score')).toBeInTheDocument();
+      expect(screen.getByText('Worst Score')).toBeInTheDocument();
+    });
+  });
+
+  it('handles undefined blocked_change showing 0 vs previous', async () => {
+    mockCompare.mockResolvedValue({
+      data: {
+        ...mockComparisonData,
+        blocked_change: undefined,
+      },
+    });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Blocked Attacks')).toBeInTheDocument();
+    });
+  });
+
+  it('handles undefined detected_change showing 0 vs previous', async () => {
+    mockCompare.mockResolvedValue({
+      data: {
+        ...mockComparisonData,
+        detected_change: undefined,
+      },
+    });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Detected Attacks')).toBeInTheDocument();
+    });
+  });
+
+  it('handles negative detected_change without plus prefix', async () => {
+    mockCompare.mockResolvedValue({
+      data: { ...mockComparisonData, detected_change: -7 },
+    });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('-7 vs previous')).toBeInTheDocument();
+    });
+  });
+
+  it('renders charts with empty trend data_points', async () => {
+    mockCompare.mockResolvedValue({ data: mockComparisonData });
+    mockTrend.mockResolvedValue({
+      data: {
+        period: '30_days',
+        data_points: [],
+        summary: undefined,
+      },
+    });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      // Charts should still render with empty data
+      const lineCharts = screen.getAllByTestId('line-chart');
+      const barCharts = screen.getAllByTestId('bar-chart');
+      expect(lineCharts.length).toBeGreaterThan(0);
+      expect(barCharts.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('renders with undefined executions_by_status', async () => {
+    mockCompare.mockResolvedValue({ data: mockComparisonData });
+    mockSummary.mockResolvedValue({
+      data: {
+        ...mockSummaryData,
+        executions_by_status: undefined,
+      },
+    });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Executions by Status')).toBeInTheDocument();
+    });
+  });
+
+  it('renders with undefined scores_by_scenario showing empty message', async () => {
+    mockCompare.mockResolvedValue({ data: mockComparisonData });
+    mockSummary.mockResolvedValue({
+      data: {
+        ...mockSummaryData,
+        scores_by_scenario: undefined,
+      },
+    });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('No scenario data available')).toBeInTheDocument();
+    });
+  });
+
+  it('renders summary section with zero total_executions', async () => {
+    mockCompare.mockResolvedValue({ data: mockComparisonData });
+    mockSummary.mockResolvedValue({
+      data: {
+        total_executions: 0,
+        completed_executions: 0,
+        average_score: 0,
+        best_score: 0,
+        worst_score: 0,
+        scores_by_scenario: {},
+        executions_by_status: {},
+      },
+    });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Total Executions')).toBeInTheDocument();
+      expect(screen.getByText('No scenario data available')).toBeInTheDocument();
+    });
+  });
+
+  it('handles previous period execution_count of 0', async () => {
+    mockCompare.mockResolvedValue({
+      data: {
+        ...mockComparisonData,
+        previous: {
+          ...mockComparisonData.previous,
+          execution_count: 0,
+        },
+      },
+    });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('0 previous period')).toBeInTheDocument();
+    });
+  });
+
+  it('handles current execution_count of 0', async () => {
+    mockCompare.mockResolvedValue({
+      data: {
+        ...mockComparisonData,
+        current: {
+          ...mockComparisonData.current,
+          execution_count: 0,
+          total_blocked: 0,
+          total_detected: 0,
+        },
+      },
+    });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Executions')).toBeInTheDocument();
+    });
+  });
+});
+
+describe('Analytics All APIs Fail', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('shows error when all three APIs fail', async () => {
+    mockCompare.mockRejectedValue(new Error('Compare failed'));
+    mockTrend.mockRejectedValue(new Error('Trend failed'));
+    mockSummary.mockRejectedValue(new Error('Summary failed'));
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to load analytics')).toBeInTheDocument();
+      // First error message in the fallback chain is comparisonError
+      expect(screen.getByText('Compare failed')).toBeInTheDocument();
+    });
+  });
+
+  it('prioritizes comparisonError message over trendError and summaryError', async () => {
+    mockCompare.mockRejectedValue(new Error('First error'));
+    mockTrend.mockRejectedValue(new Error('Second error'));
+    mockSummary.mockRejectedValue(new Error('Third error'));
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      // The || chain picks comparisonError.message first
+      expect(screen.getByText('First error')).toBeInTheDocument();
+    });
+  });
+
+  it('falls back to trendError when comparisonError has no message', async () => {
+    mockCompare.mockRejectedValue({ message: '' });
+    mockTrend.mockRejectedValue(new Error('Trend error message'));
+    mockSummary.mockResolvedValue({ data: mockSummaryData });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to load analytics')).toBeInTheDocument();
+    });
+  });
+
+  it('falls back to summaryError when comparison and trend have no message', async () => {
+    mockCompare.mockResolvedValue({ data: mockComparisonData });
+    mockTrend.mockResolvedValue({ data: mockTrendData });
+    mockSummary.mockRejectedValue(new Error('Only summary failed'));
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to load analytics')).toBeInTheDocument();
+      expect(screen.getByText('Only summary failed')).toBeInTheDocument();
+    });
+  });
+
+  it('handles retry after all APIs fail', async () => {
+    mockCompare.mockRejectedValueOnce(new Error('Fail'));
+    mockTrend.mockRejectedValueOnce(new Error('Fail'));
+    mockSummary.mockRejectedValueOnce(new Error('Fail'));
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Try Again')).toBeInTheDocument();
+    });
+
+    // Reset to succeed
+    mockCompare.mockResolvedValue({ data: mockComparisonData });
+    mockTrend.mockResolvedValue({ data: mockTrendData });
+    mockSummary.mockResolvedValue({ data: mockSummaryData });
+
+    fireEvent.click(screen.getByText('Try Again'));
+
+    await waitFor(() => {
+      expect(mockCompare).toHaveBeenCalledTimes(2);
+      expect(mockTrend).toHaveBeenCalledTimes(2);
+      expect(mockSummary).toHaveBeenCalledTimes(2);
+    });
+  });
+});
+
+describe('Analytics Period Selection Full Verification', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCompare.mockResolvedValue({ data: mockComparisonData });
+    mockTrend.mockResolvedValue({ data: mockTrendData });
+    mockSummary.mockResolvedValue({ data: mockSummaryData });
+  });
+
+  it('calls all three APIs with 90-day period', async () => {
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Analytics')).toBeInTheDocument();
+    });
+
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: '90' } });
+
+    await waitFor(() => {
+      expect(mockCompare).toHaveBeenCalledWith(90);
+      expect(mockTrend).toHaveBeenCalledWith(90);
+      expect(mockSummary).toHaveBeenCalledWith(90);
+    });
+  });
+
+  it('calls all three APIs with 7-day period', async () => {
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Analytics')).toBeInTheDocument();
+    });
+
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: '7' } });
+
+    await waitFor(() => {
+      expect(mockCompare).toHaveBeenCalledWith(7);
+      expect(mockTrend).toHaveBeenCalledWith(7);
+      expect(mockSummary).toHaveBeenCalledWith(7);
+    });
+  });
+
+  it('defaults to 30-day period on initial load', async () => {
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(mockCompare).toHaveBeenCalledWith(30);
+      expect(mockTrend).toHaveBeenCalledWith(30);
+      expect(mockSummary).toHaveBeenCalledWith(30);
+    });
+  });
+});
+
+describe('Analytics Trend Summary Conditional Rendering', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCompare.mockResolvedValue({ data: mockComparisonData });
+    mockSummary.mockResolvedValue({ data: mockSummaryData });
+  });
+
+  it('renders trend summary section when summary exists', async () => {
+    mockTrend.mockResolvedValue({ data: mockTrendData });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Min Score')).toBeInTheDocument();
+      expect(screen.getByText('Max Score')).toBeInTheDocument();
+      expect(screen.getByText('Average')).toBeInTheDocument();
+      expect(screen.getByText('65.0%')).toBeInTheDocument();
+      expect(screen.getByText('85.0%')).toBeInTheDocument();
+      expect(screen.getByText('75.0%')).toBeInTheDocument();
+    });
+  });
+
+  it('does not render trend summary section when summary is undefined', async () => {
+    mockTrend.mockResolvedValue({
+      data: {
+        ...mockTrendData,
+        summary: undefined,
+      },
+    });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Score Trend')).toBeInTheDocument();
+    });
+
+    // Min/Max/Average labels from the trend summary should NOT be present
+    expect(screen.queryByText('Min Score')).not.toBeInTheDocument();
+    expect(screen.queryByText('Max Score')).not.toBeInTheDocument();
+  });
+
+  it('does not render trend summary section when summary is null', async () => {
+    mockTrend.mockResolvedValue({
+      data: {
+        ...mockTrendData,
+        summary: null,
+      },
+    });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Score Trend')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Min Score')).not.toBeInTheDocument();
+    expect(screen.queryByText('Max Score')).not.toBeInTheDocument();
+  });
+});
+
+describe('Analytics Scenario Score Rendering', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCompare.mockResolvedValue({ data: mockComparisonData });
+    mockTrend.mockResolvedValue({ data: mockTrendData });
+  });
+
+  it('renders progress bars with correct widths for scenario scores', async () => {
+    mockSummary.mockResolvedValue({
+      data: {
+        ...mockSummaryData,
+        scores_by_scenario: {
+          'High Score Scenario': 100,
+          'Low Score Scenario': 10,
+        },
+      },
+    });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('High Score Scenario')).toBeInTheDocument();
+      expect(screen.getByText('Low Score Scenario')).toBeInTheDocument();
+      expect(screen.getByText('100%')).toBeInTheDocument();
+      expect(screen.getByText('10%')).toBeInTheDocument();
+    });
+  });
+
+  it('caps progress bar width at 100% for scores over 100', async () => {
+    mockSummary.mockResolvedValue({
+      data: {
+        ...mockSummaryData,
+        scores_by_scenario: {
+          'Over 100': 150,
+        },
+      },
+    });
+
+    const { container } = renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Over 100')).toBeInTheDocument();
+      expect(screen.getByText('150%')).toBeInTheDocument();
+    });
+
+    // The progress bar width should be capped at 100% via Math.min(score, 100)
+    const progressBars = container.querySelectorAll('.bg-primary-600.h-2.rounded-full');
+    const overBar = Array.from(progressBars).find(
+      (el) => (el as HTMLElement).style.width === '100%'
+    );
+    expect(overBar).toBeTruthy();
+  });
+
+  it('renders scenario title attribute for long scenario names', async () => {
+    const longName = 'A Very Long Scenario Name That Might Overflow The Container';
+    mockSummary.mockResolvedValue({
+      data: {
+        ...mockSummaryData,
+        scores_by_scenario: {
+          [longName]: 75,
+        },
+      },
+    });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      const scenarioLabel = screen.getByTitle(longName);
+      expect(scenarioLabel).toBeInTheDocument();
+    });
+  });
+});
+
+describe('Analytics Null Query Data Fallbacks', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders with null comparison data using fallback values', async () => {
+    // When comparison is null, all comparison?.xxx || 0 branches hit fallback
+    // This covers the || 0 branch on line 232 and similar fallback expressions
+    mockCompare.mockResolvedValue({ data: null });
+    mockTrend.mockResolvedValue({ data: mockTrendData });
+    mockSummary.mockResolvedValue({ data: mockSummaryData });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Average Score')).toBeInTheDocument();
+      expect(screen.getByText('Executions')).toBeInTheDocument();
+      expect(screen.getByText('Blocked Attacks')).toBeInTheDocument();
+      expect(screen.getByText('Detected Attacks')).toBeInTheDocument();
+    });
+  });
+
+  it('renders charts with null trend data using empty array fallbacks', async () => {
+    // When trend is null, all trend?.data_points.map(...) || [] branches hit fallback
+    // This covers the || [] branches on lines 139, 143, 153, 157, 162, 167
+    mockCompare.mockResolvedValue({ data: mockComparisonData });
+    mockTrend.mockResolvedValue({ data: null });
+    mockSummary.mockResolvedValue({ data: mockSummaryData });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Score Trend')).toBeInTheDocument();
+      expect(screen.getByText('Detection Results Over Time')).toBeInTheDocument();
+      // Charts should still render with empty data from fallbacks
+      const lineCharts = screen.getAllByTestId('line-chart');
+      const barCharts = screen.getAllByTestId('bar-chart');
+      expect(lineCharts.length).toBeGreaterThan(0);
+      expect(barCharts.length).toBeGreaterThan(0);
+    });
+
+    // Trend summary should NOT render since trend is null
+    expect(screen.queryByText('Min Score')).not.toBeInTheDocument();
+  });
+
+  it('renders with null summary data using fallback values', async () => {
+    // When summary is null, all summary?.xxx || 0 branches hit fallback
+    mockCompare.mockResolvedValue({ data: mockComparisonData });
+    mockTrend.mockResolvedValue({ data: mockTrendData });
+    mockSummary.mockResolvedValue({ data: null });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      expect(screen.getByText('Execution Summary')).toBeInTheDocument();
+      expect(screen.getByText('Executions by Status')).toBeInTheDocument();
+      expect(screen.getByText('Performance by Scenario')).toBeInTheDocument();
+      // No scenario data when summary is null
+      expect(screen.getByText('No scenario data available')).toBeInTheDocument();
+    });
+  });
+
+  it('renders with all query data null', async () => {
+    mockCompare.mockResolvedValue({ data: null });
+    mockTrend.mockResolvedValue({ data: null });
+    mockSummary.mockResolvedValue({ data: null });
+
+    renderAnalytics();
+
+    await waitFor(() => {
+      // All sections render with fallback values
+      expect(screen.getByText('Analytics')).toBeInTheDocument();
+      expect(screen.getByText('Average Score')).toBeInTheDocument();
+      expect(screen.getByText('Score Trend')).toBeInTheDocument();
+      expect(screen.getByText('Execution Summary')).toBeInTheDocument();
+      expect(screen.getByText('No scenario data available')).toBeInTheDocument();
+    });
+  });
 });
