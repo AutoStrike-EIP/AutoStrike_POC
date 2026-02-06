@@ -69,3 +69,71 @@
     - source: "File System"
       indicator: "Creation of encoded or encrypted files"
   is_safe: true
+
+- id: "T1070.001"
+  name: "Clear Windows Event Logs"
+  description: "Adversaries may clear Windows Event Logs to hide the activity of an intrusion."
+  tactic: "defense-evasion"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "powershell"
+      command: "Get-WinEvent -ListLog * -ErrorAction SilentlyContinue | Where-Object { $_.RecordCount -gt 0 } | Select-Object -First 10 LogName,RecordCount,LastWriteTime | Sort-Object RecordCount -Descending"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "ls -la /var/log/*.log /var/log/syslog /var/log/auth.log /var/log/kern.log 2>/dev/null; wc -l /var/log/syslog /var/log/auth.log 2>/dev/null | tail -3"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Windows Event Log"
+      indicator: "Event ID 1102 - Audit log was cleared"
+    - source: "Process Creation"
+      indicator: "wevtutil.exe cl or Clear-EventLog commands"
+  is_safe: true
+
+- id: "T1036.005"
+  name: "Match Legitimate Name or Location"
+  description: "Adversaries may match or approximate the name or location of legitimate files or resources when naming/placing them."
+  tactic: "defense-evasion"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "powershell"
+      command: "Get-Process | Where-Object { $_.Path -and $_.Path -notlike 'C:\\Windows\\*' -and $_.Path -notlike 'C:\\Program Files*' } | Select-Object -First 15 Name,Id,Path"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "find /tmp /var/tmp /dev/shm -type f -executable 2>/dev/null | head -15; ps aux 2>/dev/null | awk '$11 !~ /^\\[/ && $11 !~ /^\\/usr/ && $11 !~ /^\\/sbin/ {print $11}' | sort -u | head -15"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "Processes with legitimate names running from unusual paths"
+    - source: "File System"
+      indicator: "Executables in temp directories or with names mimicking system tools"
+  is_safe: true
+
+- id: "T1218.011"
+  name: "Rundll32"
+  description: "Adversaries may abuse rundll32.exe to proxy execution of malicious code."
+  tactic: "defense-evasion"
+  platforms:
+    - "windows"
+  executors:
+    - type: "powershell"
+      command: "Get-Process rundll32 -ErrorAction SilentlyContinue | Select-Object Id,Path,StartTime; Get-WinEvent -FilterHashtable @{LogName='Security';Id=4688} -MaxEvents 50 -ErrorAction SilentlyContinue | Where-Object { $_.Message -like '*rundll32*' } | Select-Object -First 5 TimeCreated,Message"
+      platform: "windows"
+      timeout: 60
+    - type: "cmd"
+      command: "tasklist /fi \"imagename eq rundll32.exe\" /v"
+      platform: "windows"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "rundll32.exe with unusual DLL paths or export functions"
+    - source: "Module Load"
+      indicator: "rundll32.exe loading non-standard DLLs"
+  is_safe: true

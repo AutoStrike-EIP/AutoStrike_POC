@@ -1,0 +1,71 @@
+# Command and Control techniques - MITRE ATT&CK
+# All techniques are safe/read-only (checking for indicators, not establishing C2)
+
+- id: "T1071.001"
+  name: "Web Protocols"
+  description: "Adversaries may communicate using application layer protocols associated with web traffic to avoid detection."
+  tactic: "command-and-control"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "powershell"
+      command: "Get-NetTCPConnection -State Established | Where-Object { $_.RemotePort -in @(80,443,8080,8443) } | Select-Object -First 15 LocalAddress,LocalPort,RemoteAddress,RemotePort,OwningProcess"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "ss -tnp state established 2>/dev/null | grep -E ':(80|443|8080|8443)\\s' | head -15 || netstat -tnp 2>/dev/null | grep ESTABLISHED | grep -E ':(80|443|8080|8443)' | head -15"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Network Traffic"
+      indicator: "Unusual HTTP/HTTPS traffic patterns or beaconing behavior"
+    - source: "Proxy Logs"
+      indicator: "Connections to uncategorized or suspicious domains"
+  is_safe: true
+
+- id: "T1105"
+  name: "Ingress Tool Transfer"
+  description: "Adversaries may transfer tools or other files from an external system into a compromised environment."
+  tactic: "command-and-control"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "cmd"
+      command: "where curl 2>nul && where certutil 2>nul && where bitsadmin 2>nul && where powershell 2>nul"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "which curl wget scp sftp nc ncat socat 2>/dev/null; ls -la /usr/bin/{curl,wget,scp,nc} 2>/dev/null"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "certutil.exe, bitsadmin.exe, or curl.exe downloading files"
+    - source: "Network Traffic"
+      indicator: "File downloads from unusual external sources"
+  is_safe: true
+
+- id: "T1572"
+  name: "Protocol Tunneling"
+  description: "Adversaries may tunnel network communications to and from a victim system within a separate protocol to avoid detection."
+  tactic: "command-and-control"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "powershell"
+      command: "Get-Process -Name ssh,putty,plink,stunnel,chisel,ngrok -ErrorAction SilentlyContinue | Select-Object Name,Id,Path; netsh interface portproxy show all 2>$null"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "ps aux 2>/dev/null | grep -E '(ssh.*-[LRD]|stunnel|chisel|ngrok|socat.*LISTEN)' | grep -v grep; cat /proc/net/tcp 2>/dev/null | awk '{print $2}' | head -20"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "SSH tunneling (-L, -R, -D flags) or known tunneling tools"
+    - source: "Network Traffic"
+      indicator: "DNS tunneling, ICMP tunneling, or encapsulated protocols"
+  is_safe: true

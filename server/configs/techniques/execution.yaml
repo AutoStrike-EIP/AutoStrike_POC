@@ -51,3 +51,48 @@
     - source: "Process Creation"
       indicator: "bash or sh execution with unusual arguments"
   is_safe: true
+
+- id: "T1047"
+  name: "Windows Management Instrumentation"
+  description: "Adversaries may abuse Windows Management Instrumentation (WMI) to execute malicious commands and payloads."
+  tactic: "execution"
+  platforms:
+    - "windows"
+  executors:
+    - type: "cmd"
+      command: "wmic os get Caption,Version,BuildNumber,OSArchitecture /format:list"
+      platform: "windows"
+      timeout: 60
+    - type: "powershell"
+      command: "Get-WmiObject -Class Win32_OperatingSystem | Select-Object Caption,Version,BuildNumber,OSArchitecture; Get-WmiObject -Class Win32_Process | Select-Object -First 10 Name,ProcessId,CommandLine"
+      platform: "windows"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "wmic.exe or WmiPrvSE.exe spawning child processes"
+    - source: "Windows Event Log"
+      indicator: "Event ID 5857/5861 - WMI activity"
+  is_safe: true
+
+- id: "T1059.006"
+  name: "Python"
+  description: "Adversaries may abuse Python commands and scripts for execution."
+  tactic: "execution"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "cmd"
+      command: "where python 2>nul && python --version 2>nul || where python3 2>nul && python3 --version 2>nul || echo Python not found"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "which python python3 2>/dev/null; python3 --version 2>/dev/null || python --version 2>/dev/null; pip3 list --format=columns 2>/dev/null | head -15 || echo 'pip not available'"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "python.exe or python3 execution with suspicious arguments"
+    - source: "Script Block Logging"
+      indicator: "Python scripts with encoded or obfuscated content"
+  is_safe: true

@@ -1,0 +1,75 @@
+# Impact techniques - MITRE ATT&CK
+# All techniques are safe/read-only (checking status, not causing impact)
+
+- id: "T1490"
+  name: "Inhibit System Recovery"
+  description: "Adversaries may delete or remove built-in data and turn off services designed to aid in the recovery of a corrupted system to prevent recovery."
+  tactic: "impact"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "cmd"
+      command: "vssadmin list shadows && bcdedit /v | findstr recoveryenabled"
+      platform: "windows"
+      timeout: 60
+    - type: "powershell"
+      command: "Get-ComputerRestorePoint -ErrorAction SilentlyContinue | Select-Object -First 5 SequenceNumber,Description,CreationTime; Get-WmiObject -Class Win32_ShadowCopy -ErrorAction SilentlyContinue | Select-Object ID,InstallDate"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "which timeshift restic borg 2>/dev/null; systemctl list-units --type=service 2>/dev/null | grep -iE '(backup|restic|borg|bacula|duplicity)'; ls /etc/cron.d/*backup* /etc/cron.daily/*backup* 2>/dev/null"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "vssadmin.exe delete shadows or bcdedit.exe recovery modifications"
+    - source: "Windows Event Log"
+      indicator: "Event ID 524 - System Catalog was deleted"
+  is_safe: true
+
+- id: "T1489"
+  name: "Service Stop"
+  description: "Adversaries may stop or disable services on a system to render those services unavailable to legitimate users."
+  tactic: "impact"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "powershell"
+      command: "Get-Service | Where-Object { $_.Status -eq 'Running' -and $_.DisplayName -match '(Security|Defender|Firewall|Update|Backup|SQL|Exchange|IIS)' } | Select-Object Name,DisplayName,Status"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "systemctl list-units --type=service --state=running 2>/dev/null | grep -iE '(security|firewall|ufw|iptables|fail2ban|sshd|httpd|nginx|mysql|postgresql|docker)' | head -20"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Windows Event Log"
+      indicator: "Event ID 7036 - Service entered the stopped state"
+    - source: "Process Creation"
+      indicator: "net stop, sc stop, or systemctl stop commands for critical services"
+  is_safe: true
+
+- id: "T1486"
+  name: "Data Encrypted for Impact"
+  description: "Adversaries may encrypt data on target systems or on large numbers of systems in a network to interrupt availability to system and network resources."
+  tactic: "impact"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "powershell"
+      command: "Get-BitLockerVolume -ErrorAction SilentlyContinue | Select-Object MountPoint,VolumeStatus,ProtectionStatus,EncryptionPercentage; Get-ChildItem -Path $env:TEMP -Include *.encrypted,*.locked,*.crypto -Recurse -ErrorAction SilentlyContinue | Select-Object -First 5 Name"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "lsblk -o NAME,FSTYPE,SIZE,MOUNTPOINT 2>/dev/null | grep -i crypt; find /tmp /var/tmp -name '*.encrypted' -o -name '*.locked' -o -name '*.crypto' 2>/dev/null | head -5; dmsetup ls --target crypt 2>/dev/null"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "File System"
+      indicator: "Mass file renaming with unusual extensions (.encrypted, .locked)"
+    - source: "Process Creation"
+      indicator: "Encryption tools targeting user files (openssl, gpg with bulk operations)"
+  is_safe: true

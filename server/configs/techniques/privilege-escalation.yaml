@@ -1,0 +1,96 @@
+# Privilege Escalation techniques - MITRE ATT&CK
+# All techniques are safe/read-only (enumeration only, no privilege escalation performed)
+
+- id: "T1548.001"
+  name: "Setuid and Setgid"
+  description: "Adversaries may abuse configurations where an application has the setuid or setgid bits set in order to get code running in a different user's context."
+  tactic: "privilege-escalation"
+  platforms:
+    - "linux"
+  executors:
+    - type: "bash"
+      command: "find /usr/bin /usr/sbin /bin /sbin -perm -4000 -type f 2>/dev/null | head -20"
+      platform: "linux"
+      timeout: 120
+  detection:
+    - source: "File System"
+      indicator: "New files with SUID/SGID bits in system directories"
+    - source: "Process Creation"
+      indicator: "find command searching for SUID binaries"
+  is_safe: true
+
+- id: "T1548.002"
+  name: "Bypass User Account Control"
+  description: "Adversaries may bypass UAC mechanisms to elevate process privileges on system."
+  tactic: "privilege-escalation"
+  platforms:
+    - "windows"
+  executors:
+    - type: "cmd"
+      command: "reg query HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System /v EnableLUA"
+      platform: "windows"
+      timeout: 60
+    - type: "powershell"
+      command: "Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System' | Select-Object EnableLUA,ConsentPromptBehaviorAdmin,PromptOnSecureDesktop"
+      platform: "windows"
+      timeout: 60
+  detection:
+    - source: "Windows Event Log"
+      indicator: "Event ID 4688 - Elevated process creation"
+    - source: "Registry"
+      indicator: "Changes to UAC registry keys"
+  is_safe: true
+
+- id: "T1078.003"
+  name: "Local Accounts"
+  description: "Adversaries may obtain and abuse credentials of a local account as a means of gaining Initial Access, Persistence, Privilege Escalation, or Defense Evasion."
+  tactic: "privilege-escalation"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "cmd"
+      command: "net localgroup Administrators"
+      platform: "windows"
+      timeout: 60
+    - type: "powershell"
+      command: "Get-LocalGroupMember -Group 'Administrators' -ErrorAction SilentlyContinue | Select-Object Name,ObjectClass,PrincipalSource"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "grep -E '^(root|sudo)' /etc/group 2>/dev/null && awk -F: '$3 == 0 {print $1}' /etc/passwd"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Process Creation"
+      indicator: "Enumeration of privileged local accounts"
+    - source: "Authentication Logs"
+      indicator: "Logon attempts using local administrator accounts"
+  is_safe: true
+
+- id: "T1134.001"
+  name: "Token Impersonation/Theft"
+  description: "Adversaries may duplicate then impersonate another user's existing token to escalate privileges and bypass access controls."
+  tactic: "privilege-escalation"
+  platforms:
+    - "windows"
+    - "linux"
+  executors:
+    - type: "cmd"
+      command: "whoami /priv"
+      platform: "windows"
+      timeout: 60
+    - type: "powershell"
+      command: "whoami /priv /fo csv | ConvertFrom-Csv | Where-Object { $_.'State' -eq 'Enabled' }"
+      platform: "windows"
+      timeout: 60
+    - type: "bash"
+      command: "id && cat /proc/self/status | grep -E '^(Uid|Gid|Groups|Cap)'"
+      platform: "linux"
+      timeout: 60
+  detection:
+    - source: "Windows Event Log"
+      indicator: "Event ID 4672 - Special privileges assigned to new logon"
+    - source: "Process Creation"
+      indicator: "whoami /priv or token enumeration commands"
+  is_safe: true
