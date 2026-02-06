@@ -953,6 +953,104 @@ func TestSecurityHeadersMiddleware(t *testing.T) {
 	}
 }
 
+// --- Body Size Limit Middleware Tests ---
+
+func TestBodySizeLimitMiddleware_SmallBody(t *testing.T) {
+	router := gin.New()
+	router.Use(BodySizeLimitMiddleware(1024))
+	router.POST("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	body := strings.NewReader(`{"key":"value"}`)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/test", body)
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200 for small body, got %d", w.Code)
+	}
+}
+
+func TestBodySizeLimitMiddleware_LargeContentLength(t *testing.T) {
+	router := gin.New()
+	router.Use(BodySizeLimitMiddleware(1024))
+	router.POST("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	body := strings.NewReader(`{"key":"value"}`)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/test", body)
+	req.ContentLength = 2048 // Declared larger than limit
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusRequestEntityTooLarge {
+		t.Errorf("Expected status 413 for large Content-Length, got %d", w.Code)
+	}
+}
+
+func TestBodySizeLimitMiddleware_NilBody(t *testing.T) {
+	router := gin.New()
+	router.Use(BodySizeLimitMiddleware(1024))
+	router.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/test", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200 for nil body, got %d", w.Code)
+	}
+}
+
+func TestBodySizeLimitMiddleware_ExactLimit(t *testing.T) {
+	router := gin.New()
+	router.Use(BodySizeLimitMiddleware(10))
+	router.POST("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	body := strings.NewReader("0123456789") // exactly 10 bytes
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/test", body)
+	req.Header.Set("Content-Type", "application/octet-stream")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200 for body at exact limit, got %d", w.Code)
+	}
+}
+
+func TestBodySizeLimitMiddleware_StreamingOverflow(t *testing.T) {
+	router := gin.New()
+	router.Use(BodySizeLimitMiddleware(16))
+	router.POST("/test", func(c *gin.Context) {
+		var data map[string]interface{}
+		if err := c.ShouldBindJSON(&data); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.Status(http.StatusOK)
+	})
+
+	// Body is 30+ bytes but Content-Length is not set (simulating chunked)
+	largeBody := `{"key":"` + strings.Repeat("x", 100) + `"}`
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/test", strings.NewReader(largeBody))
+	req.ContentLength = -1 // Unknown length
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	// MaxBytesReader should cause ShouldBindJSON to fail
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for streaming overflow, got %d", w.Code)
+	}
+}
+
 // --- Auth Middleware Blacklist Tests ---
 
 type mockBlacklist struct {

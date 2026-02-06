@@ -112,9 +112,11 @@ func NewServerWithConfig(
 	_ = router.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 
 	// Request body size limit (10 MB)
-	router.MaxMultipartMemory = 10 << 20
+	const maxBodySize int64 = 10 << 20
+	router.MaxMultipartMemory = maxBodySize
 
 	// Global middleware
+	router.Use(middleware.BodySizeLimitMiddleware(maxBodySize))
 	router.Use(middleware.SecurityHeadersMiddleware())
 	router.Use(middleware.LoggingMiddleware(logger))
 	router.Use(middleware.RecoveryMiddleware(logger))
