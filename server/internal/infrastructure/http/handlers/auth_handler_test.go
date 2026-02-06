@@ -13,9 +13,11 @@ import (
 
 	"autostrike/internal/application"
 	"autostrike/internal/domain/entity"
+	"autostrike/internal/infrastructure/http/middleware"
 	"autostrike/internal/infrastructure/persistence/sqlite"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -1021,5 +1023,177 @@ func TestAuthHandler_Logout_ResponseBody(t *testing.T) {
 	}
 	if response["message"] != "logged out successfully" {
 		t.Errorf("Expected message 'logged out successfully', got %q", response["message"])
+	}
+}
+
+// --- Token Blacklist / Revocation Tests ---
+
+func TestNewAuthHandlerWithBlacklist(t *testing.T) {
+	repo := newMockUserRepo()
+	service := application.NewAuthService(repo, "test-secret")
+	bl := application.NewTokenBlacklist()
+
+	handler := NewAuthHandlerWithBlacklist(service, bl)
+	if handler == nil {
+		t.Fatal("Expected non-nil handler")
+	}
+}
+
+func TestAuthHandler_RegisterRoutesWithRateLimit(t *testing.T) {
+	repo := newMockUserRepo()
+	service := application.NewAuthService(repo, "test-secret")
+	handler := NewAuthHandler(service)
+
+	loginLimiter := middleware.NewRateLimiter(5, time.Minute)
+	refreshLimiter := middleware.NewRateLimiter(10, time.Minute)
+
+	router := gin.New()
+	handler.RegisterRoutesWithRateLimit(router, loginLimiter, refreshLimiter)
+
+	routes := router.Routes()
+	expectedPaths := map[string]string{
+		"/api/v1/auth/login":   "POST",
+		"/api/v1/auth/refresh": "POST",
+		"/api/v1/auth/logout":  "POST",
+	}
+
+	for path, method := range expectedPaths {
+		found := false
+		for _, route := range routes {
+			if route.Path == path && route.Method == method {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Route %s %s not found", method, path)
+		}
+	}
+}
+
+func TestAuthHandler_Logout_WithBlacklist(t *testing.T) {
+	repo := newMockUserRepo()
+	service := application.NewAuthService(repo, "test-secret")
+	bl := application.NewTokenBlacklist()
+
+	handler := NewAuthHandlerWithBlacklist(service, bl)
+
+	// Create a valid JWT
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":  "user123",
+		"type": "access",
+		"exp":  time.Now().Add(time.Hour).Unix(),
+	})
+	tokenString, _ := token.SignedString([]byte("test-secret"))
+
+	router := gin.New()
+	router.POST("/logout", handler.Logout)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/logout", nil)
+	req.Header.Set("Authorization", "Bearer "+tokenString)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+
+	if !bl.IsRevoked(tokenString) {
+		t.Error("Expected token to be revoked after logout")
+	}
+}
+
+func TestAuthHandler_Logout_NoAuthHeader_WithBlacklist(t *testing.T) {
+	repo := newMockUserRepo()
+	service := application.NewAuthService(repo, "test-secret")
+	bl := application.NewTokenBlacklist()
+
+	handler := NewAuthHandlerWithBlacklist(service, bl)
+
+	router := gin.New()
+	router.POST("/logout", handler.Logout)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/logout", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+}
+
+func TestAuthHandler_Logout_InvalidAuthHeader_WithBlacklist(t *testing.T) {
+	repo := newMockUserRepo()
+	service := application.NewAuthService(repo, "test-secret")
+	bl := application.NewTokenBlacklist()
+
+	handler := NewAuthHandlerWithBlacklist(service, bl)
+
+	router := gin.New()
+	router.POST("/logout", handler.Logout)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/logout", nil)
+	req.Header.Set("Authorization", "InvalidFormat")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+}
+
+func TestAuthHandler_Logout_MalformedJWT_WithBlacklist(t *testing.T) {
+	repo := newMockUserRepo()
+	service := application.NewAuthService(repo, "test-secret")
+	bl := application.NewTokenBlacklist()
+
+	handler := NewAuthHandlerWithBlacklist(service, bl)
+
+	router := gin.New()
+	router.POST("/logout", handler.Logout)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/logout", nil)
+	req.Header.Set("Authorization", "Bearer not-a-valid-jwt")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+
+	// Malformed JWT still gets revoked with fallback 24h expiry
+	if !bl.IsRevoked("not-a-valid-jwt") {
+		t.Error("Expected malformed token to still be added to blacklist")
+	}
+}
+
+func TestAuthHandler_Logout_TokenWithoutExp_WithBlacklist(t *testing.T) {
+	repo := newMockUserRepo()
+	service := application.NewAuthService(repo, "test-secret")
+	bl := application.NewTokenBlacklist()
+
+	handler := NewAuthHandlerWithBlacklist(service, bl)
+
+	// Create JWT without exp claim
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":  "user123",
+		"type": "access",
+	})
+	tokenString, _ := token.SignedString([]byte("test-secret"))
+
+	router := gin.New()
+	router.POST("/logout", handler.Logout)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/logout", nil)
+	req.Header.Set("Authorization", "Bearer "+tokenString)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+
+	if !bl.IsRevoked(tokenString) {
+		t.Error("Expected token without exp to be revoked with fallback expiry")
 	}
 }

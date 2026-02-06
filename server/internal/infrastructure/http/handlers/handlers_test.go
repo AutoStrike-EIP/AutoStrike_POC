@@ -698,7 +698,7 @@ func TestTechniqueHandler_ImportTechniques(t *testing.T) {
 	router := gin.New()
 	router.POST("/techniques/import", handler.ImportTechniques)
 
-	body := ImportRequest{Path: "/path/to/techniques.yaml"}
+	body := ImportRequest{Path: "configs/techniques.yaml"}
 	jsonBody, _ := json.Marshal(body)
 
 	w := httptest.NewRecorder()
@@ -729,6 +729,27 @@ func TestTechniqueHandler_ImportTechniques_BadRequest(t *testing.T) {
 	}
 }
 
+func TestTechniqueHandler_ImportTechniques_PathTraversal(t *testing.T) {
+	repo := newMockTechniqueRepo()
+	svc := application.NewTechniqueService(repo)
+	handler := NewTechniqueHandler(svc)
+
+	router := gin.New()
+	router.POST("/techniques/import", handler.ImportTechniques)
+
+	body := ImportRequest{Path: "/etc/passwd"}
+	jsonBody, _ := json.Marshal(body)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/techniques/import", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status 400 for path traversal, got %d", w.Code)
+	}
+}
+
 func TestTechniqueHandler_ImportTechniques_Error(t *testing.T) {
 	repo := newMockTechniqueRepo()
 	repo.importErr = errors.New("import error")
@@ -738,7 +759,7 @@ func TestTechniqueHandler_ImportTechniques_Error(t *testing.T) {
 	router := gin.New()
 	router.POST("/techniques/import", handler.ImportTechniques)
 
-	body := ImportRequest{Path: "/path/to/techniques.yaml"}
+	body := ImportRequest{Path: "configs/techniques.yaml"}
 	jsonBody, _ := json.Marshal(body)
 
 	w := httptest.NewRecorder()
@@ -1856,5 +1877,73 @@ func TestImportJSONResponse_Struct(t *testing.T) {
 	}
 	if len(resp.Errors) != 2 {
 		t.Errorf("Expected 2 errors, got %d", len(resp.Errors))
+	}
+}
+
+// --- validateImportPath edge case tests ---
+
+// --- validateImportPath edge case tests ---
+
+func TestValidateImportPath_DotDotTraversal(t *testing.T) {
+	err := validateImportPath("configs/../../../etc/passwd")
+	if err == nil {
+		t.Error("Expected error for path traversal with ..")
+	}
+}
+
+func TestValidateImportPath_AbsolutePath(t *testing.T) {
+	err := validateImportPath("/etc/passwd")
+	if err == nil {
+		t.Error("Expected error for absolute path outside allowed dirs")
+	}
+}
+
+func TestValidateImportPath_ValidConfigsSubpath(t *testing.T) {
+	err := validateImportPath("configs/techniques/discovery.yaml")
+	if err != nil {
+		t.Errorf("Expected no error for valid configs subpath, got %v", err)
+	}
+}
+
+func TestValidateImportPath_ValidConfigDir(t *testing.T) {
+	err := validateImportPath("config/techniques.yaml")
+	if err != nil {
+		t.Errorf("Expected no error for valid config subpath, got %v", err)
+	}
+}
+
+func TestValidateImportPath_DotSlashConfigs(t *testing.T) {
+	err := validateImportPath("./configs/techniques.yaml")
+	if err != nil {
+		t.Errorf("Expected no error for ./configs path, got %v", err)
+	}
+}
+
+func TestValidateImportPath_ExactConfigsDir(t *testing.T) {
+	err := validateImportPath("configs")
+	if err != nil {
+		t.Errorf("Expected no error for exact configs dir, got %v", err)
+	}
+}
+
+func TestValidateImportPath_OutsideAllowedDir(t *testing.T) {
+	err := validateImportPath("data/techniques.yaml")
+	if err == nil {
+		t.Error("Expected error for path outside allowed directories")
+	}
+}
+
+func TestValidateImportPath_RelativeTraversal(t *testing.T) {
+	err := validateImportPath("../server/configs/techniques.yaml")
+	if err == nil {
+		t.Error("Expected error for relative traversal path")
+	}
+}
+
+func TestValidateImportPath_ConfigsPrefixNotDir(t *testing.T) {
+	// "configs_backup/file.yaml" should NOT match "configs" as a prefix
+	err := validateImportPath("configs_backup/file.yaml")
+	if err == nil {
+		t.Error("Expected error for configs_backup (not a valid directory prefix)")
 	}
 }

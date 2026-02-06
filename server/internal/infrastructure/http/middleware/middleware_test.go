@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -739,5 +740,325 @@ func TestAuthMiddleware_OnlyTokenPrefix(t *testing.T) {
 
 	if w.Code != http.StatusUnauthorized {
 		t.Errorf("Expected status 401 for 'Token' prefix, got %d", w.Code)
+	}
+}
+
+// --- Rate Limiter Tests ---
+
+func TestNewRateLimiter(t *testing.T) {
+	rl := NewRateLimiter(5, time.Minute)
+	if rl == nil {
+		t.Fatal("Expected non-nil rate limiter")
+	}
+	if rl.limit != 5 {
+		t.Errorf("Expected limit 5, got %d", rl.limit)
+	}
+	if rl.window != time.Minute {
+		t.Errorf("Expected window 1m, got %v", rl.window)
+	}
+}
+
+func TestRateLimiter_Allow_WithinLimit(t *testing.T) {
+	rl := &RateLimiter{
+		ips:    make(map[string]*ipEntry),
+		limit:  3,
+		window: time.Minute,
+	}
+
+	for i := 0; i < 3; i++ {
+		if !rl.allow("192.168.1.1") {
+			t.Errorf("Request %d should be allowed", i+1)
+		}
+	}
+}
+
+func TestRateLimiter_Allow_ExceedsLimit(t *testing.T) {
+	rl := &RateLimiter{
+		ips:    make(map[string]*ipEntry),
+		limit:  2,
+		window: time.Minute,
+	}
+
+	rl.allow("192.168.1.1")
+	rl.allow("192.168.1.1")
+
+	if rl.allow("192.168.1.1") {
+		t.Error("Third request should be denied")
+	}
+}
+
+func TestRateLimiter_Allow_DifferentIPs(t *testing.T) {
+	rl := &RateLimiter{
+		ips:    make(map[string]*ipEntry),
+		limit:  1,
+		window: time.Minute,
+	}
+
+	if !rl.allow("192.168.1.1") {
+		t.Error("First IP should be allowed")
+	}
+	if !rl.allow("192.168.1.2") {
+		t.Error("Second IP should be allowed (different IP)")
+	}
+}
+
+func TestRateLimiter_Allow_WindowReset(t *testing.T) {
+	rl := &RateLimiter{
+		ips:    make(map[string]*ipEntry),
+		limit:  1,
+		window: time.Millisecond,
+	}
+
+	rl.allow("192.168.1.1")
+
+	// Wait for window to expire
+	time.Sleep(5 * time.Millisecond)
+
+	if !rl.allow("192.168.1.1") {
+		t.Error("Request should be allowed after window reset")
+	}
+}
+
+func TestRateLimiter_Cleanup(t *testing.T) {
+	rl := &RateLimiter{
+		ips:    make(map[string]*ipEntry),
+		limit:  5,
+		window: time.Minute,
+	}
+
+	// Add expired entry
+	rl.ips["expired"] = &ipEntry{count: 3, resetAt: time.Now().Add(-time.Hour)}
+	// Add active entry
+	rl.ips["active"] = &ipEntry{count: 1, resetAt: time.Now().Add(time.Hour)}
+
+	rl.cleanup()
+
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+
+	if _, exists := rl.ips["expired"]; exists {
+		t.Error("Expected expired entry to be cleaned up")
+	}
+	if _, exists := rl.ips["active"]; !exists {
+		t.Error("Expected active entry to remain")
+	}
+}
+
+func TestRateLimiter_Cleanup_EmptyMap(t *testing.T) {
+	rl := &RateLimiter{
+		ips:    make(map[string]*ipEntry),
+		limit:  5,
+		window: time.Minute,
+	}
+	rl.cleanup() // Should not panic
+}
+
+func TestRateLimitMiddleware_Allowed(t *testing.T) {
+	rl := &RateLimiter{
+		ips:    make(map[string]*ipEntry),
+		limit:  5,
+		window: time.Minute,
+	}
+
+	router := gin.New()
+	router.Use(RateLimitMiddleware(rl))
+	router.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/test", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+}
+
+func TestRateLimitMiddleware_Blocked(t *testing.T) {
+	rl := &RateLimiter{
+		ips:    make(map[string]*ipEntry),
+		limit:  1,
+		window: time.Minute,
+	}
+
+	router := gin.New()
+	router.Use(RateLimitMiddleware(rl))
+	router.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	// First request - allowed
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/test", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("First request: expected status 200, got %d", w.Code)
+	}
+
+	// Second request - blocked
+	w = httptest.NewRecorder()
+	req, _ = http.NewRequest("GET", "/test", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusTooManyRequests {
+		t.Errorf("Second request: expected status 429, got %d", w.Code)
+	}
+}
+
+// --- Security Headers Tests ---
+
+func TestSecurityHeadersMiddleware(t *testing.T) {
+	router := gin.New()
+	router.Use(SecurityHeadersMiddleware())
+	router.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/test", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+
+	expectedHeaders := map[string]string{
+		"X-Content-Type-Options":    "nosniff",
+		"X-Frame-Options":          "DENY",
+		"X-XSS-Protection":         "1; mode=block",
+		"Referrer-Policy":          "strict-origin-when-cross-origin",
+		"Permissions-Policy":       "camera=(), microphone=(), geolocation=()",
+		"Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+	}
+
+	for header, expected := range expectedHeaders {
+		actual := w.Header().Get(header)
+		if actual != expected {
+			t.Errorf("Header %s: expected %q, got %q", header, expected, actual)
+		}
+	}
+
+	// Check CSP contains key directives
+	csp := w.Header().Get("Content-Security-Policy")
+	if csp == "" {
+		t.Error("Expected Content-Security-Policy header to be set")
+	}
+	for _, directive := range []string{"default-src 'self'", "script-src", "style-src", "connect-src"} {
+		if !strings.Contains(csp, directive) {
+			t.Errorf("CSP missing directive: %s", directive)
+		}
+	}
+}
+
+// --- Auth Middleware Blacklist Tests ---
+
+type mockBlacklist struct {
+	revoked map[string]bool
+}
+
+func (m *mockBlacklist) IsRevoked(token string) bool {
+	return m.revoked[token]
+}
+
+func TestAuthMiddleware_RevokedToken(t *testing.T) {
+	secret := "test-secret-key"
+	bl := &mockBlacklist{revoked: make(map[string]bool)}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":  "user123",
+		"role": "admin",
+		"type": "access",
+		"exp":  time.Now().Add(time.Hour).Unix(),
+	})
+	tokenString, _ := token.SignedString([]byte(secret))
+
+	// Mark token as revoked
+	bl.revoked[tokenString] = true
+
+	config := &AuthConfig{
+		JWTSecret:      secret,
+		TokenBlacklist: bl,
+	}
+
+	router := gin.New()
+	router.Use(AuthMiddleware(config))
+	router.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/test", nil)
+	req.Header.Set("Authorization", "Bearer "+tokenString)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401 for revoked token, got %d", w.Code)
+	}
+}
+
+func TestAuthMiddleware_NonRevokedTokenWithBlacklist(t *testing.T) {
+	secret := "test-secret-key"
+	bl := &mockBlacklist{revoked: make(map[string]bool)}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":  "user123",
+		"role": "admin",
+		"type": "access",
+		"exp":  time.Now().Add(time.Hour).Unix(),
+	})
+	tokenString, _ := token.SignedString([]byte(secret))
+
+	config := &AuthConfig{
+		JWTSecret:      secret,
+		TokenBlacklist: bl,
+	}
+
+	router := gin.New()
+	router.Use(AuthMiddleware(config))
+	router.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/test", nil)
+	req.Header.Set("Authorization", "Bearer "+tokenString)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200 for non-revoked token, got %d", w.Code)
+	}
+}
+
+func TestAuthMiddleware_NilBlacklist(t *testing.T) {
+	secret := "test-secret-key"
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub":  "user123",
+		"role": "admin",
+		"type": "access",
+		"exp":  time.Now().Add(time.Hour).Unix(),
+	})
+	tokenString, _ := token.SignedString([]byte(secret))
+
+	config := &AuthConfig{
+		JWTSecret:      secret,
+		TokenBlacklist: nil, // No blacklist
+	}
+
+	router := gin.New()
+	router.Use(AuthMiddleware(config))
+	router.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/test", nil)
+	req.Header.Set("Authorization", "Bearer "+tokenString)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200 with nil blacklist, got %d", w.Code)
 	}
 }
