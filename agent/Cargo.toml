@@ -11,7 +11,7 @@ description = "AutoStrike BAS Agent - Executes MITRE ATT&CK techniques for secur
 tokio = { version = "1.35", features = ["full"] }
 
 # WebSocket client
-tokio-tungstenite = { version = "0.18", features = ["rustls-tls-webpki-roots"] }
+tokio-tungstenite = { version = "0.28", features = ["rustls-tls-webpki-roots"] }
 futures-util = "0.3"
 
 # Serialization
