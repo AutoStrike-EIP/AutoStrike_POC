@@ -9,7 +9,7 @@ Production deployment guide for AutoStrike.
 - Docker and Docker Compose (optional)
 - TLS certificates (or Let's Encrypt)
 - Linux server (Ubuntu 22.04+ recommended)
-- Go 1.21+ and Node.js 18+ (for manual deployment)
+- Go 1.24+ and Node.js 18+ (for manual deployment)
 
 ---
 
@@ -52,6 +52,15 @@ ALLOWED_ORIGINS=https://your-domain.com
 
 # Logging
 LOG_LEVEL=info
+
+# SMTP (optional - for email notifications)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=notifications@example.com
+SMTP_PASSWORD=<smtp-password>
+SMTP_FROM=noreply@example.com
+SMTP_USE_TLS=true
+DASHBOARD_URL=https://your-domain.com
 ```
 
 ### 2. TLS Certificates
@@ -137,10 +146,11 @@ cd ../server
 ```bash
 # Test HTTPS connection
 curl -k https://localhost:8443/health
-# Expected: {"status":"ok"}
+# Expected: {"status":"ok","auth_enabled":true}
 
-# Test API (with JWT if enabled)
-curl -k https://localhost:8443/api/v1/agents
+# Test API (with JWT)
+curl -k https://localhost:8443/api/v1/agents \
+  -H "Authorization: Bearer <token>"
 ```
 
 ---
@@ -175,8 +185,8 @@ cargo build --release
 
 ```powershell
 # Copy binary to target machine
-# Run with server URL
-.\autostrike-agent.exe --server https://server:8443 --paw agent-win-01
+# Run with server URL and agent secret
+.\autostrike-agent.exe --server https://server:8443 --paw agent-win-01 -k "your-agent-secret"
 ```
 
 ### Linux
@@ -185,8 +195,8 @@ cargo build --release
 # Copy binary to target machine
 chmod +x autostrike-agent
 
-# Run with server URL
-./autostrike-agent --server https://server:8443 --paw agent-linux-01
+# Run with server URL and agent secret
+./autostrike-agent --server https://server:8443 --paw agent-linux-01 -k "your-agent-secret"
 ```
 
 ### Agent as systemd Service
@@ -262,12 +272,14 @@ tail -f server/logs/autostrike.log
 
 ### Production Checklist
 
-1. **Secrets**: Use 32+ character randomly generated secrets
+1. **Secrets**: Use 32+ character randomly generated secrets for `JWT_SECRET` and `AGENT_SECRET`
 2. **TLS**: Always use HTTPS in production (Let's Encrypt or commercial cert)
 3. **Firewall**: Restrict access to port 8443
 4. **Network**: Isolate agents in a dedicated network/VLAN
 5. **Logging**: Enable centralized logging
 6. **Updates**: Keep Go, Rust, and dependencies updated
+7. **Auth**: Ensure `JWT_SECRET` is set (auth enabled)
+8. **Agent Auth**: Set `AGENT_SECRET` to authenticate agent connections
 
 ### Firewall Rules
 
@@ -297,12 +309,20 @@ ufw allow from 10.0.0.0/8 to any port 8443
    ```
 2. Check TLS certificates (use `--debug` flag)
 3. Check agent logs: `journalctl -u autostrike-agent -f`
+4. If `AGENT_SECRET` is set, verify the agent passes `-k` with the correct secret
 
 ### Error 401 Unauthorized
 
 1. Verify JWT token is not expired
 2. Verify `JWT_SECRET` matches between token generation and server
 3. Check if auth is enabled (set `JWT_SECRET` in `.env`)
+
+### Error 429 Too Many Requests
+
+Rate limiting is active on authentication endpoints:
+- Login: 5 attempts/minute per IP
+- Token refresh: 10 attempts/minute per IP
+- Wait for the rate limit window to expire
 
 ### Database issues
 

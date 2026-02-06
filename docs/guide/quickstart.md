@@ -8,7 +8,7 @@ This guide will help you run your first attack simulation in 5 minutes.
 
 | Component | Version | Purpose |
 |-----------|---------|---------|
-| Go | 1.21+ | Server compilation |
+| Go | 1.24+ | Server compilation |
 | Node.js | 18+ | Dashboard build |
 | Rust | 1.75+ | Agent compilation |
 
@@ -65,6 +65,12 @@ This compiles and runs the Rust agent, which will:
 4. Wait for tasks from the server
 
 Verify the agent is connected in the **Agents** page (status should be "Online").
+
+!!! tip "Agent Authentication"
+    If `AGENT_SECRET` is set on the server, pass it to the agent:
+    ```bash
+    cd agent && cargo run --release -- -k "your-agent-secret"
+    ```
 
 ---
 
@@ -143,9 +149,51 @@ Filter by platform (Windows/Linux) using the dropdown.
 
 ---
 
-## Available Techniques
+## Available Techniques (48 total)
 
-AutoStrike includes 15 MITRE ATT&CK techniques:
+AutoStrike includes **48 MITRE ATT&CK techniques** across **13 tactics**:
+
+### Reconnaissance (2 techniques)
+- T1592.004 - Gather Victim Host Information: Client Configurations
+- T1595.002 - Active Scanning: Vulnerability Scanning
+
+### Initial Access (3 techniques)
+- T1078 - Valid Accounts
+- T1133 - External Remote Services
+- T1190 - Exploit Public-Facing Application
+
+### Execution (5 techniques)
+- T1059.001 - PowerShell
+- T1059.003 - Windows Command Shell
+- T1059.004 - Unix Shell
+- T1047 - Windows Management Instrumentation
+- T1059.006 - Python
+
+### Persistence (4 techniques)
+- T1053.005 - Scheduled Task
+- T1547.001 - Registry Run Keys
+- T1053.003 - Cron
+- T1543.002 - Systemd Service
+
+### Privilege Escalation (4 techniques)
+- T1548.001 - Setuid and Setgid
+- T1548.002 - Bypass User Account Control
+- T1078.003 - Local Accounts
+- T1134.001 - Token Impersonation/Theft
+
+### Defense Evasion (6 techniques)
+- T1070.004 - File Deletion
+- T1562.001 - Disable or Modify Tools
+- T1027 - Obfuscated Files or Information
+- T1070.001 - Clear Windows Event Logs
+- T1036.005 - Match Legitimate Name or Location
+- T1218.011 - Rundll32
+
+### Credential Access (4 techniques)
+- T1552.001 - Credentials In Files
+- T1555.003 - Credentials from Web Browsers
+- T1003.008 - /etc/passwd and /etc/shadow
+- T1552.004 - Private Keys
 
 ### Discovery (9 techniques)
 - T1082 - System Information Discovery
@@ -158,17 +206,33 @@ AutoStrike includes 15 MITRE ATT&CK techniques:
 - T1018 - Remote System Discovery
 - T1007 - System Service Discovery
 
-### Execution (3 techniques)
-- T1059.001 - PowerShell
-- T1059.003 - Windows Command Shell
-- T1059.004 - Unix Shell
+### Lateral Movement (3 techniques)
+- T1021.001 - Remote Desktop Protocol
+- T1021.002 - SMB/Windows Admin Shares
+- T1021.004 - SSH
 
-### Persistence (2 techniques)
-- T1053.005 - Scheduled Task
-- T1547.001 - Registry Run Keys
+### Collection (4 techniques)
+- T1005 - Data from Local System
+- T1039 - Data from Network Shared Drive
+- T1074.001 - Local Data Staging
+- T1119 - Automated Collection
 
-### Defense Evasion (1 technique)
-- T1070.004 - File Deletion
+### Command and Control (3 techniques)
+- T1071.001 - Web Protocols
+- T1105 - Ingress Tool Transfer
+- T1572 - Protocol Tunneling
+
+### Exfiltration (3 techniques)
+- T1048.003 - Exfiltration Over Unencrypted Non-C2 Protocol
+- T1041 - Exfiltration Over C2 Channel
+- T1567.002 - Exfiltration to Cloud Storage
+
+### Impact (3 techniques)
+- T1490 - Inhibit System Recovery
+- T1489 - Service Stop
+- T1486 - Data Encrypted for Impact
+
+All techniques support **Safe Mode** for production-safe testing.
 
 ---
 
@@ -180,6 +244,7 @@ AutoStrike includes 15 MITRE ATT&CK techniques:
 2. Verify WebSocket endpoint: `wss://localhost:8443/ws/agent`
 3. Check agent logs for connection errors
 4. Ensure no firewall blocking port 8443
+5. If `AGENT_SECRET` is set, verify the agent passes `-k` with the correct secret
 
 ### Execution stuck in "Running"
 

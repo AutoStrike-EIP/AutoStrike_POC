@@ -327,6 +327,61 @@ score = (blocked * 100 + detected * 50) / (total * 100) * 100
 | Detected | 50 | Attack seen but not stopped |
 | Success | 0 | Attack succeeded undetected |
 
+## Git Rules
+
+### Branches
+- NEVER push to main directly
+- Naming: `feat/<scope>-<description>`, `fix/<scope>-<description>`, `test/<scope>-<description>`
+- Scope: server, dashboard, agent, techniques, scenarios, docs, ci
+- Always branch from latest main: `git checkout main && git pull && git checkout -b feat/...`
+
+### Commits
+- Format: `type(scope): description`
+- Types: feat, fix, test, refactor, docs, ci, chore
+- Examples: `feat(server): add PDF report endpoint`, `test(dashboard): add Reports page tests`
+- NEVER mention Claude, AI, LLM, assistant, copilot, or Anthropic in commits
+- NEVER add Co-Authored-By with Claude or Anthropic
+- Messages in English, concise, descriptive
+- Stage specific files (`git add <files>`) — never use `git add -A` or `git add .`
+
+### Pull Requests
+- Use `gh pr create` with title (<70 chars) and body
+- NEVER mention Claude/AI/LLM in PRs
+- PR body format:
+  ```
+  ## Summary
+  - <change 1>
+  - <change 2>
+
+  ## Test plan
+  - [ ] Unit tests added
+  - [ ] Coverage >= 95%
+  - [ ] Lint passes
+  - [ ] No regressions
+  ```
+
+## Quality Standards
+
+### Coverage Targets
+- Server Go: 95%+ per package
+- Dashboard React: 95%+ lines
+- Agent Rust: 90%+
+
+### Lint (must pass with zero warnings)
+```bash
+cd server && go vet ./... && go test ./... -cover
+cd dashboard && npm run lint && npm run type-check && npm test -- --run
+cd agent && cargo fmt --check && cargo clippy -- -D warnings && cargo test
+```
+
+### Code Rules
+- No `any` in TypeScript unless justified with a comment
+- No `unsafe` in Rust unless justified and documented
+- No `panic` in Go handlers — always return proper HTTP errors
+- Input validation on all public endpoints
+- Error handling explicit — no unhandled promises, no ignored errors
+- Hexagonal architecture: domain/ has ZERO imports from infrastructure/
+
 ## Contributing
 
 1. Follow hexagonal architecture for server changes

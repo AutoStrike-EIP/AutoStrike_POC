@@ -10,13 +10,18 @@ The AutoStrike dashboard is built with **React 18**, **TypeScript**, and **Tailw
 |------------|---------|-------|
 | React | 18.2 | UI Framework |
 | TypeScript | 5.3 | Static typing |
-| Vite | 5.0 | Build tool |
+| Vite | 7.3 | Build tool |
 | TailwindCSS | 3.4 | Utility-first styling |
 | TanStack Query | 5.17 | Data fetching & caching |
 | React Router | 6.21 | SPA navigation |
 | Chart.js | 4.4 | Charts (Doughnut) |
 | Axios | 1.6 | HTTP client |
-| react-hot-toast | 2.4 | Notifications |
+| Zustand | 4.4 | State management |
+| Headless UI | 1.7 | Accessible components |
+| Heroicons | 2.1 | SVG icons |
+| date-fns | 3.2 | Date formatting |
+| react-hot-toast | 2.4 | Toast notifications |
+| Vitest | 4.0 | Testing framework |
 
 ---
 
@@ -33,6 +38,11 @@ dashboard/
 │   │   ├── ProtectedRoute.tsx # Route protection wrapper
 │   │   ├── MitreMatrix.tsx   # Interactive MITRE ATT&CK matrix
 │   │   ├── RunExecutionModal.tsx  # Execution configuration modal
+│   │   ├── SecurityScore.tsx # Security score visualization
+│   │   ├── CoverageReport.tsx # MITRE coverage report
+│   │   ├── Modal.tsx         # Reusable modal component
+│   │   ├── Table.tsx         # Reusable table component
+│   │   ├── ThemeToggle.tsx   # Dark/light theme toggle
 │   │   ├── LoadingState.tsx  # Loading spinner component
 │   │   ├── EmptyState.tsx    # Empty state placeholder
 │   │   └── ErrorBoundary.tsx # Error boundary wrapper
@@ -75,7 +85,7 @@ dashboard/
 
 Overview page with:
 - **Agents Online**: Connected agent count
-- **Security Score**: Latest execution score
+- **Security Score**: Latest execution score (SecurityScore component)
 - **Techniques Tested**: Number of techniques executed
 - **Doughnut Chart**: Distribution of blocked/detected/successful
 - **Recent Activity**: Last 5 executions
@@ -95,6 +105,7 @@ MITRE ATT&CK catalog:
 - Tactic color coding (14 colors)
 - Platform badges
 - Safe/Unsafe badge
+- Import techniques modal
 
 ### Matrix (`/matrix`)
 
@@ -103,7 +114,7 @@ Interactive MITRE ATT&CK matrix:
 - Technique cells with safety indicators
 - Platform filter dropdown
 - Click to view technique details
-- Coverage statistics
+- Coverage statistics (CoverageReport component)
 
 ### Scenarios (`/scenarios`)
 
@@ -112,6 +123,7 @@ Attack scenarios:
 - Technique count per phase
 - Category tags
 - **Run** button → Opens RunExecutionModal
+- Import/export support
 
 ### Executions (`/executions`)
 
@@ -213,6 +225,26 @@ interface RunExecutionModalProps {
 - Safe mode toggle
 - Scenario info display
 - Validation (requires at least one agent)
+
+### SecurityScore
+
+Security score visualization with color-coded display.
+
+### CoverageReport
+
+MITRE ATT&CK coverage statistics and reporting.
+
+### Modal
+
+Reusable modal dialog component.
+
+### Table
+
+Reusable data table with sorting and filtering.
+
+### ThemeToggle
+
+Dark/light theme toggle button.
 
 ---
 
@@ -326,7 +358,7 @@ npm test          # Vitest tests (513 tests)
 
 513 tests across 25 test files:
 
-- Component tests (Layout, MitreMatrix, RunExecutionModal)
+- Component tests (Layout, MitreMatrix, RunExecutionModal, SecurityScore, CoverageReport, Modal, Table, ThemeToggle, LoadingState, EmptyState, ErrorBoundary, ProtectedRoute)
 - Page tests (Dashboard, Agents, Techniques, Scenarios, Executions, etc.)
 - Hook tests (useWebSocket)
 - API client tests

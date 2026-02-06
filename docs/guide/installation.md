@@ -6,7 +6,7 @@
 
 | Component | Minimum Version | Recommended |
 |-----------|-----------------|-------------|
-| Go | 1.21+ | 1.22+ |
+| Go | 1.24+ | 1.24+ |
 | Node.js | 18+ | 20 LTS |
 | SQLite | 3.35+ | 3.40+ |
 | Docker | 24+ (optional) | 25+ |
@@ -80,14 +80,29 @@ DASHBOARD_PATH=../dashboard/dist
 # JWT Configuration (optional - auth disabled if not set)
 JWT_SECRET=your-secure-jwt-secret-32-characters
 
+# Explicit auth override (optional)
+ENABLE_AUTH=true
+
 # Agent Authentication (optional)
 AGENT_SECRET=your-secure-agent-secret
+
+# Default admin password (optional - random if not set)
+DEFAULT_ADMIN_PASSWORD=your-admin-password
 
 # CORS Origins
 ALLOWED_ORIGINS=localhost:3000,localhost:8443
 
 # Log Level (debug, info, warn, error)
 LOG_LEVEL=info
+
+# SMTP Configuration (optional - for email notifications)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=notifications@example.com
+SMTP_PASSWORD=smtp-password
+SMTP_FROM=noreply@example.com
+SMTP_USE_TLS=true
+DASHBOARD_URL=https://localhost:8443
 ```
 
 !!! note "Authentication"
@@ -180,6 +195,9 @@ cargo build --release
 
 # Run the agent
 .\target\release\autostrike-agent.exe --server https://server:8443 --paw "agent-win-001"
+
+# With agent authentication
+.\target\release\autostrike-agent.exe --server https://server:8443 --paw "agent-win-001" -k "your-agent-secret"
 ```
 
 #### Install as Windows Service
@@ -207,6 +225,9 @@ cargo build --release
 
 # Run the agent
 sudo ./target/release/autostrike-agent --server https://server:8443 --paw "agent-lin-001"
+
+# With agent authentication
+sudo ./target/release/autostrike-agent --server https://server:8443 --paw "agent-lin-001" -k "your-agent-secret"
 ```
 
 #### Install as systemd Service
@@ -258,6 +279,7 @@ sudo ./target/release/autostrike-agent --server https://server:8443 --paw "agent
 | `-p, --paw` | Unique agent identifier | Auto-generated UUID |
 | `-c, --config` | Configuration file path | `agent.yaml` |
 | `-d, --debug` | Enable debug logging | `false` |
+| `-k, --agent-secret` | Agent authentication secret (`X-Agent-Key` header) | - |
 
 ### Agent Configuration File
 
@@ -267,6 +289,7 @@ Create `agent.yaml`:
 server_url: "https://server:8443"
 paw: "agent-001"
 heartbeat_interval: 30  # seconds
+agent_secret: "your-agent-secret"  # optional
 
 tls:
   cert_file: "./certs/agent.crt"  # optional
@@ -344,6 +367,8 @@ sudo systemctl restart autostrike-agent
    ```bash
    journalctl -u autostrike-agent -f
    ```
+
+4. If `AGENT_SECRET` is set on the server, verify the agent passes `-k` with the correct secret
 
 ### "Connection refused" error
 

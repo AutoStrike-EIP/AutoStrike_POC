@@ -10,24 +10,41 @@ Le serveur suit une **architecture hexagonale** (Ports & Adapters) :
 server/
 ├── cmd/autostrike/          # Point d'entrée
 │   └── main.go
-├── config/                  # Configuration
-│   └── config.yaml
+├── configs/
+│   └── techniques/          # Définitions YAML (13 fichiers)
+│       ├── reconnaissance.yaml
+│       ├── initial-access.yaml
+│       ├── execution.yaml
+│       ├── persistence.yaml
+│       ├── privilege-escalation.yaml
+│       ├── defense-evasion.yaml
+│       ├── credential-access.yaml
+│       ├── discovery.yaml
+│       ├── lateral-movement.yaml
+│       ├── collection.yaml
+│       ├── command-and-control.yaml
+│       ├── exfiltration.yaml
+│       └── impact.yaml
 ├── internal/
 │   ├── domain/              # Couche métier (indépendante)
-│   │   ├── entity/          # Entités: Agent, Technique, Scenario, Result
+│   │   ├── entity/          # Entités: Agent, Technique, Scenario, Execution, Result, User, Notification, Schedule, Permission
 │   │   ├── repository/      # Interfaces (ports sortants)
-│   │   ├── service/         # Services domaine: Orchestrator, Validator, ScoreCalculator
-│   │   └── valueobject/     # Objets valeur
+│   │   └── service/         # Services domaine: Orchestrator, Validator, ScoreCalculator
 │   ├── application/         # Cas d'utilisation
 │   │   ├── agent_service.go
+│   │   ├── auth_service.go
 │   │   ├── execution_service.go
 │   │   ├── scenario_service.go
-│   │   └── technique_service.go
+│   │   ├── technique_service.go
+│   │   ├── notification_service.go
+│   │   ├── schedule_service.go
+│   │   ├── analytics_service.go
+│   │   └── token_blacklist.go
 │   └── infrastructure/      # Adaptateurs externes
 │       ├── api/rest/        # Serveur REST (Gin)
 │       ├── http/
-│       │   ├── handlers/    # Handlers HTTP
-│       │   └── middleware/  # Auth JWT, Logging
+│       │   ├── handlers/    # Handlers HTTP (11 fichiers)
+│       │   └── middleware/  # Auth JWT, Security Headers, Rate Limiting, Logging
 │       ├── persistence/
 │       │   └── sqlite/      # Implémentation SQLite
 │       └── websocket/       # Communication agents
@@ -36,7 +53,7 @@ server/
 
 ## Prérequis
 
-- Go 1.21+
+- Go 1.24+
 - SQLite3
 - OpenSSL (pour les certificats)
 
@@ -55,25 +72,39 @@ mkdir -p data
 
 ## Configuration
 
-Éditer `config/config.yaml` :
+Variables d'environnement (fichier `.env`) :
 
-```yaml
-server:
-  host: "0.0.0.0"
-  port: 8443
+```env
+# Base de données
+DATABASE_PATH=./data/autostrike.db
 
-database:
-  path: "./data/autostrike.db"
+# Dashboard
+DASHBOARD_PATH=../dashboard/dist
 
-security:
-  jwt_secret: "${JWT_SECRET}"      # Variable d'environnement
-  agent_secret: "${AGENT_SECRET}"
-  tls:
-    enabled: true
-    cert_file: "./certs/server.crt"
-    key_file: "./certs/server.key"
-    ca_file: "./certs/ca.crt"
-    mtls: true
+# Authentification JWT (optionnel - auth désactivée si non défini)
+JWT_SECRET=your-secure-jwt-secret-32-characters
+ENABLE_AUTH=true
+
+# Agent
+AGENT_SECRET=your-secure-agent-secret
+
+# Admin
+DEFAULT_ADMIN_PASSWORD=your-admin-password
+
+# CORS
+ALLOWED_ORIGINS=localhost:3000,localhost:8443
+
+# Logging
+LOG_LEVEL=info
+
+# SMTP (optionnel - pour notifications email)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=notifications@example.com
+SMTP_PASSWORD=smtp-password
+SMTP_FROM=noreply@example.com
+SMTP_USE_TLS=true
+DASHBOARD_URL=https://localhost:8443
 ```
 
 ## Lancement
@@ -84,25 +115,25 @@ go run ./cmd/autostrike
 
 # Mode production
 go build -o autostrike ./cmd/autostrike
-./autostrike
+JWT_SECRET=secret AGENT_SECRET=agent-key ./autostrike
 ```
 
 ## API REST
 
 Base URL: `https://localhost:8443/api/v1`
 
-### Authentication (routes publiques)
+### Authentication (routes publiques, rate-limited)
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
-| POST | `/auth/login` | Login avec username/password |
-| POST | `/auth/refresh` | Rafraîchir le token d'accès |
+| POST | `/auth/login` | Login (5 tentatives/min par IP) |
+| POST | `/auth/refresh` | Rafraîchir le token (10 tentatives/min par IP) |
 | POST | `/auth/logout` | Invalider les tokens |
-| GET | `/auth/me` | Infos utilisateur courant (requiert token) |
+| GET | `/auth/me` | Infos utilisateur courant |
 
 ### Agents
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
-| GET | `/agents` | Liste tous les agents |
+| GET | `/agents` | Liste des agents (`?all=true` pour offline) |
 | GET | `/agents/:paw` | Détails d'un agent |
 | POST | `/agents` | Enregistrer un agent |
 | DELETE | `/agents/:paw` | Supprimer un agent |
@@ -111,11 +142,11 @@ Base URL: `https://localhost:8443/api/v1`
 ### Techniques
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
-| GET | `/techniques` | Liste toutes les techniques |
+| GET | `/techniques` | Liste des 48 techniques |
 | GET | `/techniques/:id` | Détails d'une technique |
 | GET | `/techniques/tactic/:tactic` | Techniques par tactique MITRE |
 | GET | `/techniques/platform/:platform` | Techniques par plateforme |
-| GET | `/techniques/coverage` | Statistiques de couverture |
+| GET | `/techniques/coverage` | Statistiques de couverture (13 tactiques) |
 | POST | `/techniques/import` | Importer depuis YAML |
 
 ### Scénarios
@@ -124,7 +155,10 @@ Base URL: `https://localhost:8443/api/v1`
 | GET | `/scenarios` | Liste des scénarios |
 | GET | `/scenarios/:id` | Détails d'un scénario |
 | GET | `/scenarios/tag/:tag` | Scénarios par tag |
+| GET | `/scenarios/export` | Exporter tous les scénarios |
+| GET | `/scenarios/:id/export` | Exporter un scénario |
 | POST | `/scenarios` | Créer un scénario |
+| POST | `/scenarios/import` | Importer des scénarios |
 | PUT | `/scenarios/:id` | Modifier un scénario |
 | DELETE | `/scenarios/:id` | Supprimer un scénario |
 
@@ -149,33 +183,41 @@ Base URL: `https://localhost:8443/api/v1`
 | DELETE | `/schedules/:id` | Supprimer une planification |
 | POST | `/schedules/:id/pause` | Mettre en pause |
 | POST | `/schedules/:id/resume` | Reprendre |
+| POST | `/schedules/:id/run` | Exécuter maintenant |
 
 ### Notifications
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
 | GET | `/notifications` | Liste des notifications |
-| GET | `/notifications/settings` | Paramètres de notification |
-| PUT | `/notifications/settings` | Modifier les paramètres |
+| GET | `/notifications/unread/count` | Nombre de non-lues |
 | POST | `/notifications/:id/read` | Marquer comme lue |
 | POST | `/notifications/read-all` | Tout marquer comme lu |
+| GET | `/notifications/settings` | Paramètres de notification |
+| POST | `/notifications/settings` | Créer des paramètres |
+| PUT | `/notifications/settings/:id` | Modifier les paramètres |
+| DELETE | `/notifications/settings/:id` | Supprimer les paramètres |
+| GET | `/notifications/smtp` | Configuration SMTP (admin) |
+| POST | `/notifications/smtp/test` | Tester SMTP (admin) |
 
 ### Analytics
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
+| GET | `/analytics/period` | Statistiques par période |
+| GET | `/analytics/comparison` | Comparaison de périodes |
 | GET | `/analytics/trend` | Tendance du score |
-| GET | `/analytics/compare` | Comparaison de périodes |
 | GET | `/analytics/summary` | Résumé des exécutions |
 
-### Admin (Utilisateurs)
+### Admin (Utilisateurs) - rôle admin requis
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
 | GET | `/admin/users` | Liste des utilisateurs |
 | GET | `/admin/users/:id` | Détails d'un utilisateur |
 | POST | `/admin/users` | Créer un utilisateur |
 | PUT | `/admin/users/:id` | Modifier un utilisateur |
-| DELETE | `/admin/users/:id` | Supprimer un utilisateur |
-| POST | `/admin/users/:id/activate` | Activer un utilisateur |
-| POST | `/admin/users/:id/deactivate` | Désactiver un utilisateur |
+| PUT | `/admin/users/:id/role` | Changer le rôle |
+| DELETE | `/admin/users/:id` | Désactiver un utilisateur |
+| POST | `/admin/users/:id/reactivate` | Réactiver un utilisateur |
+| POST | `/admin/users/:id/reset-password` | Réinitialiser le mot de passe |
 
 ### Permissions
 | Méthode | Endpoint | Description |
@@ -185,19 +227,23 @@ Base URL: `https://localhost:8443/api/v1`
 
 ## WebSocket
 
-Endpoint: `wss://localhost:8443/ws/agent`
+| Endpoint | Description |
+|----------|-------------|
+| `wss://localhost:8443/ws/agent` | Connexion agents |
+| `wss://localhost:8443/ws/dashboard` | Mises à jour temps réel |
 
 ### Messages Agent → Server
 ```json
-{"type": "register", "payload": {"paw": "...", "hostname": "...", "platform": "..."}}
+{"type": "register", "payload": {"paw": "...", "hostname": "...", "platform": "...", "executors": [...]}}
 {"type": "heartbeat", "payload": {"paw": "..."}}
 {"type": "task_result", "payload": {"task_id": "...", "success": true, "output": "..."}}
 ```
 
 ### Messages Server → Agent
 ```json
+{"type": "registered", "payload": {"status": "ok", "paw": "..."}}
 {"type": "task", "payload": {"id": "...", "technique_id": "T1082", "command": "...", "timeout": 300}}
-{"type": "ping", "payload": {}}
+{"type": "task_ack", "payload": {"task_id": "...", "status": "received"}}
 ```
 
 ## Score de Sécurité
@@ -212,8 +258,11 @@ Formule : `(blocked × 100 + detected × 50) / (total × 100) × 100`
 
 ## Tests
 
+200+ tests avec couverture complète :
+
 ```bash
 go test -v ./...
+go test ./... -cover
 ```
 
 ## Docker
