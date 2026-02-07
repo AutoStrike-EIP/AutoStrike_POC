@@ -1,21 +1,36 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Technique, TacticType } from '../types';
 
+type DescPart = { type: 'text' | 'link' | 'code'; value: string; href?: string };
+
 /**
- * Renders a description string, converting markdown-style [text](url) links to clickable anchors.
+ * Renders a description string with rich formatting:
+ * - Markdown links [text](url) → clickable anchors
+ * - HTML <code>text</code> → styled inline code
+ * - Backtick `text` → styled inline code
  */
 function DescriptionText({ text }: Readonly<{ text: string }>) {
   const parts = useMemo(() => {
-    const result: { type: 'text' | 'link'; value: string; href?: string }[] = [];
-    const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
+    // Single regex that matches markdown links, HTML <code> tags, or backtick code
+    const combinedRegex = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)|<code>([^<]+)<\/code>|`([^`]+)`/g;
+    const result: DescPart[] = [];
     let lastIndex = 0;
     let match;
 
-    while ((match = linkRegex.exec(text)) !== null) {
+    while ((match = combinedRegex.exec(text)) !== null) {
       if (match.index > lastIndex) {
         result.push({ type: 'text', value: text.slice(lastIndex, match.index) });
       }
-      result.push({ type: 'link', value: match[1], href: match[2] });
+      if (match[1] !== undefined) {
+        // Markdown link: [text](url)
+        result.push({ type: 'link', value: match[1], href: match[2] });
+      } else if (match[3] !== undefined) {
+        // HTML <code>text</code>
+        result.push({ type: 'code', value: match[3] });
+      } else if (match[4] !== undefined) {
+        // Backtick `text`
+        result.push({ type: 'code', value: match[4] });
+      }
       lastIndex = match.index + match[0].length;
     }
     if (lastIndex < text.length) {
@@ -26,21 +41,32 @@ function DescriptionText({ text }: Readonly<{ text: string }>) {
 
   return (
     <span>
-      {parts.map((part, i) =>
-        part.type === 'link' ? (
-          <a
-            key={i}
-            href={part.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary-600 dark:text-primary-400 hover:underline"
-          >
-            {part.value}
-          </a>
-        ) : (
-          <span key={i}>{part.value}</span>
-        )
-      )}
+      {parts.map((part, i) => {
+        if (part.type === 'link') {
+          return (
+            <a
+              key={i}
+              href={part.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-600 dark:text-primary-400 hover:underline"
+            >
+              {part.value}
+            </a>
+          );
+        }
+        if (part.type === 'code') {
+          return (
+            <code
+              key={i}
+              className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-red-600 dark:text-red-400 text-xs font-mono"
+            >
+              {part.value}
+            </code>
+          );
+        }
+        return <span key={i}>{part.value}</span>;
+      })}
     </span>
   );
 }

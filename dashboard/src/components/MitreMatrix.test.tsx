@@ -34,7 +34,7 @@ const mockTechniques: Technique[] = [
   {
     id: 'T1059.001',
     name: 'PowerShell',
-    description: 'Adversaries may abuse PowerShell commands.',
+    description: 'Adversaries may abuse the <code>PowerShell</code> utility and `Invoke-Expression` cmdlet.',
     tactic: 'execution',
     platforms: ['windows'],
     is_safe: false,
@@ -265,6 +265,30 @@ describe('MitreMatrix', () => {
     expect(link.tagName).toBe('A');
     expect(link).toHaveAttribute('href', 'https://attack.mitre.org/techniques/T1566');
     expect(link).toHaveAttribute('target', '_blank');
+  });
+
+  it('renders HTML <code> tags as styled inline code', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
+    fireEvent.click(techniqueButton);
+
+    // <code>PowerShell</code> should render as a <code> element
+    const codeEl = screen.getByText('PowerShell', { selector: 'code' });
+    expect(codeEl).toBeInTheDocument();
+    expect(codeEl.tagName).toBe('CODE');
+  });
+
+  it('renders backtick code as styled inline code', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
+    fireEvent.click(techniqueButton);
+
+    // `Invoke-Expression` should render as a <code> element
+    const codeEl = screen.getByText('Invoke-Expression');
+    expect(codeEl).toBeInTheDocument();
+    expect(codeEl.tagName).toBe('CODE');
   });
 
   it('renders references as clickable links', () => {
