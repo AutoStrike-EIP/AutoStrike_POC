@@ -404,3 +404,130 @@ describe('MitreMatrix', () => {
     expect(screen.getByText('T1566')).toBeInTheDocument();
   });
 });
+
+describe('MitreMatrix Multi-Tactic Support', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('displays a multi-tactic technique in multiple columns', () => {
+    const multiTacticTechniques: Technique[] = [
+      {
+        id: 'T1078',
+        name: 'Valid Accounts',
+        description: 'Adversaries may use valid accounts.',
+        tactic: 'initial_access',
+        tactics: ['initial_access', 'persistence', 'privilege_escalation', 'defense_evasion'],
+        platforms: ['windows', 'linux'],
+        is_safe: false,
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={multiTacticTechniques} />);
+
+    // T1078 should appear in all 4 tactic columns
+    const techniqueButtons = screen.getAllByTitle('T1078: Valid Accounts');
+    expect(techniqueButtons.length).toBe(4);
+
+    // Check the counts in the headers
+    const initialAccessCount = screen.getByText('Initial Access').parentElement?.querySelector('.text-white\\/70');
+    expect(initialAccessCount?.textContent).toBe('1');
+
+    const persistenceCount = screen.getByText('Persistence').parentElement?.querySelector('.text-white\\/70');
+    expect(persistenceCount?.textContent).toBe('1');
+
+    const privEscCount = screen.getByText('Privilege Escalation').parentElement?.querySelector('.text-white\\/70');
+    expect(privEscCount?.textContent).toBe('1');
+
+    const defenseEvasionCount = screen.getByText('Defense Evasion').parentElement?.querySelector('.text-white\\/70');
+    expect(defenseEvasionCount?.textContent).toBe('1');
+  });
+
+  it('falls back to single tactic when tactics array is absent', () => {
+    const singleTacticTechniques: Technique[] = [
+      {
+        id: 'T1082',
+        name: 'System Information Discovery',
+        description: 'Test',
+        tactic: 'discovery',
+        // No tactics array
+        platforms: ['windows'],
+        is_safe: true,
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={singleTacticTechniques} />);
+
+    // Should appear only in discovery column
+    const techniqueButtons = screen.getAllByTitle('T1082: System Information Discovery');
+    expect(techniqueButtons.length).toBe(1);
+
+    const discoveryCount = screen.getByText('Discovery').parentElement?.querySelector('.text-white\\/70');
+    expect(discoveryCount?.textContent).toBe('1');
+  });
+
+  it('shows all tactics in the detail panel for a multi-tactic technique', () => {
+    const multiTacticTechniques: Technique[] = [
+      {
+        id: 'T1078',
+        name: 'Valid Accounts',
+        description: 'Adversaries may use valid accounts.',
+        tactic: 'initial_access',
+        tactics: ['initial_access', 'persistence'],
+        platforms: ['windows'],
+        is_safe: false,
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={multiTacticTechniques} />);
+
+    // Click on the technique
+    const techniqueButtons = screen.getAllByTitle('T1078: Valid Accounts');
+    fireEvent.click(techniqueButtons[0]);
+
+    // Detail panel should show all tactics
+    expect(screen.getByText('initial access, persistence')).toBeInTheDocument();
+  });
+
+  it('counts multi-tactic techniques correctly in each column header', () => {
+    const techniques: Technique[] = [
+      {
+        id: 'T1078',
+        name: 'Valid Accounts',
+        description: 'Test',
+        tactic: 'initial_access',
+        tactics: ['initial_access', 'persistence'],
+        platforms: ['windows'],
+        is_safe: false,
+        detection: [],
+      },
+      {
+        id: 'T1053.005',
+        name: 'Scheduled Task',
+        description: 'Test',
+        tactic: 'persistence',
+        tactics: ['persistence', 'execution'],
+        platforms: ['windows'],
+        is_safe: false,
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={techniques} />);
+
+    // Persistence should have 2 techniques (T1078 + T1053.005)
+    const persistenceCount = screen.getByText('Persistence').parentElement?.querySelector('.text-white\\/70');
+    expect(persistenceCount?.textContent).toBe('2');
+
+    // Initial Access should have 1 (T1078)
+    const initialAccessCount = screen.getByText('Initial Access').parentElement?.querySelector('.text-white\\/70');
+    expect(initialAccessCount?.textContent).toBe('1');
+
+    // Execution should have 1 (T1053.005)
+    const executionCount = screen.getByText('Execution').parentElement?.querySelector('.text-white\\/70');
+    expect(executionCount?.textContent).toBe('1');
+  });
+});

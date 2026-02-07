@@ -1080,7 +1080,7 @@ describe('Scenarios Create Modal', () => {
         name: 'New Test Scenario',
         description: 'A test description',
         tags: ['test', 'discovery'],
-        phases: [{ name: 'Phase 1', techniques: ['T1082'], order: 1 }],
+        phases: [{ name: 'Phase 1', techniques: [{ technique_id: 'T1082' }], order: 1 }],
       });
       expect(toast.success).toHaveBeenCalledWith('Scenario created successfully');
     });
@@ -1361,8 +1361,246 @@ describe('Scenarios Create Modal', () => {
         name: 'No Tags Scenario',
         description: '',
         tags: [],
-        phases: [{ name: 'Phase 1', techniques: ['T1082'], order: 1 }],
+        phases: [{ name: 'Phase 1', techniques: [{ technique_id: 'T1082' }], order: 1 }],
       });
     });
+  });
+});
+
+describe('Scenarios TechniqueSelection and Executor', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const mockTechniquesWithExecutors = [
+    {
+      id: 'T1082',
+      name: 'System Info Discovery',
+      tactic: 'discovery',
+      platforms: ['windows', 'linux'],
+      is_safe: true,
+      executors: [
+        { name: 'systeminfo-cmd', type: 'cmd', platform: 'windows', command: 'systeminfo', timeout: 300 },
+        { name: 'uname-bash', type: 'bash', platform: 'linux', command: 'uname -a', timeout: 300 },
+      ],
+    },
+    {
+      id: 'T1083',
+      name: 'File Discovery',
+      tactic: 'discovery',
+      platforms: ['windows'],
+      is_safe: true,
+      executors: [
+        { type: 'cmd', command: 'dir', timeout: 300 },
+      ],
+    },
+  ];
+
+  it('submits techniques in TechniqueSelection format', async () => {
+    vi.mocked(api.get).mockImplementation((url) => {
+      if (url === '/scenarios') return Promise.resolve({ data: [] });
+      if (url === '/techniques') return Promise.resolve({ data: mockTechniquesWithExecutors });
+      return Promise.resolve({ data: [] });
+    });
+    vi.mocked(scenarioApi.create).mockResolvedValue({ data: { id: 'new-sc' } } as never);
+
+    renderWithClient(<Scenarios />);
+
+    await screen.findByText('Scenarios');
+    fireEvent.click(screen.getByText('Create Scenario'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Create Scenario' })).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByPlaceholderText('My Attack Scenario'), {
+      target: { value: 'Selection Test' },
+    });
+
+    const checkbox = screen.getByRole('checkbox', { name: /T1082/i });
+    fireEvent.click(checkbox);
+
+    const createButtons = screen.getAllByRole('button', { name: /create scenario/i });
+    const submitButton = createButtons.find(btn => btn.closest('.border-t'));
+    if (submitButton) {
+      fireEvent.click(submitButton);
+    }
+
+    await waitFor(() => {
+      expect(scenarioApi.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          phases: [expect.objectContaining({
+            techniques: [{ technique_id: 'T1082' }],
+          })],
+        })
+      );
+    });
+  });
+
+  it('shows executor dropdown when technique has multiple executors', async () => {
+    vi.mocked(api.get).mockImplementation((url) => {
+      if (url === '/scenarios') return Promise.resolve({ data: [] });
+      if (url === '/techniques') return Promise.resolve({ data: mockTechniquesWithExecutors });
+      return Promise.resolve({ data: [] });
+    });
+
+    renderWithClient(<Scenarios />);
+
+    await screen.findByText('Scenarios');
+    fireEvent.click(screen.getByText('Create Scenario'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Create Scenario' })).toBeInTheDocument();
+    });
+
+    // Select T1082 (has 2 executors)
+    const checkbox = screen.getByRole('checkbox', { name: /T1082/i });
+    fireEvent.click(checkbox);
+
+    // Executor dropdown should appear
+    await waitFor(() => {
+      const executorSelect = screen.getByLabelText('Executor for T1082');
+      expect(executorSelect).toBeInTheDocument();
+      expect(executorSelect).toContainHTML('Auto (best match)');
+      expect(executorSelect).toContainHTML('systeminfo-cmd');
+      expect(executorSelect).toContainHTML('uname-bash');
+    });
+  });
+
+  it('does not show executor dropdown for single-executor technique', async () => {
+    vi.mocked(api.get).mockImplementation((url) => {
+      if (url === '/scenarios') return Promise.resolve({ data: [] });
+      if (url === '/techniques') return Promise.resolve({ data: mockTechniquesWithExecutors });
+      return Promise.resolve({ data: [] });
+    });
+
+    renderWithClient(<Scenarios />);
+
+    await screen.findByText('Scenarios');
+    fireEvent.click(screen.getByText('Create Scenario'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Create Scenario' })).toBeInTheDocument();
+    });
+
+    // Select T1083 (has 1 executor only)
+    const checkbox = screen.getByRole('checkbox', { name: /T1083/i });
+    fireEvent.click(checkbox);
+
+    // No executor dropdown for single-executor technique
+    expect(screen.queryByLabelText('Executor for T1083')).not.toBeInTheDocument();
+  });
+
+  it('saves executor selection in TechniqueSelection', async () => {
+    vi.mocked(api.get).mockImplementation((url) => {
+      if (url === '/scenarios') return Promise.resolve({ data: [] });
+      if (url === '/techniques') return Promise.resolve({ data: mockTechniquesWithExecutors });
+      return Promise.resolve({ data: [] });
+    });
+    vi.mocked(scenarioApi.create).mockResolvedValue({ data: { id: 'new-sc' } } as never);
+
+    renderWithClient(<Scenarios />);
+
+    await screen.findByText('Scenarios');
+    fireEvent.click(screen.getByText('Create Scenario'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Create Scenario' })).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByPlaceholderText('My Attack Scenario'), {
+      target: { value: 'Executor Choice' },
+    });
+
+    // Select T1082
+    const checkbox = screen.getByRole('checkbox', { name: /T1082/i });
+    fireEvent.click(checkbox);
+
+    // Choose a specific executor
+    await waitFor(() => {
+      const executorSelect = screen.getByLabelText('Executor for T1082');
+      fireEvent.change(executorSelect, { target: { value: 'uname-bash' } });
+    });
+
+    // Submit
+    const createButtons = screen.getAllByRole('button', { name: /create scenario/i });
+    const submitButton = createButtons.find(btn => btn.closest('.border-t'));
+    if (submitButton) {
+      fireEvent.click(submitButton);
+    }
+
+    await waitFor(() => {
+      expect(scenarioApi.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          phases: [expect.objectContaining({
+            techniques: [{ technique_id: 'T1082', executor_name: 'uname-bash' }],
+          })],
+        })
+      );
+    });
+  });
+
+  it('defaults executor to auto (empty) when no selection made', async () => {
+    vi.mocked(api.get).mockImplementation((url) => {
+      if (url === '/scenarios') return Promise.resolve({ data: [] });
+      if (url === '/techniques') return Promise.resolve({ data: mockTechniquesWithExecutors });
+      return Promise.resolve({ data: [] });
+    });
+    vi.mocked(scenarioApi.create).mockResolvedValue({ data: { id: 'new-sc' } } as never);
+
+    renderWithClient(<Scenarios />);
+
+    await screen.findByText('Scenarios');
+    fireEvent.click(screen.getByText('Create Scenario'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Create Scenario' })).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByPlaceholderText('My Attack Scenario'), {
+      target: { value: 'Auto Default' },
+    });
+
+    // Select T1082 without changing executor dropdown
+    const checkbox = screen.getByRole('checkbox', { name: /T1082/i });
+    fireEvent.click(checkbox);
+
+    // Submit without selecting specific executor
+    const createButtons = screen.getAllByRole('button', { name: /create scenario/i });
+    const submitButton = createButtons.find(btn => btn.closest('.border-t'));
+    if (submitButton) {
+      fireEvent.click(submitButton);
+    }
+
+    await waitFor(() => {
+      expect(scenarioApi.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          phases: [expect.objectContaining({
+            // executor_name should be absent (auto-select)
+            techniques: [{ technique_id: 'T1082' }],
+          })],
+        })
+      );
+    });
+  });
+
+  it('renders scenarios with retro-compatible string[] techniques', async () => {
+    const mockScenarios = [
+      {
+        id: 'old-scenario',
+        name: 'Legacy Scenario',
+        description: 'Uses old string[] format',
+        phases: [
+          { name: 'Phase 1', techniques: ['T1082', 'T1083'] },
+        ],
+        tags: ['legacy'],
+      },
+    ];
+    vi.mocked(api.get).mockResolvedValue({ data: mockScenarios } as never);
+
+    renderWithClient(<Scenarios />);
+
+    expect(await screen.findByText('Legacy Scenario')).toBeInTheDocument();
+    expect(screen.getByText('(2 techniques)')).toBeInTheDocument();
   });
 });

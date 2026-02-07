@@ -74,15 +74,21 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [selectedTechnique, setSelectedTechnique] = useState<Technique | null>(null);
 
-  // Group techniques by tactic
+  // Get all tactics for a technique (multi-tactic support with fallback)
+  const getTactics = (t: Technique): TacticType[] => {
+    if (t.tactics && t.tactics.length > 0) {
+      return t.tactics.map(tac => String(tac).replaceAll('-', '_') as TacticType);
+    }
+    return [String(t.tactic).replaceAll('-', '_') as TacticType];
+  };
+
+  // Group techniques by tactic (a technique can appear in multiple columns)
   const techniquesByTactic = TACTICS.reduce((acc, tactic) => {
     acc[tactic.id] = techniques
       .filter(t => {
-        // Map backend tactic format to frontend format
-        const techTactic = String(t.tactic).replaceAll('-', '_');
-        const matches = techTactic === tactic.id;
         const platformMatches = platformFilter === 'all' || t.platforms.includes(platformFilter);
-        return matches && platformMatches;
+        if (!platformMatches) return false;
+        return getTactics(t).includes(tactic.id);
       })
       .sort((a, b) => a.id.localeCompare(b.id));
     return acc;
@@ -209,7 +215,7 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedTechnique.name}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
-                    {String(selectedTechnique.tactic).replaceAll('-', '_').replaceAll('_', ' ')}
+                    {getTactics(selectedTechnique).map(t => t.replaceAll('_', ' ')).join(', ')}
                   </p>
                 </div>
               </div>

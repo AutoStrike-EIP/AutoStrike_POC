@@ -261,6 +261,7 @@ export interface Technique {
   name: string;
   description: string;
   tactic: string;
+  tactics?: string[];
   platforms: string[];
   executors: TechniqueExecutor[];
   detection: TechniqueDetection[];
@@ -268,10 +269,18 @@ export interface Technique {
 }
 
 export interface TechniqueExecutor {
+  name?: string;
   type: string;
-  command: string;
   platform?: string;
+  command: string;
+  cleanup?: string;
   timeout: number;
+  elevation_required?: boolean;
+}
+
+export interface TechniqueSelection {
+  technique_id: string;
+  executor_name?: string;
 }
 
 export interface TechniqueDetection {
@@ -315,6 +324,14 @@ export const techniqueApi = {
    * Get MITRE ATT&CK coverage statistics
    */
   getCoverage: () => api.get<Record<string, number>>('/techniques/coverage'),
+
+  /**
+   * Get executors for a technique, optionally filtered by platform
+   */
+  getExecutors: (id: string, platform?: string) =>
+    api.get<TechniqueExecutor[]>(`/techniques/${id}/executors`, {
+      params: platform ? { platform } : undefined,
+    }),
 
   /**
    * Import techniques from JSON
@@ -398,7 +415,7 @@ export interface Scenario {
 
 export interface ScenarioPhase {
   name: string;
-  techniques: string[];
+  techniques: TechniqueSelection[] | string[];
   order?: number;
 }
 

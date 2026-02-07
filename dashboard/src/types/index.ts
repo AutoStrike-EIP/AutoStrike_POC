@@ -59,8 +59,10 @@ export interface Technique {
   name: string;
   /** Detailed description of the technique */
   description: string;
-  /** MITRE tactic this technique belongs to */
+  /** MITRE tactic this technique belongs to (primary) */
   tactic: TacticType;
+  /** All MITRE tactics this technique belongs to (multi-tactic support) */
+  tactics?: TacticType[];
   /** Supported operating system platforms */
   platforms: string[];
   /** Whether the technique is safe for production testing */
@@ -75,14 +77,30 @@ export interface Technique {
  * Executor configuration for a technique.
  */
 export interface TechniqueExecutor {
+  /** Executor name (for distinguishing multiple executors) */
+  name?: string;
   /** Executor type (cmd, powershell, bash, etc.) */
   type: string;
+  /** Target platform (windows, linux, macos) */
+  platform?: string;
   /** Command to execute */
   command: string;
   /** Cleanup command to run after execution */
   cleanup?: string;
   /** Execution timeout in seconds */
   timeout: number;
+  /** Whether elevated privileges are required */
+  elevation_required?: boolean;
+}
+
+/**
+ * Technique selection with optional executor preference.
+ */
+export interface TechniqueSelection {
+  /** Technique ID */
+  technique_id: string;
+  /** Preferred executor name (empty = auto-select best match) */
+  executor_name?: string;
 }
 
 /**
@@ -142,8 +160,8 @@ export interface Execution {
 export interface ScenarioPhase {
   /** Phase name */
   name: string;
-  /** List of technique IDs to execute in this phase */
-  techniques: string[];
+  /** List of technique selections or IDs to execute in this phase */
+  techniques: TechniqueSelection[] | string[];
 }
 
 /**
