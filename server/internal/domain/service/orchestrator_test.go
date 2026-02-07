@@ -146,7 +146,7 @@ func TestAttackOrchestrator_PlanExecution_SafeMode(t *testing.T) {
 		Name:      "System Info",
 		Platforms: []string{"windows"},
 		Executors: []entity.Executor{
-			{Type: "psh", Command: "systeminfo", Timeout: 30},
+			{Type: "psh", Command: "systeminfo", Timeout: 30, IsSafe: true},
 		},
 		IsSafe: true,
 	}
@@ -156,7 +156,7 @@ func TestAttackOrchestrator_PlanExecution_SafeMode(t *testing.T) {
 		Name:      "Process Injection",
 		Platforms: []string{"windows"},
 		Executors: []entity.Executor{
-			{Type: "psh", Command: "dangerous", Timeout: 30},
+			{Type: "psh", Command: "dangerous", Timeout: 30, ElevationRequired: true, IsSafe: false},
 		},
 		IsSafe: false,
 	}

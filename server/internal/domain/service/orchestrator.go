@@ -109,7 +109,8 @@ func (o *AttackOrchestrator) planPhase(
 	return tasks
 }
 
-// getTechnique retrieves and validates a technique
+// getTechnique retrieves and validates a technique.
+// In safe mode, filters out unsafe executors instead of skipping the whole technique.
 func (o *AttackOrchestrator) getTechnique(ctx context.Context, techID string, safeMode bool) *entity.Technique {
 	technique, err := o.techniqueRepo.FindByID(ctx, techID)
 	if err != nil {
@@ -117,9 +118,26 @@ func (o *AttackOrchestrator) getTechnique(ctx context.Context, techID string, sa
 		return nil
 	}
 
-	if safeMode && !technique.IsSafe {
-		o.logger.Info("Skipping unsafe technique in safe mode", zap.String("technique_id", techID))
-		return nil
+	if safeMode {
+		if !technique.IsSafe {
+			o.logger.Info("Skipping technique with no safe executors", zap.String("technique_id", techID))
+			return nil
+		}
+		// Filter to only safe executors
+		var safeExecutors []entity.Executor
+		for _, exec := range technique.Executors {
+			if exec.IsSafe {
+				safeExecutors = append(safeExecutors, exec)
+			}
+		}
+		if len(safeExecutors) == 0 {
+			o.logger.Info("Skipping technique: no safe executors available", zap.String("technique_id", techID))
+			return nil
+		}
+		// Return a copy with only safe executors
+		filtered := *technique
+		filtered.Executors = safeExecutors
+		return &filtered
 	}
 
 	return technique

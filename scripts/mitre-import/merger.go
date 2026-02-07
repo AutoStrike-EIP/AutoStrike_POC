@@ -1,8 +1,5 @@
 package main
 
-import (
-	"strings"
-)
 
 // MergedTechnique represents a technique after merging STIX metadata with Atomic executors
 type MergedTechnique struct {
@@ -27,6 +24,7 @@ type MergedExecutor struct {
 	Cleanup           string
 	Timeout           int
 	ElevationRequired bool
+	IsSafe            bool
 }
 
 // MergeStats holds statistics about the merge operation
@@ -42,20 +40,6 @@ type MergeStats struct {
 	TacticBreakdown map[string]int
 }
 
-// dangerousPatterns are command patterns that force is_safe=false
-var dangerousPatterns = []string{
-	"rm -rf", "del /f", "format c:", "format d:", "shutdown",
-	"encrypt", "mkfs", "dd if=", "fdisk", "wipefs",
-	"cipher /w", "sdelete", "shred", "> /dev/sd",
-	"Remove-Item -Recurse -Force", "Stop-Service",
-	"Stop-Process", "net stop", "taskkill /f",
-}
-
-// safeTactics are tactics where techniques are safe by default
-var safeTactics = map[string]bool{
-	"discovery":      true,
-	"reconnaissance": true,
-}
 
 // Merge performs an inner join between STIX techniques and Atomic executors
 func Merge(stix map[string]*STIXTechnique, atomics map[string]*AtomicTechnique) ([]*MergedTechnique, MergeStats) {
@@ -97,9 +81,15 @@ func Merge(stix map[string]*STIXTechnique, atomics map[string]*AtomicTechnique) 
 		}
 
 		var executors []MergedExecutor
+		hasSafeExecutor := false
 		for _, exec := range atomicTech.Executors {
 			if !platformSet[exec.Platform] {
 				continue
+			}
+			// Safety is determined solely by elevation_required from Atomic Red Team
+			execSafe := !exec.ElevationRequired
+			if execSafe {
+				hasSafeExecutor = true
 			}
 			executors = append(executors, MergedExecutor{
 				Name:              exec.Name,
@@ -109,6 +99,7 @@ func Merge(stix map[string]*STIXTechnique, atomics map[string]*AtomicTechnique) 
 				Cleanup:           exec.Cleanup,
 				Timeout:           defaultTimeout(exec.Type),
 				ElevationRequired: exec.ElevationRequired,
+				IsSafe:            execSafe,
 			})
 		}
 
@@ -125,8 +116,8 @@ func Merge(stix map[string]*STIXTechnique, atomics map[string]*AtomicTechnique) 
 			tactic = stixTech.Tactics[0]
 		}
 
-		// Determine is_safe (check ALL tactics, not just primary)
-		isSafe := determineSafety(stixTech.Tactics, executors)
+		// Technique is safe if it has at least one safe executor
+		isSafe := hasSafeExecutor
 
 		if isSafe {
 			stats.SafeCount++
@@ -155,39 +146,6 @@ func Merge(stix map[string]*STIXTechnique, atomics map[string]*AtomicTechnique) 
 	}
 
 	return result, stats
-}
-
-// determineSafety determines if a technique is safe based on ALL tactics and commands
-func determineSafety(tactics []string, executors []MergedExecutor) bool {
-	// Check if any executor requires elevation
-	for _, exec := range executors {
-		if exec.ElevationRequired {
-			return false
-		}
-	}
-
-	// Check for dangerous command patterns
-	for _, exec := range executors {
-		cmdLower := strings.ToLower(exec.Command)
-		cleanupLower := strings.ToLower(exec.Cleanup)
-		for _, pattern := range dangerousPatterns {
-			patternLower := strings.ToLower(pattern)
-			if strings.Contains(cmdLower, patternLower) || strings.Contains(cleanupLower, patternLower) {
-				return false
-			}
-		}
-	}
-
-	// ALL tactics must be safe; if any tactic is unsafe, the technique is unsafe
-	if len(tactics) == 0 {
-		return false
-	}
-	for _, tactic := range tactics {
-		if !safeTactics[tactic] {
-			return false
-		}
-	}
-	return true
 }
 
 // defaultTimeout returns a default timeout based on executor type

@@ -43,6 +43,7 @@ type Executor struct {
 	Cleanup           string `json:"cleanup,omitempty" yaml:"cleanup,omitempty"`
 	Timeout           int    `json:"timeout" yaml:"timeout"` // Seconds
 	ElevationRequired bool   `json:"elevation_required,omitempty" yaml:"elevation_required,omitempty"`
+	IsSafe            bool   `json:"is_safe" yaml:"is_safe"` // Safe = !elevation_required (from Atomic Red Team)
 }
 
 // Detection describes expected detection indicators

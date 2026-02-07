@@ -26,6 +26,7 @@
         $p=Tasklist /svc /fi "IMAGENAME eq mstsc.exe" /fo csv | convertfrom-csv
         if(-not ([string]::IsNullOrEmpty($p.PID))) { Stop-Process -Id $p.PID }
       timeout: 120
+      is_safe: true
     - name: Changing RDP Port to Non Standard Port via Powershell
       type: powershell
       platform: windows
@@ -35,6 +36,7 @@
       cleanup: "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server\\WinStations\\RDP-Tcp' -name \"PortNumber\" -Value 3389\nRemove-NetFirewallRule -DisplayName \"RDPPORTLatest-TCP-In\" -ErrorAction Ignore \nGet-Service TermService | Restart-Service -Force -ErrorAction Ignore"
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Changing RDP Port to Non Standard Port via Command_Prompt
       type: cmd
       platform: windows
@@ -48,15 +50,17 @@
         net start TermService >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Disable NLA for RDP via Command Prompt
       type: cmd
       platform: windows
       command: reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v UserAuthentication /d 0 /t REG_DWORD /f
       cleanup: reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v UserAuthentication /d 1 /t REG_DWORD -f >nul 2>&1
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1021/001
-  is_safe: false
+  is_safe: true
 - id: T1021.002
   name: SMB/Windows Admin Shares
   description: |-
@@ -74,26 +78,30 @@
       platform: windows
       command: cmd.exe /c "net use \\Target\C$ P@ssw0rd1 /u:DOMAIN\Administrator"
       timeout: 120
+      is_safe: true
     - name: Map Admin Share PowerShell
       type: powershell
       platform: windows
       command: New-PSDrive -name g -psprovider filesystem -root \\Target\C$
       timeout: 120
+      is_safe: true
     - name: Copy and Execute File with PsExec
       type: cmd
       platform: windows
       command: '"PathToAtomicsFolder\..\ExternalPayloads\PsExec.exe" \\localhost -accepteula -c C:\Windows\System32\cmd.exe'
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Execute command writing output to local Admin Share
       type: cmd
       platform: windows
       command: cmd.exe /Q /c hostname 1> \\127.0.0.1\ADMIN$\output.txt 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1021/002
-  is_safe: false
+  is_safe: true
 - id: T1021.003
   name: Distributed Component Object Model
   description: |-
@@ -109,6 +117,7 @@
       platform: windows
       command: '[activator]::CreateInstance([type]::GetTypeFromProgID("MMC20.application","localhost")).Document.ActiveView.ExecuteShellCommand("c:\windows\system32\calc.exe", $null, $null, "7")'
       timeout: 120
+      is_safe: true
     - name: PowerShell Lateral Movement Using Excel Application Object
       type: powershell
       platform: windows
@@ -118,9 +127,10 @@
         $com.ActivateMicrosoftApp("5")
       cleanup: Remove-Item 'C:\users\admin\AppData\local\Microsoft\WindowsApps\foxprow.exe'
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1021/003
-  is_safe: false
+  is_safe: true
 - id: T1021.005
   name: VNC
   description: |-
@@ -140,6 +150,7 @@
       cleanup: sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -deactivate -stop -configure -privs -none -quiet
       timeout: 60
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1021/005
   is_safe: false
@@ -159,6 +170,7 @@
       command: Enable-PSRemoting -Force
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Remote Code Execution with PS Credentials Using Invoke-Command
       type: powershell
       platform: windows
@@ -167,15 +179,17 @@
         Invoke-Command -ComputerName $env:COMPUTERNAME -ScriptBlock {whoami}
       cleanup: Disable-PSRemoting -Force
       timeout: 120
+      is_safe: true
     - name: WinRM Access with Evil-WinRM
       type: powershell
       platform: windows
       command: evil-winrm -i Target -u Domain\Administrator -p P@ssw0rd1
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1021/006
-  is_safe: false
+  is_safe: true
 - id: T1091
   name: Replication Through Removable Media
   description: Adversaries may move onto systems, possibly those on disconnected or air-gapped networks, by copying malware to removable media and taking advantage of Autorun features when the media is inserted into a system and executes. In the case of Lateral Movement, this may occur through modification of executable files stored on removable media or by copying malware and renaming it to look like a legitimate file to trick users into executing it on a separate system. In the case of Initial Access, this m...
@@ -204,9 +218,10 @@
         Remove-Item -Path $Drive\T1091Test1.txt -Force -ErrorAction Ignore
         }
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1091
-  is_safe: false
+  is_safe: true
 - id: T1563.002
   name: RDP Hijacking
   description: |-
@@ -227,6 +242,7 @@
       cleanup: sc.exe delete sesshijack >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1563/002
   is_safe: false
@@ -250,6 +266,7 @@
         copy 'C:\path\to\file.txt' 'Z:\'
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Exfiltration Over SMB over QUIC (NET USE)
       type: powershell
       platform: windows
@@ -258,6 +275,7 @@
         copy 'C:\path\to\file.txt' '*:\'
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1570
   is_safe: false

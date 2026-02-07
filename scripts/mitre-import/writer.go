@@ -32,6 +32,7 @@ type YAMLExecutor struct {
 	Cleanup           string `yaml:"cleanup,omitempty"`
 	Timeout           int    `yaml:"timeout"`
 	ElevationRequired bool   `yaml:"elevation_required,omitempty"`
+	IsSafe            bool   `yaml:"is_safe"`
 }
 
 // WriteResult holds the result of writing YAML files
@@ -128,6 +129,7 @@ func toYAMLTechnique(tech *MergedTechnique) YAMLTechnique {
 			Cleanup:           exec.Cleanup,
 			Timeout:           exec.Timeout,
 			ElevationRequired: exec.ElevationRequired,
+			IsSafe:            exec.IsSafe,
 		})
 	}
 

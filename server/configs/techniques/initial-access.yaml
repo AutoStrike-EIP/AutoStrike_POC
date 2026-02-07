@@ -32,9 +32,10 @@
         del %temp%\..\Microsoft\ExplorerSync.db 2>null
         del %temp%\ExplorerSync.db 2>null
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1195
-  is_safe: false
+  is_safe: true
 - id: T1195.002
   name: Compromise Software Supply Chain
   description: |-
@@ -52,9 +53,10 @@
       platform: linux
       command: kubectl run atomic-npm-install --image=node:18 --restart=Never --attach --rm -i -- bash -lc "mkdir -p /tmp/test && cd /tmp/test && npm init -y >/dev/null 2>&1 && echo '--- package.json before install ---' && cat package.json && npm install tinycolor --no-audit --no-fund --no-package-lock && echo '--- package.json after install ---' && cat package.json"
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1195/002
-  is_safe: false
+  is_safe: true
 - id: T1566.001
   name: Spearphishing Attachment
   description: Adversaries may send spearphishing emails with a malicious attachment in an attempt to gain access to victim systems. Spearphishing attachment is a specific variant of spearphishing. Spearphishing attachment is different from other forms of spearphishing in that it employs the use of malware attached to an email. All forms of spearphishing are electronically delivered social engineering targeted at a specific individual, company, or industry. In this scenario, adversaries attach a file to the sp...
@@ -73,6 +75,7 @@
         Invoke-WebRequest -Uri $url -OutFile $env:TEMP\PhishingAttachment.xlsm
       cleanup: Remove-Item $env:TEMP\PhishingAttachment.xlsm -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Word spawned a command shell and used an IP address in the command line
       type: powershell
       platform: windows
@@ -83,9 +86,10 @@
         Invoke-MalDoc -macroCode $macrocode -officeProduct "Word"
       cleanup: Remove-Item C:\Users\Public\art.jse -ErrorAction Ignore
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1566/001
-  is_safe: false
+  is_safe: true
 - id: T1566.002
   name: Spearphishing Link
   description: Adversaries may send spearphishing emails with a malicious link in an attempt to gain access to victim systems. Spearphishing with a link is a specific variant of spearphishing. It is different from other forms of spearphishing in that it employs the use of links to download malware contained in email, instead of attaching malicious files to the email itself, to avoid defenses that may inspect email attachments. Spearphishing may also involve social engineering techniques, such as posing as a tr...
@@ -123,6 +127,7 @@
         Add-Type -AssemblyName System.Windows.Forms
         [System.Windows.Forms.SendKeys]::SendWait("cmd /c powershell -ec " + [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes('calc.exe')) + "{ENTER}")
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1566/002
-  is_safe: false
+  is_safe: true

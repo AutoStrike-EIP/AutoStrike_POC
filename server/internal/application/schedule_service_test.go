@@ -29,7 +29,7 @@ func buildTestExecutionService() *ExecutionService {
 	techRepo.techniques["T1059"] = &entity.Technique{
 		ID:        "T1059",
 		Platforms: []string{"linux"},
-		Executors: []entity.Executor{{Type: "sh", Command: "echo test"}},
+		Executors: []entity.Executor{{Type: "sh", Command: "echo test", IsSafe: true}},
 		IsSafe:    true,
 	}
 	agentRepo := newMockAgentRepo()

