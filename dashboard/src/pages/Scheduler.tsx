@@ -633,7 +633,7 @@ function ScheduleFormModal({
               className="h-4 w-4 text-primary-600 rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700"
             />
             <label htmlFor="safe_mode" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Safe Mode
+              Safe Mode (no elevation)
             </label>
           </div>
 

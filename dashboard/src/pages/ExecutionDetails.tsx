@@ -154,7 +154,7 @@ export default function ExecutionDetails() {
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400">Mode</p>
             <span className={`badge ${execution.safe_mode ? 'badge-success' : 'badge-danger'}`}>
-              {execution.safe_mode ? 'Safe Mode' : 'Full Mode'}
+              {execution.safe_mode ? 'No Elevation' : 'Full Mode'}
             </span>
           </div>
           <div>

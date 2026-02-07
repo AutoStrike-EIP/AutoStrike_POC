@@ -133,7 +133,7 @@ export function RunExecutionModal({ scenario, onConfirm, onCancel, isLoading }: 
                       className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 dark:border-gray-600 rounded"
                     />
                     <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">Safe Mode</span>
-                    <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">(Skip potentially destructive techniques)</span>
+                    <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">(Only run techniques that don't require elevation)</span>
                   </label>
                 </div>
 

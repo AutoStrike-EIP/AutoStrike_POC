@@ -70,9 +70,9 @@ describe('Techniques Page', () => {
     expect(screen.getByText('PowerShell')).toBeInTheDocument();
     expect(screen.getByText('execution')).toBeInTheDocument();
     expect(screen.getByText('windows')).toBeInTheDocument();
-    // "Safe" appears both as column header and as badge - check we have both
-    const safeElements = screen.getAllByText('Safe');
-    expect(safeElements.length).toBeGreaterThanOrEqual(2);
+    // "Elevation" column header and "No Elevation" badge
+    expect(screen.getByText('Elevation')).toBeInTheDocument();
+    expect(screen.getByText('No Elevation')).toBeInTheDocument();
   });
 
   it('renders unsafe technique badge', async () => {
@@ -90,7 +90,7 @@ describe('Techniques Page', () => {
 
     renderWithClient(<Techniques />);
 
-    expect(await screen.findByText('Unsafe')).toBeInTheDocument();
+    expect(await screen.findByText('Elevation Required')).toBeInTheDocument();
     expect(screen.getByText('defense evasion')).toBeInTheDocument();
   });
 

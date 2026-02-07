@@ -567,7 +567,7 @@ describe('Safe Mode Toggle', () => {
   it('renders safe mode toggle with description', () => {
     renderSettings();
     expect(screen.getByText('Safe Mode by Default')).toBeInTheDocument();
-    expect(screen.getByText("Only run safe techniques that don't modify the system")).toBeInTheDocument();
+    expect(screen.getByText("Only run techniques that don't require elevation (admin/root)")).toBeInTheDocument();
   });
 });
 

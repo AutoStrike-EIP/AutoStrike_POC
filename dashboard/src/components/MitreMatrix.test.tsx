@@ -143,7 +143,7 @@ describe('MitreMatrix', () => {
     // Modal should appear with technique details
     expect(screen.getByRole('heading', { name: 'System Information Discovery' })).toBeInTheDocument();
     expect(screen.getByText('Adversaries may attempt to get detailed information about the operating system.')).toBeInTheDocument();
-    expect(screen.getByText('Safe')).toBeInTheDocument();
+    expect(screen.getByText('No Elevation')).toBeInTheDocument();
   });
 
   it('closes technique detail panel when close button clicked', () => {
@@ -212,7 +212,7 @@ describe('MitreMatrix', () => {
     const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
     fireEvent.click(techniqueButton);
 
-    expect(screen.getByText('Unsafe')).toBeInTheDocument();
+    expect(screen.getByText('Elevation Required')).toBeInTheDocument();
   });
 
   it('calls onTechniqueClick callback when provided', () => {
@@ -236,8 +236,8 @@ describe('MitreMatrix', () => {
   it('renders legend', () => {
     render(<MitreMatrix techniques={mockTechniques} />);
 
-    expect(screen.getByText('Safe technique')).toBeInTheDocument();
-    expect(screen.getByText('Potentially unsafe')).toBeInTheDocument();
+    expect(screen.getByText('No elevation required')).toBeInTheDocument();
+    expect(screen.getByText('Elevation required')).toBeInTheDocument();
   });
 
   it('handles techniques with hyphenated tactics', () => {

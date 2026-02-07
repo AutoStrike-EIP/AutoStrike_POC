@@ -944,7 +944,7 @@ describe('Scenarios Create Modal', () => {
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText('My Attack Scenario')).toBeInTheDocument();
-      expect(screen.getByPlaceholderText('discovery, safe, windows')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('discovery, windows, lateral')).toBeInTheDocument();
       expect(screen.getByPlaceholderText('Describe the purpose of this scenario...')).toBeInTheDocument();
       // Phase name is in an input field
       expect(screen.getByDisplayValue('Phase 1')).toBeInTheDocument();
@@ -1060,7 +1060,7 @@ describe('Scenarios Create Modal', () => {
     fireEvent.change(screen.getByPlaceholderText('Describe the purpose of this scenario...'), {
       target: { value: 'A test description' },
     });
-    fireEvent.change(screen.getByPlaceholderText('discovery, safe, windows'), {
+    fireEvent.change(screen.getByPlaceholderText('discovery, windows, lateral'), {
       target: { value: 'test, discovery' },
     });
 

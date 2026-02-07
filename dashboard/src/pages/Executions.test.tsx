@@ -131,7 +131,7 @@ describe('Executions Page', () => {
     expect(screen.getByText('5 blocked')).toBeInTheDocument();
     expect(screen.getByText('3 detected')).toBeInTheDocument();
     expect(screen.getByText('2 success')).toBeInTheDocument();
-    expect(screen.getByText('Safe')).toBeInTheDocument();
+    expect(screen.getByText('No Elev.')).toBeInTheDocument();
   });
 
   it('renders running execution with warning badge and stop button', async () => {

@@ -172,9 +172,9 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
                   <div className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">{technique.name}</div>
                   <div className="flex gap-1 mt-1">
                     {technique.is_safe ? (
-                      <span className="w-2 h-2 rounded-full bg-green-500" title="Safe" />
+                      <span className="w-2 h-2 rounded-full bg-green-500" title="No elevation required" />
                     ) : (
-                      <span className="w-2 h-2 rounded-full bg-red-500" title="Unsafe" />
+                      <span className="w-2 h-2 rounded-full bg-red-500" title="Elevation required" />
                     )}
                   </div>
                 </button>
@@ -222,7 +222,7 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
               <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">{selectedTechnique.description}</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className={`badge ${selectedTechnique.is_safe ? 'badge-success' : 'badge-danger'}`}>
-                  {selectedTechnique.is_safe ? 'Safe' : 'Unsafe'}
+                  {selectedTechnique.is_safe ? 'No Elevation' : 'Elevation Required'}
                 </span>
                 {selectedTechnique.platforms.map(p => (
                   <span key={p} className="badge bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">{p}</span>
@@ -250,11 +250,11 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
       <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
         <div className="flex items-center gap-1">
           <span className="w-3 h-3 rounded-full bg-green-500"></span>
-          <span>Safe technique</span>
+          <span>No elevation required</span>
         </div>
         <div className="flex items-center gap-1">
           <span className="w-3 h-3 rounded-full bg-red-500"></span>
-          <span>Potentially unsafe</span>
+          <span>Elevation required</span>
         </div>
       </div>
     </div>

@@ -111,7 +111,7 @@ describe('ExecutionDetails Page', () => {
 
     // Check summary
     expect(screen.getByText('test-scenario')).toBeInTheDocument();
-    expect(screen.getByText('Safe Mode')).toBeInTheDocument();
+    expect(screen.getByText('No Elevation')).toBeInTheDocument();
     expect(screen.getByText('75.5%')).toBeInTheDocument();
 
     // Check score breakdown

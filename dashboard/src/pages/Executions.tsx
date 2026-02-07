@@ -366,7 +366,7 @@ export default function Executions() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`badge ${execution.safe_mode ? 'badge-success' : 'badge-danger'}`}>
-                    {execution.safe_mode ? 'Safe' : 'Full'}
+                    {execution.safe_mode ? 'No Elev.' : 'Full'}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">

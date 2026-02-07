@@ -528,7 +528,7 @@ export default function Scenarios() {
                       value={newScenario.tags}
                       onChange={(e) => setNewScenario(prev => ({ ...prev, tags: e.target.value }))}
                       className="input"
-                      placeholder="discovery, safe, windows"
+                      placeholder="discovery, windows, lateral"
                     />
                   </div>
                 </div>

@@ -152,7 +152,7 @@ export default function Techniques() {
 
       <div className="card overflow-hidden">
         <table className="w-full">
-          <TableHeader columns={['ID', 'Name', 'Tactic', 'Platforms', 'Safe']} />
+          <TableHeader columns={['ID', 'Name', 'Tactic', 'Platforms', 'Elevation']} />
           <TableBody>
             {techniques?.map((technique) => (
               <TableRow key={technique.id}>
@@ -181,7 +181,7 @@ export default function Techniques() {
                 </td>
                 <td className={TABLE_CELL_NOWRAP_CLASS}>
                   <span className={`badge ${technique.is_safe ? 'badge-success' : 'badge-danger'}`}>
-                    {technique.is_safe ? 'Safe' : 'Unsafe'}
+                    {technique.is_safe ? 'No Elevation' : 'Elevation Required'}
                   </span>
                 </td>
               </TableRow>
