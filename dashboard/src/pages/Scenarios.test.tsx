@@ -1584,6 +1584,158 @@ describe('Scenarios TechniqueSelection and Executor', () => {
     });
   });
 
+  it('shows executor dropdown with name fallback to type and platform display', async () => {
+    // Techniques with executors that have no name (fallback to type) and mixed platforms
+    const techniquesWithFallback = [
+      {
+        id: 'T1082',
+        name: 'System Info',
+        tactic: 'discovery',
+        platforms: ['linux', 'windows'],
+        executors: [
+          { type: 'bash', command: 'uname -a', platform: 'linux', timeout: 30 },
+          { type: 'psh', command: 'systeminfo', platform: 'windows', timeout: 30 },
+          { name: 'named-exec', type: 'sh', command: 'whoami', platform: '', timeout: 30 },
+        ],
+        is_safe: true,
+      },
+    ];
+
+    vi.mocked(api.get).mockImplementation((url) => {
+      if (url === '/scenarios') return Promise.resolve({ data: [] });
+      if (url === '/techniques') return Promise.resolve({ data: techniquesWithFallback });
+      return Promise.resolve({ data: [] });
+    });
+
+    renderWithClient(<Scenarios />);
+
+    await screen.findByText('Scenarios');
+    fireEvent.click(screen.getByText('Create Scenario'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Create Scenario' })).toBeInTheDocument();
+    });
+
+    // Select T1082 to show executor dropdown (3 executors > 1)
+    const checkbox = screen.getByRole('checkbox', { name: /T1082/i });
+    fireEvent.click(checkbox);
+
+    // Should show executor dropdown with fallback names
+    await waitFor(() => {
+      const select = screen.getByLabelText('Executor for T1082');
+      expect(select).toBeInTheDocument();
+      // Named executor shows name
+      expect(screen.getByText('named-exec')).toBeInTheDocument();
+      // Unnamed executors fall back to type with platform
+      expect(screen.getByText('bash (linux)')).toBeInTheDocument();
+      expect(screen.getByText('psh (windows)')).toBeInTheDocument();
+    });
+  });
+
+  it('clears executor selection when set to auto', async () => {
+    const techniquesWithExecutors = [
+      {
+        id: 'T1082',
+        name: 'System Info',
+        tactic: 'discovery',
+        platforms: ['linux'],
+        executors: [
+          { name: 'exec-a', type: 'bash', command: 'uname', platform: 'linux', timeout: 30 },
+          { name: 'exec-b', type: 'sh', command: 'whoami', platform: 'linux', timeout: 30 },
+        ],
+        is_safe: true,
+      },
+    ];
+
+    vi.mocked(api.get).mockImplementation((url) => {
+      if (url === '/scenarios') return Promise.resolve({ data: [] });
+      if (url === '/techniques') return Promise.resolve({ data: techniquesWithExecutors });
+      return Promise.resolve({ data: [] });
+    });
+    vi.mocked(scenarioApi.create).mockResolvedValue({ data: { id: 'sc-1' } } as never);
+
+    renderWithClient(<Scenarios />);
+
+    await screen.findByText('Scenarios');
+    fireEvent.click(screen.getByText('Create Scenario'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Create Scenario' })).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByPlaceholderText('My Attack Scenario'), {
+      target: { value: 'Clear Exec Test' },
+    });
+
+    // Select technique
+    const checkbox = screen.getByRole('checkbox', { name: /T1082/i });
+    fireEvent.click(checkbox);
+
+    // Select specific executor
+    await waitFor(() => {
+      const select = screen.getByLabelText('Executor for T1082');
+      fireEvent.change(select, { target: { value: 'exec-a' } });
+    });
+
+    // Now reset to auto (empty string)
+    const select = screen.getByLabelText('Executor for T1082');
+    fireEvent.change(select, { target: { value: '' } });
+
+    // Submit - executor_name should be undefined (auto)
+    const createButtons = screen.getAllByRole('button', { name: /create scenario/i });
+    const submitButton = createButtons.find(btn => btn.closest('.border-t'));
+    if (submitButton) {
+      fireEvent.click(submitButton);
+    }
+
+    await waitFor(() => {
+      expect(scenarioApi.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          phases: [expect.objectContaining({
+            techniques: [{ technique_id: 'T1082' }],
+          })],
+        })
+      );
+    });
+  });
+
+  it('does not show executor dropdown for single-executor technique', async () => {
+    const singleExecTech = [
+      {
+        id: 'T1082',
+        name: 'System Info',
+        tactic: 'discovery',
+        platforms: ['linux'],
+        executors: [
+          { name: 'only-exec', type: 'bash', command: 'uname', platform: 'linux', timeout: 30 },
+        ],
+        is_safe: true,
+      },
+    ];
+
+    vi.mocked(api.get).mockImplementation((url) => {
+      if (url === '/scenarios') return Promise.resolve({ data: [] });
+      if (url === '/techniques') return Promise.resolve({ data: singleExecTech });
+      return Promise.resolve({ data: [] });
+    });
+
+    renderWithClient(<Scenarios />);
+
+    await screen.findByText('Scenarios');
+    fireEvent.click(screen.getByText('Create Scenario'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Create Scenario' })).toBeInTheDocument();
+    });
+
+    // Select technique
+    const checkbox = screen.getByRole('checkbox', { name: /T1082/i });
+    fireEvent.click(checkbox);
+
+    // Should NOT show executor dropdown (only 1 executor)
+    expect(screen.queryByLabelText('Executor for T1082')).not.toBeInTheDocument();
+  });
+
   it('renders scenarios with retro-compatible string[] techniques', async () => {
     const mockScenarios = [
       {
