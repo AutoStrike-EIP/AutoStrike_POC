@@ -1,5 +1,49 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Technique, TacticType } from '../types';
+
+/**
+ * Renders a description string, converting markdown-style [text](url) links to clickable anchors.
+ */
+function DescriptionText({ text }: Readonly<{ text: string }>) {
+  const parts = useMemo(() => {
+    const result: { type: 'text' | 'link'; value: string; href?: string }[] = [];
+    const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
+    let lastIndex = 0;
+    let match;
+
+    while ((match = linkRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        result.push({ type: 'text', value: text.slice(lastIndex, match.index) });
+      }
+      result.push({ type: 'link', value: match[1], href: match[2] });
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < text.length) {
+      result.push({ type: 'text', value: text.slice(lastIndex) });
+    }
+    return result;
+  }, [text]);
+
+  return (
+    <span>
+      {parts.map((part, i) =>
+        part.type === 'link' ? (
+          <a
+            key={i}
+            href={part.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-600 dark:text-primary-400 hover:underline"
+          >
+            {part.value}
+          </a>
+        ) : (
+          <span key={i}>{part.value}</span>
+        )
+      )}
+    </span>
+  );
+}
 
 /**
  * Ordered list of MITRE ATT&CK tactics for matrix display.
@@ -219,7 +263,9 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
                   </p>
                 </div>
               </div>
-              <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">{selectedTechnique.description}</p>
+              <p className="mt-4 text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">
+                <DescriptionText text={selectedTechnique.description} />
+              </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className={`badge ${selectedTechnique.is_safe ? 'badge-success' : 'badge-danger'}`}>
                   {selectedTechnique.is_safe ? 'No Elevation' : 'Elevation Required'}
@@ -271,6 +317,25 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
                       <li key={`${d.source}-${d.indicator}`} className="flex gap-2">
                         <span className="font-medium">{d.source}:</span>
                         <span>{d.indicator}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {selectedTechnique.references && selectedTechnique.references.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">References</h4>
+                  <ul className="text-sm space-y-1">
+                    {selectedTechnique.references.map((ref) => (
+                      <li key={ref}>
+                        <a
+                          href={ref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary-600 dark:text-primary-400 hover:underline break-all"
+                        >
+                          {ref}
+                        </a>
                       </li>
                     ))}
                   </ul>

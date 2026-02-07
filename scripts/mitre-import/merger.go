@@ -158,9 +158,9 @@ func defaultTimeout(execType string) int {
 	}
 }
 
-// truncateDescription truncates long descriptions for YAML readability
+// truncateDescription truncates extremely long descriptions for YAML readability
 func truncateDescription(desc string) string {
-	const maxLen = 500
+	const maxLen = 2000
 	if len(desc) <= maxLen {
 		return desc
 	}

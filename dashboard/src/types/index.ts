@@ -71,6 +71,8 @@ export interface Technique {
   executors?: TechniqueExecutor[];
   /** Detection indicators for this technique */
   detection?: DetectionIndicator[];
+  /** MITRE ATT&CK reference URLs */
+  references?: string[];
 }
 
 /**

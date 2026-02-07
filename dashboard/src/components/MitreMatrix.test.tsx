@@ -49,11 +49,12 @@ const mockTechniques: Technique[] = [
   {
     id: 'T1566',
     name: 'Phishing',
-    description: 'Adversaries may send phishing messages.',
+    description: 'Adversaries may use [spearphishing](https://attack.mitre.org/techniques/T1566) to gain access.',
     tactic: 'initial_access',
     platforms: ['windows', 'linux', 'macos'],
     is_safe: true,
     detection: [],
+    references: ['https://attack.mitre.org/techniques/T1566', 'https://example.com/phishing-guide'],
   },
 ];
 
@@ -251,6 +252,31 @@ describe('MitreMatrix', () => {
     expect(screen.getByText('Executors (2)')).toBeInTheDocument();
     expect(screen.getByText('cmd')).toBeInTheDocument();
     expect(screen.getByText('sh')).toBeInTheDocument();
+  });
+
+  it('renders markdown links as clickable anchors in description', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1566: Phishing');
+    fireEvent.click(techniqueButton);
+
+    const link = screen.getByText('spearphishing');
+    expect(link).toBeInTheDocument();
+    expect(link.tagName).toBe('A');
+    expect(link).toHaveAttribute('href', 'https://attack.mitre.org/techniques/T1566');
+    expect(link).toHaveAttribute('target', '_blank');
+  });
+
+  it('renders references as clickable links', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1566: Phishing');
+    fireEvent.click(techniqueButton);
+
+    expect(screen.getByText('References')).toBeInTheDocument();
+    const refLink = screen.getByText('https://example.com/phishing-guide');
+    expect(refLink.tagName).toBe('A');
+    expect(refLink).toHaveAttribute('href', 'https://example.com/phishing-guide');
   });
 
   it('calls onTechniqueClick callback when provided', () => {
