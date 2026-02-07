@@ -106,6 +106,16 @@ func writeTacticFile(tactic string, techniques []*MergedTechnique, outputDir str
 	return nil
 }
 
+// cleanDescription trims leading whitespace from each line to avoid
+// Go yaml.v3 producing block scalar indicators like |4- which break parsers.
+func cleanDescription(desc string) string {
+	lines := strings.Split(desc, "\n")
+	for i, line := range lines {
+		lines[i] = strings.TrimLeft(line, " \t")
+	}
+	return strings.TrimSpace(strings.Join(lines, "\n"))
+}
+
 // toYAMLTechnique converts a MergedTechnique to the output YAML format
 func toYAMLTechnique(tech *MergedTechnique) YAMLTechnique {
 	executors := make([]YAMLExecutor, 0, len(tech.Executors))
@@ -124,7 +134,7 @@ func toYAMLTechnique(tech *MergedTechnique) YAMLTechnique {
 	yt := YAMLTechnique{
 		ID:          tech.ID,
 		Name:        tech.Name,
-		Description: tech.Description,
+		Description: cleanDescription(tech.Description),
 		Tactic:      tech.Tactic,
 		Platforms:   tech.Platforms,
 		Executors:   executors,
