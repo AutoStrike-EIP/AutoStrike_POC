@@ -77,8 +77,8 @@ server/
 ├── cmd/autostrike/
 │   └── main.go                    # Entry point, DI, startup
 ├── configs/
-│   └── techniques/                # YAML technique definitions (13 files)
-│       ├── reconnaissance.yaml
+│   └── techniques/                # YAML technique definitions (auto-loaded via os.ReadDir)
+│       ├── reconnaissance.yaml    # 13 built-in files + any imported via make import-mitre
 │       ├── initial-access.yaml
 │       ├── execution.yaml
 │       ├── persistence.yaml
@@ -206,6 +206,7 @@ Base URL: `https://localhost:8443/api/v1`
 | `GET` | `/techniques/tactic/:tactic` | `techniques:view` | By tactic |
 | `GET` | `/techniques/platform/:platform` | `techniques:view` | By platform |
 | `GET` | `/techniques/coverage` | `techniques:view` | Coverage statistics |
+| `GET` | `/techniques/:id/executors` | `techniques:view` | List executors (`?platform=`) |
 | `POST` | `/techniques/import` | `techniques:import` | Import from YAML |
 
 ### Scenarios
@@ -435,11 +436,28 @@ type Technique struct {
     ID          string
     Name        string
     Description string
-    Tactic      TacticType
+    Tactic      TacticType     // Primary tactic (retro-compatible)
+    Tactics     []TacticType   // All tactics (multi-tactic support)
     Platforms   []string
     Executors   []Executor
     Detection   []Detection
+    References  []string       // MITRE ATT&CK URLs
     IsSafe      bool
+}
+
+type Executor struct {
+    Name              string // Executor display name (optional)
+    Type              string // cmd, powershell, bash, sh
+    Platform          string // windows, linux, macos (optional)
+    Command           string
+    Cleanup           string
+    Timeout           int
+    ElevationRequired bool   // Needs admin/root privileges (optional)
+}
+
+type TechniqueSelection struct {
+    TechniqueID  string // Technique ID
+    ExecutorName string // Preferred executor (empty = auto-select)
 }
 ```
 

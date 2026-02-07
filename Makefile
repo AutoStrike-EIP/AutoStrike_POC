@@ -7,6 +7,7 @@
 .PHONY: dashboard-build dashboard-test
 .PHONY: certs docker-build docker-up docker-down
 .PHONY: run stop logs agent deps deps-install install setup
+.PHONY: import-mitre import-mitre-safe import-mitre-dry
 
 # Variables
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -298,6 +299,23 @@ stop: ## Stop all running services
 logs: ## Show server logs
 	@echo "$(CYAN)=== Server Logs ===$(RESET)"
 	@tail -30 /tmp/autostrike-server.log 2>/dev/null || echo "No server logs"
+
+# =============================================================================
+# MITRE ATT&CK Import
+# =============================================================================
+
+import-mitre: ## Import MITRE techniques from STIX + Atomic Red Team
+	cd scripts/mitre-import && go run . --output-dir ../../server/configs/techniques
+
+import-mitre-safe: ## Import only safe techniques
+	cd scripts/mitre-import && go run . --output-dir ../../server/configs/techniques --safe-only
+
+import-mitre-dry: ## Dry run (show stats without writing files)
+	cd scripts/mitre-import && go run . --dry-run
+
+# =============================================================================
+# Distribution
+# =============================================================================
 
 dist: ## Create distribution package
 	mkdir -p dist

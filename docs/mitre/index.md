@@ -151,6 +151,62 @@ Toutes les techniques sont **Safe Mode compatible** (non-destructives). Elles se
 
 ---
 
+## Import automatique des techniques
+
+AutoStrike inclut un outil d'import qui fusionne les donnees de **MITRE ATT&CK STIX 2.1** (metadonnees) et **Atomic Red Team** (commandes d'execution) pour generer automatiquement des techniques YAML.
+
+### Utilisation
+
+```bash
+# Import complet (telecharge STIX + clone Atomic Red Team)
+make import-mitre
+
+# Import seulement les techniques safe (discovery, reconnaissance)
+make import-mitre-safe
+
+# Dry run : affiche les stats sans ecrire de fichiers
+make import-mitre-dry
+```
+
+### Fonctionnement
+
+1. **Telecharge** le fichier STIX `enterprise-attack.json` depuis GitHub (cache dans `~/.cache/autostrike/`)
+2. **Clone** le repo Atomic Red Team en shallow clone (cache dans `~/.cache/autostrike/`)
+3. **Inner join** : seules les techniques presentes dans les DEUX sources sont importees
+4. **Genere** les fichiers YAML dans `server/configs/techniques/`, groupes par tactique
+
+### Options du CLI
+
+| Flag | Description | Defaut |
+|------|-------------|--------|
+| `--stix-path` | Chemin local vers enterprise-attack.json | Telecharge si absent |
+| `--atomics-path` | Chemin local vers le repo Atomic Red Team | Clone si absent |
+| `--output-dir` | Repertoire de sortie des YAML | `../../server/configs/techniques` |
+| `--cache-dir` | Repertoire de cache | `~/.cache/autostrike` |
+| `--dry-run` | Affiche les stats sans ecrire | `false` |
+| `--safe-only` | N'importe que les techniques safe | `false` |
+| `--force-download` | Re-telecharge meme si le cache existe | `false` |
+| `--verbose` | Logs detailles | `false` |
+
+### Heuristique Safe Mode
+
+- Tactiques `discovery` et `reconnaissance` : `is_safe = true` par defaut
+- Toutes les autres tactiques : `is_safe = false`
+- Force `is_safe = false` si la commande contient des patterns dangereux (`rm -rf`, `del /f`, `format`, `kill`, `shutdown`, etc.)
+- Force `is_safe = false` si `elevation_required: true`
+
+### Mapping des types d'executor
+
+| Atomic Red Team | AutoStrike | Plateforme |
+|-----------------|------------|------------|
+| `command_prompt` | `cmd` | Windows |
+| `powershell` | `powershell` | Windows |
+| `bash` | `bash` | Linux/macOS |
+| `sh` | `sh` | Linux/macOS |
+| `manual` | **Ignore** | - |
+
+---
+
 ## Voir aussi
 
 - [Liste detaillee des techniques](techniques.md)

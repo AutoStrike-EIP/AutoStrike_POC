@@ -54,6 +54,7 @@ autostrike/
 │       └── lib/         # API client
 ├── docs/            # MkDocs documentation
 └── scripts/         # Build and deployment scripts
+    └── mitre-import/    # MITRE ATT&CK import tool (Go CLI)
 ```
 
 ## Tech Stack
@@ -113,6 +114,11 @@ docker compose up --build
 
 # Generate TLS certificates
 make certs
+
+# MITRE ATT&CK Import
+make import-mitre       # Import techniques from STIX + Atomic Red Team
+make import-mitre-safe  # Import only safe techniques
+make import-mitre-dry   # Dry run (show stats without writing files)
 ```
 
 ## API Endpoints
@@ -141,6 +147,7 @@ Base URL: `https://localhost:8443/api/v1`
 | `/techniques/tactic/:tactic` | GET | Techniques by tactic |
 | `/techniques/platform/:platform` | GET | Techniques by platform |
 | `/techniques/coverage` | GET | MITRE coverage stats |
+| `/techniques/:id/executors` | GET | List executors for a technique (`?platform=linux`) |
 | `/techniques/import` | POST | Import from YAML |
 | `/scenarios` | GET | List scenarios |
 | `/scenarios/:id` | GET | Get scenario |
@@ -266,10 +273,12 @@ Connection: `wss://server:8443/ws/dashboard`
 - `VITE_API_BASE_URL` - API base path
 - `VITE_WS_HOST` - WebSocket host override
 
-## Available Techniques (48 total)
+## Available Techniques
 
-| Tactic | Count | IDs |
-|--------|-------|-----|
+48 built-in techniques ship with the project. Run `make import-mitre` to import additional techniques from MITRE ATT&CK STIX + Atomic Red Team (typically 200+ techniques).
+
+| Tactic | Built-in | IDs (built-in) |
+|--------|----------|-----------------|
 | Reconnaissance | 2 | T1592.004, T1595.002 |
 | Initial Access | 3 | T1078, T1133, T1190 |
 | Execution | 5 | T1059.001, T1059.003, T1059.004, T1047, T1059.006 |
@@ -284,7 +293,33 @@ Connection: `wss://server:8443/ws/dashboard`
 | Exfiltration | 3 | T1048.003, T1041, T1567.002 |
 | Impact | 3 | T1490, T1489, T1486 |
 
-All techniques are **safe mode compatible** (non-destructive).
+All built-in techniques are **safe mode compatible** (non-destructive). Imported techniques from Atomic Red Team may include unsafe techniques; use `make import-mitre-safe` to import only safe ones.
+
+### Key Data Model Additions
+
+**Executor** (extended fields):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string (optional) | Executor name (distinguishes multiple executors per technique) |
+| `platform` | string (optional) | Target platform (`windows`, `linux`, `macos`) |
+| `elevation_required` | bool (optional) | Whether root/admin privileges are needed |
+
+**Technique** (extended fields):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `tactics` | []string (optional) | All MITRE tactics (multi-tactic support). Fallback: `[tactic]` |
+| `references` | []string (optional) | MITRE ATT&CK reference URLs |
+
+**TechniqueSelection** (scenario phases):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `technique_id` | string | Technique ID |
+| `executor_name` | string (optional) | Preferred executor name (empty = auto-select) |
+
+Phase `techniques` field accepts both `[]string` (legacy) and `[]TechniqueSelection` (new format) via custom JSON unmarshaling.
 
 ## Important Notes
 

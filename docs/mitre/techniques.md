@@ -1045,17 +1045,25 @@ techniques:
     name: Custom Technique
     description: Description of the technique
     tactic: discovery
+    tactics:                     # Optional: all tactics (multi-tactic)
+      - discovery
+      - collection
     platforms:
       - windows
       - linux
     is_safe: true
+    references:                  # Optional: MITRE ATT&CK URLs
+      - https://attack.mitre.org/techniques/T1234
     executors:
-      - type: cmd
+      - name: "System info via cmd"  # Optional: executor name
+        type: cmd
         platform: windows
         command: "echo Hello"
         cleanup: ""
         timeout: 60
-      - type: bash
+        elevation_required: false    # Optional: needs admin/root
+      - name: "System info via bash"
+        type: bash
         platform: linux
         command: "echo Hello"
         cleanup: ""
@@ -1072,15 +1080,34 @@ techniques:
 | `id` | string | MITRE ATT&CK ID (e.g., T1082) |
 | `name` | string | Technique name |
 | `description` | string | Detailed description |
-| `tactic` | string | MITRE tactic (discovery, execution, etc.) |
-| `platforms` | array | Supported platforms (windows, linux, darwin) |
+| `tactic` | string | Primary MITRE tactic (discovery, execution, etc.) |
+| `tactics` | array (optional) | All MITRE tactics for multi-tactic techniques |
+| `platforms` | array | Supported platforms (windows, linux, macos) |
 | `is_safe` | boolean | Safe for production testing |
+| `references` | array (optional) | MITRE ATT&CK reference URLs |
 | `executors` | array | Command definitions per platform |
 | `detection` | array | Expected detection indicators |
+
+### Executor Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string (optional) | Executor display name (distinguishes multiple executors) |
+| `type` | string | Executor type: `cmd`, `powershell`, `bash`, `sh` |
+| `platform` | string (optional) | Target platform: `windows`, `linux`, `macos` |
+| `command` | string | Command to execute |
+| `cleanup` | string (optional) | Cleanup command run after execution |
+| `timeout` | int | Execution timeout in seconds |
+| `elevation_required` | bool (optional) | Whether root/admin privileges are needed |
 
 ### Import Techniques
 
 ```bash
+# Automatic import from MITRE ATT&CK + Atomic Red Team
+make import-mitre           # Full import
+make import-mitre-safe      # Safe techniques only
+make import-mitre-dry       # Dry run (stats only)
+
 # Via API (YAML file on server)
 curl -X POST https://localhost:8443/api/v1/techniques/import \
   -H "Content-Type: application/json" \
@@ -1090,9 +1117,12 @@ curl -X POST https://localhost:8443/api/v1/techniques/import \
 curl -X POST https://localhost:8443/api/v1/techniques/import/json \
   -H "Content-Type: application/json" \
   -d '[{"id": "T1234", "name": "Custom", ...}]'
+
+# List executors for a technique (with optional platform filter)
+curl https://localhost:8443/api/v1/techniques/T1082/executors?platform=linux
 ```
 
-Techniques in `server/configs/techniques/` are auto-imported at server startup.
+Techniques in `server/configs/techniques/` are auto-imported at server startup (all `*.yaml` and `*.yml` files are loaded dynamically via `os.ReadDir`).
 
 ---
 
