@@ -125,8 +125,8 @@ func Merge(stix map[string]*STIXTechnique, atomics map[string]*AtomicTechnique) 
 			tactic = stixTech.Tactics[0]
 		}
 
-		// Determine is_safe
-		isSafe := determineSafety(tactic, executors)
+		// Determine is_safe (check ALL tactics, not just primary)
+		isSafe := determineSafety(stixTech.Tactics, executors)
 
 		if isSafe {
 			stats.SafeCount++
@@ -157,8 +157,8 @@ func Merge(stix map[string]*STIXTechnique, atomics map[string]*AtomicTechnique) 
 	return result, stats
 }
 
-// determineSafety determines if a technique is safe based on tactic and commands
-func determineSafety(tactic string, executors []MergedExecutor) bool {
+// determineSafety determines if a technique is safe based on ALL tactics and commands
+func determineSafety(tactics []string, executors []MergedExecutor) bool {
 	// Check if any executor requires elevation
 	for _, exec := range executors {
 		if exec.ElevationRequired {
@@ -178,13 +178,16 @@ func determineSafety(tactic string, executors []MergedExecutor) bool {
 		}
 	}
 
-	// Safe tactics are safe by default
-	if safeTactics[tactic] {
-		return true
+	// ALL tactics must be safe; if any tactic is unsafe, the technique is unsafe
+	if len(tactics) == 0 {
+		return false
 	}
-
-	// All other tactics are unsafe by default
-	return false
+	for _, tactic := range tactics {
+		if !safeTactics[tactic] {
+			return false
+		}
+	}
+	return true
 }
 
 // defaultTimeout returns a default timeout based on executor type
