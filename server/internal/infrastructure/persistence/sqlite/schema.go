@@ -209,6 +209,14 @@ func Migrate(db *sql.DB) error {
 		return fmt.Errorf("failed to add last_login_at column: %w", err)
 	}
 
+	// Migration: Add tactics and references columns to techniques table
+	if err := addColumnIfNotExists(db, "techniques", "tactics", "TEXT"); err != nil {
+		return fmt.Errorf("failed to add tactics column: %w", err)
+	}
+	if err := addColumnIfNotExists(db, "techniques", "references", "TEXT"); err != nil {
+		return fmt.Errorf("failed to add references column: %w", err)
+	}
+
 	return nil
 }
 
@@ -241,7 +249,7 @@ func addColumnIfNotExists(db *sql.DB, table, column, definition string) error {
 	}
 
 	if !exists {
-		alterQuery := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, definition)
+		alterQuery := fmt.Sprintf("ALTER TABLE %s ADD COLUMN `%s` %s", table, column, definition)
 		_, err := db.Exec(alterQuery)
 		return err
 	}

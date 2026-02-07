@@ -120,7 +120,7 @@ func TestAttackOrchestrator_PlanExecution(t *testing.T) {
 		ID:   "test-scenario",
 		Name: "Test Scenario",
 		Phases: []entity.Phase{
-			{Name: "Phase1", Techniques: []string{"T1059"}},
+			{Name: "Phase1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}},
 		},
 	}
 
@@ -183,7 +183,7 @@ func TestAttackOrchestrator_PlanExecution_SafeMode(t *testing.T) {
 		ID:   "test-scenario",
 		Name: "Test Scenario",
 		Phases: []entity.Phase{
-			{Name: "Phase1", Techniques: []string{"T1082", "T1055"}},
+			{Name: "Phase1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}, {TechniqueID: "T1055"}}},
 		},
 	}
 
@@ -234,7 +234,7 @@ func TestAttackOrchestrator_PlanExecution_NoCompatibleAgents(t *testing.T) {
 		ID:   "test-scenario",
 		Name: "Test Scenario",
 		Phases: []entity.Phase{
-			{Name: "Phase1", Techniques: []string{"T1059"}},
+			{Name: "Phase1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}},
 		},
 	}
 
@@ -265,7 +265,7 @@ func TestAttackOrchestrator_PlanExecution_TechniqueNotFound(t *testing.T) {
 		ID:   "test-scenario",
 		Name: "Test Scenario",
 		Phases: []entity.Phase{
-			{Name: "Phase1", Techniques: []string{"T9999"}}, // doesn't exist
+			{Name: "Phase1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T9999"}}}, // doesn't exist
 		},
 	}
 
@@ -475,7 +475,7 @@ func TestAttackOrchestrator_PlanExecution_NoCompatibleExecutor(t *testing.T) {
 		ID:   "test-scenario",
 		Name: "Test Scenario",
 		Phases: []entity.Phase{
-			{Name: "Phase1", Techniques: []string{"T1059"}},
+			{Name: "Phase1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}},
 		},
 	}
 

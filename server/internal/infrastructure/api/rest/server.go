@@ -285,6 +285,7 @@ func registerRoutesWithPermissions(api *gin.RouterGroup, services *Services, hub
 		techniques.GET("/tactic/:tactic", perm(entity.PermissionTechniquesView), techniqueHandler.GetByTactic)
 		techniques.GET("/platform/:platform", perm(entity.PermissionTechniquesView), techniqueHandler.GetByPlatform)
 		techniques.GET("/:id", perm(entity.PermissionTechniquesView), techniqueHandler.GetTechnique)
+		techniques.GET("/:id/executors", perm(entity.PermissionTechniquesView), techniqueHandler.GetExecutors)
 		techniques.POST("/import", perm(entity.PermissionTechniquesImport), techniqueHandler.ImportTechniques)
 	}
 

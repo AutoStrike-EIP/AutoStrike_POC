@@ -694,7 +694,7 @@ func TestScenarioRepository_Create(t *testing.T) {
 		Name:        "Test Scenario",
 		Description: "A test",
 		Phases: []entity.Phase{
-			{Name: "Phase1", Techniques: []string{"T1059"}},
+			{Name: "Phase1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}},
 		},
 		Tags:      []string{"test"},
 			UpdatedAt: time.Now(),
@@ -716,7 +716,7 @@ func TestScenarioRepository_FindByID(t *testing.T) {
 		ID:   "s1",
 		Name: "Test",
 		Phases: []entity.Phase{
-			{Name: "Phase1", Techniques: []string{"T1059"}},
+			{Name: "Phase1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}},
 		},
 		Tags:      []string{"test"},
 			UpdatedAt: time.Now(),
@@ -753,7 +753,7 @@ func TestScenarioRepository_Update(t *testing.T) {
 	scenario := &entity.Scenario{
 		ID:        "s1",
 		Name:      "Old Name",
-		Phases:    []entity.Phase{{Name: "P1", Techniques: []string{"T1"}}},
+		Phases:    []entity.Phase{{Name: "P1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1"}}}},
 		Tags:      []string{},
 			UpdatedAt: time.Now(),
 	}
@@ -780,7 +780,7 @@ func TestScenarioRepository_Delete(t *testing.T) {
 	scenario := &entity.Scenario{
 		ID:        "s1",
 		Name:      "Test",
-		Phases:    []entity.Phase{{Name: "P1", Techniques: []string{"T1"}}},
+		Phases:    []entity.Phase{{Name: "P1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1"}}}},
 		Tags:      []string{},
 			UpdatedAt: time.Now(),
 	}
@@ -807,7 +807,7 @@ func TestScenarioRepository_FindAll(t *testing.T) {
 		scenario := &entity.Scenario{
 			ID:        "s" + string(rune('0'+i)),
 			Name:      "Scenario",
-			Phases:    []entity.Phase{{Name: "P", Techniques: []string{"T1"}}},
+			Phases:    []entity.Phase{{Name: "P", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1"}}}},
 			Tags:      []string{},
 					UpdatedAt: time.Now(),
 		}
@@ -832,14 +832,14 @@ func TestScenarioRepository_FindByTag(t *testing.T) {
 	tagged := &entity.Scenario{
 		ID:        "s1",
 		Name:      "Tagged",
-		Phases:    []entity.Phase{{Name: "P", Techniques: []string{"T1"}}},
+		Phases:    []entity.Phase{{Name: "P", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1"}}}},
 		Tags:      []string{"important"},
 			UpdatedAt: time.Now(),
 	}
 	untagged := &entity.Scenario{
 		ID:        "s2",
 		Name:      "Untagged",
-		Phases:    []entity.Phase{{Name: "P", Techniques: []string{"T1"}}},
+		Phases:    []entity.Phase{{Name: "P", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1"}}}},
 		Tags:      []string{"other"},
 			UpdatedAt: time.Now(),
 	}
@@ -3607,6 +3607,22 @@ func TestMigrate_AddColumnsToExistingTable(t *testing.T) {
 	)`)
 	if err != nil {
 		t.Fatalf("Failed to create users table: %v", err)
+	}
+
+	// Create a minimal techniques table WITHOUT tactics and references
+	_, err = db.Exec(`CREATE TABLE techniques (
+		id TEXT PRIMARY KEY,
+		name TEXT NOT NULL,
+		description TEXT,
+		tactic TEXT NOT NULL,
+		platforms TEXT NOT NULL,
+		executors TEXT NOT NULL,
+		detection TEXT,
+		is_safe BOOLEAN DEFAULT 1,
+		created_at DATETIME NOT NULL
+	)`)
+	if err != nil {
+		t.Fatalf("Failed to create techniques table: %v", err)
 	}
 
 	// Migrate should add the missing columns via ALTER TABLE

@@ -147,8 +147,8 @@ func TestTechniqueValidator_ValidateScenario(t *testing.T) {
 			scenario: &entity.Scenario{
 				Name: "Test Scenario",
 				Phases: []entity.Phase{
-					{Name: "Recon", Techniques: []string{"T1082"}},
-					{Name: "Execution", Techniques: []string{"T1059"}},
+					{Name: "Recon", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}},
+					{Name: "Execution", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}},
 				},
 			},
 			wantValid:  true,
@@ -168,7 +168,7 @@ func TestTechniqueValidator_ValidateScenario(t *testing.T) {
 			scenario: &entity.Scenario{
 				Name: "Bad Scenario",
 				Phases: []entity.Phase{
-					{Name: "Phase1", Techniques: []string{"T9999"}},
+					{Name: "Phase1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T9999"}}},
 				},
 			},
 			wantValid:  false,
@@ -179,8 +179,8 @@ func TestTechniqueValidator_ValidateScenario(t *testing.T) {
 			scenario: &entity.Scenario{
 				Name: "Warning Scenario",
 				Phases: []entity.Phase{
-					{Name: "Empty Phase", Techniques: []string{}},
-					{Name: "Valid Phase", Techniques: []string{"T1082"}},
+					{Name: "Empty Phase", Techniques: []entity.TechniqueSelection{}},
+					{Name: "Valid Phase", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}},
 				},
 			},
 			wantValid:    true,
@@ -191,7 +191,7 @@ func TestTechniqueValidator_ValidateScenario(t *testing.T) {
 			scenario: &entity.Scenario{
 				Name: "Multi Error",
 				Phases: []entity.Phase{
-					{Name: "Phase1", Techniques: []string{"T9999", "T8888"}},
+					{Name: "Phase1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T9999"}, {TechniqueID: "T8888"}}},
 				},
 			},
 			wantValid:  false,

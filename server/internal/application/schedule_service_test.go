@@ -22,7 +22,7 @@ func buildTestExecutionService() *ExecutionService {
 		ID:   "scenario-1",
 		Name: "Test Scenario",
 		Phases: []entity.Phase{
-			{Name: "Phase1", Techniques: []string{"T1059"}},
+			{Name: "Phase1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}},
 		},
 	}
 	techRepo := newMockTechniqueRepo()

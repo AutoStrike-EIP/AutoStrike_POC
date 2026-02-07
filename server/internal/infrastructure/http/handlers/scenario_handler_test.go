@@ -183,7 +183,7 @@ func TestScenarioHandler_ListScenarios(t *testing.T) {
 		ID:   "s1",
 		Name: "Test Scenario",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	techRepo := newTestTechniqueRepo()
@@ -227,7 +227,7 @@ func TestScenarioHandler_GetScenario(t *testing.T) {
 		ID:   "s1",
 		Name: "Test Scenario",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	techRepo := newTestTechniqueRepo()
@@ -279,7 +279,7 @@ func TestScenarioHandler_GetScenariosByTag(t *testing.T) {
 		Name: "Test Scenario",
 		Tags: []string{"apt29", "discovery"},
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	scenarioRepo.scenarios["s2"] = &entity.Scenario{
@@ -287,7 +287,7 @@ func TestScenarioHandler_GetScenariosByTag(t *testing.T) {
 		Name: "Another Scenario",
 		Tags: []string{"execution"},
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1059"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}, Order: 1},
 		},
 	}
 	techRepo := newTestTechniqueRepo()
@@ -333,7 +333,7 @@ func TestScenarioHandler_CreateScenario(t *testing.T) {
 		Name:        "New Scenario",
 		Description: "A test scenario",
 		Phases: []entity.Phase{
-			{Name: "Discovery", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Discovery", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 		Tags: []string{"test"},
 	}
@@ -378,7 +378,7 @@ func TestScenarioHandler_UpdateScenario(t *testing.T) {
 		Name:      "Original Name",
 		CreatedAt: time.Now(),
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	techRepo := newTestTechniqueRepo()
@@ -398,7 +398,7 @@ func TestScenarioHandler_UpdateScenario(t *testing.T) {
 		Name:        "Updated Name",
 		Description: "Updated description",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	jsonBody, _ := json.Marshal(body)
@@ -421,7 +421,7 @@ func TestScenarioHandler_UpdateScenario_PreservesAuthor(t *testing.T) {
 		Author:    "original-author",
 		CreatedAt: time.Now(),
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	techRepo := newTestTechniqueRepo()
@@ -441,7 +441,7 @@ func TestScenarioHandler_UpdateScenario_PreservesAuthor(t *testing.T) {
 		Name:        "Updated Name",
 		Description: "Updated description",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	jsonBody, _ := json.Marshal(body)
@@ -477,7 +477,7 @@ func TestScenarioHandler_UpdateScenario_NotFound(t *testing.T) {
 	body := UpdateScenarioRequest{
 		Name: "Updated Name",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	jsonBody, _ := json.Marshal(body)
@@ -566,7 +566,7 @@ func TestScenarioHandler_CreateScenario_ValidationError(t *testing.T) {
 		Name:        "Test Scenario",
 		Description: "A test scenario",
 		Phases: []entity.Phase{
-			{Name: "Discovery", Techniques: []string{"T9999"}, Order: 1}, // Invalid technique
+			{Name: "Discovery", Techniques: []entity.TechniqueSelection{{TechniqueID: "T9999"}}, Order: 1}, // Invalid technique
 		},
 		Tags: []string{"test"},
 	}
@@ -602,7 +602,7 @@ func TestScenarioHandler_CreateScenario_ServiceError(t *testing.T) {
 		Name:        "Test Scenario",
 		Description: "A test scenario",
 		Phases: []entity.Phase{
-			{Name: "Discovery", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Discovery", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 		Tags: []string{"test"},
 	}
@@ -625,7 +625,7 @@ func TestScenarioHandler_UpdateScenario_BadRequest(t *testing.T) {
 		Name:      "Original Name",
 		CreatedAt: time.Now(),
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	techRepo := newTestTechniqueRepo()
@@ -655,7 +655,7 @@ func TestScenarioHandler_UpdateScenario_ValidationError(t *testing.T) {
 		Name:      "Original Name",
 		CreatedAt: time.Now(),
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	techRepo := newTestTechniqueRepo()
@@ -669,7 +669,7 @@ func TestScenarioHandler_UpdateScenario_ValidationError(t *testing.T) {
 	body := UpdateScenarioRequest{
 		Name: "Updated Name",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T9999"}, Order: 1}, // Invalid technique
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T9999"}}, Order: 1}, // Invalid technique
 		},
 	}
 	jsonBody, _ := json.Marshal(body)
@@ -723,7 +723,7 @@ func TestScenarioHandler_UpdateScenario_ServiceError(t *testing.T) {
 				Name:      "Original Name",
 				CreatedAt: time.Now(),
 				Phases: []entity.Phase{
-					{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+					{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 				},
 			},
 		},
@@ -746,7 +746,7 @@ func TestScenarioHandler_UpdateScenario_ServiceError(t *testing.T) {
 		Name:        "Updated Name",
 		Description: "Updated description",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	jsonBody, _ := json.Marshal(body)
@@ -814,7 +814,7 @@ func TestCreateScenarioRequest_Struct(t *testing.T) {
 		Name:        "Test",
 		Description: "Test description",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 		Tags: []string{"test"},
 	}
@@ -829,7 +829,7 @@ func TestUpdateScenarioRequest_Struct(t *testing.T) {
 		Name:        "Updated",
 		Description: "Updated description",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 		Tags: []string{"updated"},
 	}
@@ -845,14 +845,14 @@ func TestScenarioHandler_ExportScenarios(t *testing.T) {
 		ID:   "s1",
 		Name: "Test Scenario 1",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	scenarioRepo.scenarios["s2"] = &entity.Scenario{
 		ID:   "s2",
 		Name: "Test Scenario 2",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1059"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}, Order: 1},
 		},
 	}
 	techRepo := newTestTechniqueRepo()
@@ -896,14 +896,14 @@ func TestScenarioHandler_ExportScenarios_WithIDs(t *testing.T) {
 		ID:   "s1",
 		Name: "Test Scenario 1",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	scenarioRepo.scenarios["s2"] = &entity.Scenario{
 		ID:   "s2",
 		Name: "Test Scenario 2",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1059"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}, Order: 1},
 		},
 	}
 	techRepo := newTestTechniqueRepo()
@@ -953,7 +953,7 @@ func TestScenarioHandler_ExportScenario(t *testing.T) {
 		ID:   "s1",
 		Name: "Test Scenario",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	techRepo := newTestTechniqueRepo()
@@ -1023,7 +1023,7 @@ func TestScenarioHandler_ImportScenarios(t *testing.T) {
 				Name:        "Imported Scenario",
 				Description: "A test scenario",
 				Phases: []entity.Phase{
-					{Name: "Discovery", Techniques: []string{"T1082"}, Order: 1},
+					{Name: "Discovery", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 				},
 				Tags: []string{"imported"},
 			},
@@ -1117,13 +1117,13 @@ func TestScenarioHandler_ImportScenarios_PartialFailure(t *testing.T) {
 			{
 				Name: "Valid Scenario",
 				Phases: []entity.Phase{
-					{Name: "Discovery", Techniques: []string{"T1082"}, Order: 1},
+					{Name: "Discovery", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 				},
 			},
 			{
 				Name: "Invalid Scenario",
 				Phases: []entity.Phase{
-					{Name: "Discovery", Techniques: []string{"T9999"}, Order: 1}, // Invalid technique
+					{Name: "Discovery", Techniques: []entity.TechniqueSelection{{TechniqueID: "T9999"}}, Order: 1}, // Invalid technique
 				},
 			},
 		},
@@ -1169,13 +1169,13 @@ func TestScenarioHandler_ImportScenarios_AllFailed(t *testing.T) {
 			{
 				Name: "Invalid Scenario 1",
 				Phases: []entity.Phase{
-					{Name: "Discovery", Techniques: []string{"T9999"}, Order: 1},
+					{Name: "Discovery", Techniques: []entity.TechniqueSelection{{TechniqueID: "T9999"}}, Order: 1},
 				},
 			},
 			{
 				Name: "Invalid Scenario 2",
 				Phases: []entity.Phase{
-					{Name: "Discovery", Techniques: []string{"T8888"}, Order: 1},
+					{Name: "Discovery", Techniques: []entity.TechniqueSelection{{TechniqueID: "T8888"}}, Order: 1},
 				},
 			},
 		},
@@ -1418,21 +1418,21 @@ func TestScenarioHandler_ExportScenarios_WithMultipleIDs(t *testing.T) {
 		ID:   "s1",
 		Name: "Test Scenario 1",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	scenarioRepo.scenarios["s2"] = &entity.Scenario{
 		ID:   "s2",
 		Name: "Test Scenario 2",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1059"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}, Order: 1},
 		},
 	}
 	scenarioRepo.scenarios["s3"] = &entity.Scenario{
 		ID:   "s3",
 		Name: "Test Scenario 3",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1057"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1057"}}, Order: 1},
 		},
 	}
 	techRepo := newTestTechniqueRepo()
@@ -1469,7 +1469,7 @@ func TestScenarioHandler_ExportScenarios_WithEmptyIDsAfterTrim(t *testing.T) {
 		ID:   "s1",
 		Name: "Test Scenario 1",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	techRepo := newTestTechniqueRepo()
@@ -1627,7 +1627,7 @@ func TestScenarioHandler_UpdateScenario_InvalidJSON(t *testing.T) {
 		Name:      "Original Name",
 		CreatedAt: time.Now(),
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	techRepo := newTestTechniqueRepo()
@@ -1655,7 +1655,7 @@ func TestScenarioHandler_ExportScenarios_WithMixedValidInvalidIDs(t *testing.T) 
 		ID:   "s1",
 		Name: "Test Scenario 1",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	techRepo := newTestTechniqueRepo()
@@ -1699,7 +1699,7 @@ func TestScenarioHandler_ImportScenarios_ServiceError(t *testing.T) {
 			{
 				Name: "Test Scenario",
 				Phases: []entity.Phase{
-					{Name: "Discovery", Techniques: []string{"T1082"}, Order: 1},
+					{Name: "Discovery", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 				},
 			},
 		},
@@ -1780,7 +1780,7 @@ func TestScenarioHandler_UpdateScenario_MissingName(t *testing.T) {
 		Name:      "Original Name",
 		CreatedAt: time.Now(),
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	techRepo := newTestTechniqueRepo()
@@ -1810,7 +1810,7 @@ func TestScenarioHandler_UpdateScenario_MissingPhases(t *testing.T) {
 		Name:      "Original Name",
 		CreatedAt: time.Now(),
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1082"}, Order: 1},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}, Order: 1},
 		},
 	}
 	techRepo := newTestTechniqueRepo()

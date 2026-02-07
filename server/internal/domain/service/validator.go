@@ -110,10 +110,10 @@ func (v *TechniqueValidator) ValidateScenario(
 				"phase '"+phase.Name+"' has no techniques")
 		}
 
-		for _, techID := range phase.Techniques {
-			if _, exists := techniqueMap[techID]; !exists {
+		for _, sel := range phase.Techniques {
+			if _, exists := techniqueMap[sel.TechniqueID]; !exists {
 				result.Errors = append(result.Errors,
-					"technique '"+techID+"' not found")
+					"technique '"+sel.TechniqueID+"' not found")
 				result.IsValid = false
 			}
 		}

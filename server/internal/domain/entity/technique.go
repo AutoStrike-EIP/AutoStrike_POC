@@ -22,23 +22,27 @@ const (
 
 // Technique represents a MITRE ATT&CK technique
 type Technique struct {
-	ID          string      `json:"id" yaml:"id"`                   // "T1059.001"
-	Name        string      `json:"name" yaml:"name"`               // "PowerShell"
-	Tactic      TacticType  `json:"tactic" yaml:"tactic"`           // "execution"
-	Description string      `json:"description" yaml:"description"` // Detailed description
-	Platforms   []string    `json:"platforms" yaml:"platforms"`     // ["windows"]
-	Executors   []Executor  `json:"executors" yaml:"executors"`
-	Detection   []Detection `json:"detection,omitempty" yaml:"detection,omitempty"`
-	References  []string    `json:"references,omitempty" yaml:"references,omitempty"`
-	IsSafe      bool        `json:"is_safe" yaml:"is_safe"` // Safe for production
+	ID          string       `json:"id" yaml:"id"`                                    // "T1059.001"
+	Name        string       `json:"name" yaml:"name"`                                // "PowerShell"
+	Tactic      TacticType   `json:"tactic" yaml:"tactic"`                            // Primary tactic (retro-compat)
+	Tactics     []TacticType `json:"tactics,omitempty" yaml:"tactics,omitempty"`       // All tactics (multi-tactic)
+	Description string       `json:"description" yaml:"description"`                  // Detailed description
+	Platforms   []string     `json:"platforms" yaml:"platforms"`                       // ["windows"]
+	Executors   []Executor   `json:"executors" yaml:"executors"`
+	Detection   []Detection  `json:"detection,omitempty" yaml:"detection,omitempty"`
+	References  []string     `json:"references,omitempty" yaml:"references,omitempty"`
+	IsSafe      bool         `json:"is_safe" yaml:"is_safe"` // Safe for production
 }
 
 // Executor defines how to execute the technique
 type Executor struct {
-	Type    string `json:"type" yaml:"type"`       // "psh", "cmd", "bash"
-	Command string `json:"command" yaml:"command"` // The command to execute
-	Cleanup string `json:"cleanup,omitempty" yaml:"cleanup,omitempty"`
-	Timeout int    `json:"timeout" yaml:"timeout"` // Seconds
+	Name              string `json:"name,omitempty" yaml:"name,omitempty"`
+	Type              string `json:"type" yaml:"type"`       // "psh", "cmd", "bash"
+	Platform          string `json:"platform,omitempty" yaml:"platform,omitempty"`
+	Command           string `json:"command" yaml:"command"` // The command to execute
+	Cleanup           string `json:"cleanup,omitempty" yaml:"cleanup,omitempty"`
+	Timeout           int    `json:"timeout" yaml:"timeout"` // Seconds
+	ElevationRequired bool   `json:"elevation_required,omitempty" yaml:"elevation_required,omitempty"`
 }
 
 // Detection describes expected detection indicators
@@ -64,11 +68,75 @@ func (t *Technique) GetExecutorForPlatform(platform string, agentExecutors []str
 
 	// Find compatible executor
 	for i := range t.Executors {
+		// If executor has a platform set, it must match
+		if t.Executors[i].Platform != "" && t.Executors[i].Platform != platform {
+			continue
+		}
 		for _, agentExec := range agentExecutors {
 			if t.Executors[i].Type == agentExec {
 				return &t.Executors[i]
 			}
 		}
+	}
+	return nil
+}
+
+// GetExecutorByName returns an executor by name, filtered by platform and agent capabilities
+func (t *Technique) GetExecutorByName(name string, platform string, agentExecutors []string) *Executor {
+	for i := range t.Executors {
+		if t.Executors[i].Name != name {
+			continue
+		}
+		// If executor has a platform set, it must match
+		if t.Executors[i].Platform != "" && t.Executors[i].Platform != platform {
+			continue
+		}
+		for _, agentExec := range agentExecutors {
+			if t.Executors[i].Type == agentExec {
+				return &t.Executors[i]
+			}
+		}
+	}
+	return nil
+}
+
+// GetExecutorsForPlatform returns all compatible executors for the given platform
+func (t *Technique) GetExecutorsForPlatform(platform string, agentExecutors []string) []Executor {
+	// Check if platform is supported
+	platformSupported := false
+	for _, p := range t.Platforms {
+		if p == platform {
+			platformSupported = true
+			break
+		}
+	}
+
+	if !platformSupported {
+		return nil
+	}
+
+	var result []Executor
+	for _, exec := range t.Executors {
+		if exec.Platform != "" && exec.Platform != platform {
+			continue
+		}
+		for _, agentExec := range agentExecutors {
+			if exec.Type == agentExec {
+				result = append(result, exec)
+				break
+			}
+		}
+	}
+	return result
+}
+
+// GetTactics returns all tactics for the technique. Falls back to the primary tactic if Tactics is empty.
+func (t *Technique) GetTactics() []TacticType {
+	if len(t.Tactics) > 0 {
+		return t.Tactics
+	}
+	if t.Tactic != "" {
+		return []TacticType{t.Tactic}
 	}
 	return nil
 }

@@ -112,6 +112,36 @@ func (h *TechniqueHandler) GetCoverage(c *gin.Context) {
 	c.JSON(http.StatusOK, coverage)
 }
 
+// GetExecutors returns executors for a technique, optionally filtered by platform
+func (h *TechniqueHandler) GetExecutors(c *gin.Context) {
+	id := c.Param("id")
+
+	technique, err := h.service.GetTechnique(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "technique not found"})
+		return
+	}
+
+	platform := c.Query("platform")
+	var executors []entity.Executor
+
+	if platform != "" {
+		// Filter by platform: return executors matching the platform
+		for _, exec := range technique.Executors {
+			if exec.Platform == "" || exec.Platform == platform {
+				executors = append(executors, exec)
+			}
+		}
+	} else {
+		executors = technique.Executors
+	}
+
+	if executors == nil {
+		executors = []entity.Executor{}
+	}
+	c.JSON(http.StatusOK, executors)
+}
+
 // ImportRequest represents the request body for importing techniques
 type ImportRequest struct {
 	Path string `json:"path" binding:"required"`

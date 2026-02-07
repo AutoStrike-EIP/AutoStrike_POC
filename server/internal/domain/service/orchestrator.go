@@ -91,14 +91,14 @@ func (o *AttackOrchestrator) planPhase(
 	var tasks []PlannedTask
 	taskOrder := startOrder
 
-	for _, techID := range phase.Techniques {
-		technique := o.getTechnique(ctx, techID, safeMode)
+	for _, selection := range phase.Techniques {
+		technique := o.getTechnique(ctx, selection.TechniqueID, safeMode)
 		if technique == nil {
 			continue
 		}
 
 		for _, agent := range targetAgents {
-			task := o.createTaskForAgent(agent, technique, phase.Name, taskOrder)
+			task := o.createTaskForAgent(agent, technique, selection.ExecutorName, phase.Name, taskOrder)
 			if task != nil {
 				tasks = append(tasks, *task)
 				taskOrder++
@@ -129,6 +129,7 @@ func (o *AttackOrchestrator) getTechnique(ctx context.Context, techID string, sa
 func (o *AttackOrchestrator) createTaskForAgent(
 	agent *entity.Agent,
 	technique *entity.Technique,
+	executorName string,
 	phaseName string,
 	order int,
 ) *PlannedTask {
@@ -136,7 +137,14 @@ func (o *AttackOrchestrator) createTaskForAgent(
 		return nil
 	}
 
-	executor := technique.GetExecutorForPlatform(agent.Platform, agent.Executors)
+	var executor *entity.Executor
+	if executorName != "" {
+		executor = technique.GetExecutorByName(executorName, agent.Platform, agent.Executors)
+	}
+	// Fallback to auto-select if no executor name or not found
+	if executor == nil {
+		executor = technique.GetExecutorForPlatform(agent.Platform, agent.Executors)
+	}
 	if executor == nil {
 		return nil
 	}
