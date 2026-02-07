@@ -91,6 +91,8 @@ export interface TechniqueExecutor {
   timeout: number;
   /** Whether elevated privileges are required */
   elevation_required?: boolean;
+  /** Whether the executor is safe (no elevation required) */
+  is_safe?: boolean;
 }
 
 /**

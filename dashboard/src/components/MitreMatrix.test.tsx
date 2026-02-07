@@ -11,6 +11,10 @@ const mockTechniques: Technique[] = [
     tactic: 'discovery',
     platforms: ['windows', 'linux'],
     is_safe: true,
+    executors: [
+      { type: 'cmd', platform: 'windows', command: 'systeminfo', timeout: 60, is_safe: true },
+      { type: 'sh', platform: 'linux', command: 'uname -a', timeout: 60, is_safe: true },
+    ],
     detection: [
       { source: 'Process Creation', indicator: 'systeminfo.exe execution' },
     ],
@@ -22,6 +26,9 @@ const mockTechniques: Technique[] = [
     tactic: 'discovery',
     platforms: ['windows', 'linux'],
     is_safe: true,
+    executors: [
+      { type: 'cmd', platform: 'windows', command: 'dir', timeout: 60, is_safe: true },
+    ],
     detection: [],
   },
   {
@@ -31,6 +38,10 @@ const mockTechniques: Technique[] = [
     tactic: 'execution',
     platforms: ['windows'],
     is_safe: false,
+    executors: [
+      { name: 'Mimikatz', type: 'psh', platform: 'windows', command: 'Invoke-Mimikatz', timeout: 120, elevation_required: true, is_safe: false },
+      { name: 'Encoded Command', type: 'psh', platform: 'windows', command: 'powershell -enc', timeout: 60, is_safe: true },
+    ],
     detection: [
       { source: 'Script Block', indicator: 'PowerShell execution' },
     ],
@@ -143,7 +154,9 @@ describe('MitreMatrix', () => {
     // Modal should appear with technique details
     expect(screen.getByRole('heading', { name: 'System Information Discovery' })).toBeInTheDocument();
     expect(screen.getByText('Adversaries may attempt to get detailed information about the operating system.')).toBeInTheDocument();
-    expect(screen.getByText('No Elevation')).toBeInTheDocument();
+    // Technique badge + executor badges all say "No Elevation"
+    const noElevElements = screen.getAllByText('No Elevation');
+    expect(noElevElements.length).toBeGreaterThanOrEqual(1);
   });
 
   it('closes technique detail panel when close button clicked', () => {
@@ -213,6 +226,31 @@ describe('MitreMatrix', () => {
     fireEvent.click(techniqueButton);
 
     expect(screen.getByText('Elevation Required')).toBeInTheDocument();
+  });
+
+  it('shows executor details with elevation status in detail panel', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    // T1059.001 has 2 executors: one with elevation, one without
+    const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
+    fireEvent.click(techniqueButton);
+
+    expect(screen.getByText('Executors (2)')).toBeInTheDocument();
+    expect(screen.getByText('Mimikatz')).toBeInTheDocument();
+    expect(screen.getByText('Encoded Command')).toBeInTheDocument();
+    expect(screen.getByText('Elevation')).toBeInTheDocument();
+    expect(screen.getByText('No Elevation')).toBeInTheDocument();
+  });
+
+  it('shows executor types and platforms', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1082: System Information Discovery');
+    fireEvent.click(techniqueButton);
+
+    expect(screen.getByText('Executors (2)')).toBeInTheDocument();
+    expect(screen.getByText('cmd')).toBeInTheDocument();
+    expect(screen.getByText('sh')).toBeInTheDocument();
   });
 
   it('calls onTechniqueClick callback when provided', () => {

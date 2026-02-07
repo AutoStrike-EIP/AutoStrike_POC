@@ -199,7 +199,7 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
               onClick={handleCloseDetail}
               aria-label="Close modal"
             />
-            <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full p-6">
+            <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full p-6 max-h-[85vh] overflow-y-auto">
               <button
                 onClick={handleCloseDetail}
                 className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -228,6 +228,41 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
                   <span key={p} className="badge bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">{p}</span>
                 ))}
               </div>
+              {/* Executors */}
+              {selectedTechnique.executors && selectedTechnique.executors.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Executors ({selectedTechnique.executors.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedTechnique.executors.map((exec, idx) => (
+                      <div
+                        key={`${exec.type}-${exec.platform ?? ''}-${idx}`}
+                        className="flex items-center justify-between p-2 rounded bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
+                            {exec.type}
+                          </span>
+                          {exec.platform && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{exec.platform}</span>
+                          )}
+                          {exec.name && (
+                            <span className="text-xs text-gray-600 dark:text-gray-300 truncate">{exec.name}</span>
+                          )}
+                        </div>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          exec.is_safe
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400'
+                            : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400'
+                        }`}>
+                          {exec.is_safe ? 'No Elevation' : 'Elevation'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {selectedTechnique.detection && selectedTechnique.detection.length > 0 && (
                 <div className="mt-4">
                   <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Detection</h4>
