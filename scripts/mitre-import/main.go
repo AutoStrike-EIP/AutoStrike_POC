@@ -170,6 +170,10 @@ func downloadFile(url, dest string) (retErr error) {
 		if cerr := out.Close(); retErr == nil {
 			retErr = cerr
 		}
+		// Remove partial file on error to avoid cache poisoning
+		if retErr != nil {
+			os.Remove(dest)
+		}
 	}()
 
 	if _, retErr = io.Copy(out, resp.Body); retErr != nil {

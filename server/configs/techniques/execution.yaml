@@ -80,7 +80,7 @@
       command: wmic /node:127.0.0.1 process call create "rundll32.exe \"PathToAtomicsFolder\..\ExternalPayloads\calc.dll\" StartW"
       cleanup: taskkill /f /im calculator.exe
       timeout: 120
-      is_safe: true
+      is_safe: false
     - name: Application uninstall using WMIC
       type: cmd
       platform: windows
@@ -784,7 +784,7 @@
         bash PathToAtomicsFolder/T1059.004/src/AutoSUID.sh
       cleanup: rm -rf PathToAtomicsFolder/T1059.004/src/AutoSUID.sh
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: LinEnum tool execution
       type: sh
       platform: linux
@@ -793,7 +793,7 @@
         bash PathToAtomicsFolder/T1059.004/src/LinEnum.sh
       cleanup: rm -rf PathToAtomicsFolder/T1059.004/src/LinEnum.sh
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: New script file in the tmp directory
       type: sh
       platform: linux

@@ -651,7 +651,7 @@
       command: '"%programfiles%/WinRAR/Rar.exe" a -r %USERPROFILE%\T1560.001-data.rar %USERPROFILE%\*.txt'
       cleanup: del /f /q /s %USERPROFILE%\T1560.001-data.rar >nul 2>&1
       timeout: 120
-      is_safe: true
+      is_safe: false
     - name: Compress Data and lock with password for Exfiltration with winrar
       type: cmd
       platform: windows
@@ -686,7 +686,7 @@
         dir
       cleanup: rmdir /s /Q $PathToAtomicsFolder\T1560.001\victim-files >nul 2>&1
       timeout: 120
-      is_safe: true
+      is_safe: false
     - name: Data Compressed - nix - zip
       type: bash
       platform: linux
@@ -742,7 +742,7 @@
         ls -l /tmp/T1560
       cleanup: rm -Rf /tmp/T1560
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Data Encrypted with zip and gpg symmetric
       type: sh
       platform: macos
@@ -754,21 +754,21 @@
         ls -l /tmp/T1560
       cleanup: rm -Rf /tmp/T1560
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Encrypts collected data with AES-256 and Base64
       type: bash
       platform: linux
       command: "zip -r  /tmp/t1560/t1560_data.zip /tmp/t1560\nopenssl enc -aes-256-cbc -pass pass:atomic_enc_pass -p -in /tmp/t1560/t1560_data.zip -out /tmp/t1560/t1560_data.enc \ncat /tmp/t1560/t1560_data.enc | base64"
       cleanup: rm -rf /tmp/t1560
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Encrypts collected data with AES-256 and Base64
       type: bash
       platform: macos
       command: "zip -r  /tmp/t1560/t1560_data.zip /tmp/t1560\nopenssl enc -aes-256-cbc -pass pass:atomic_enc_pass -p -in /tmp/t1560/t1560_data.zip -out /tmp/t1560/t1560_data.enc \ncat /tmp/t1560/t1560_data.enc | base64"
       cleanup: rm -rf /tmp/t1560
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: ESXi - Remove Syslog remote IP
       type: powershell
       platform: windows

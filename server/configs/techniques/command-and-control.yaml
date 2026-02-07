@@ -173,7 +173,7 @@
         unset http_proxy
         [ "false" == "true" ] && (kill -9 $(ps aux | grep "squid -N" | grep -v "grep" | awk '{print $2}'))
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Connection Proxy
       type: sh
       platform: macos
@@ -184,7 +184,7 @@
         unset http_proxy
         [ "false" == "true" ] && (kill -9 $(ps aux | grep "squid -N" | grep -v "grep" | awk '{print $2}'))
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Connection Proxy for macOS UI
       type: sh
       platform: macos
@@ -246,7 +246,7 @@
       command: osascript -e 'tell application "Terminal" to do script "tor"'
       cleanup: killall tor > /dev/null 2>&1
       timeout: 60
-      is_safe: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1090/003
   is_safe: true
@@ -508,7 +508,7 @@
         del /f/s/q %temp%\T1105 >nul 2>&1
         rmdir /s/q %temp%\T1105 >nul 2>&1
       timeout: 120
-      is_safe: true
+      is_safe: false
     - name: MAZE Propagation Script
       type: powershell
       platform: windows
@@ -611,7 +611,7 @@
         echo y | PathToAtomicsFolder\..\ExternalPayloads\pscp.exe -P 22 -pw atomic C:\Temp\T1105_scp.zip atomic@127.0.0.1:T1105_scp.zip
       cleanup: del /f /q C:\Temp\T1105_scp.zip
       timeout: 120
-      is_safe: true
+      is_safe: false
     - name: Windows push file using scp.exe
       type: powershell
       platform: windows
@@ -998,7 +998,7 @@
         PathToAtomicsFolder/../ExternalPayloads/devtunnel user logout
         rm PathToAtomicsFolder/../ExternalPayloads/devtunnel
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Microsoft Dev tunnels (Linux/macOS)
       type: bash
       platform: macos
@@ -1008,7 +1008,7 @@
         PathToAtomicsFolder/../ExternalPayloads/devtunnel user logout
         rm PathToAtomicsFolder/../ExternalPayloads/devtunnel
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: VSCode tunnels (Linux/macOS)
       type: sh
       platform: linux
@@ -1018,7 +1018,7 @@
         code tunnel unregister
         code tunnel user logout
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: VSCode tunnels (Linux/macOS)
       type: sh
       platform: macos
@@ -1028,7 +1028,7 @@
         code tunnel unregister
         code tunnel user logout
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Cloudflare tunnels (Linux/macOS)
       type: sh
       platform: linux
@@ -1037,7 +1037,7 @@
         pkill -9 $(basename "PathToAtomicsFolder/../ExternalPayloads/cloudflared")
         rm -f "PathToAtomicsFolder/../ExternalPayloads/cloudflared"
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Cloudflare tunnels (Linux/macOS)
       type: sh
       platform: macos
@@ -1046,7 +1046,7 @@
         pkill -9 $(basename "PathToAtomicsFolder/../ExternalPayloads/cloudflared")
         rm -f "PathToAtomicsFolder/../ExternalPayloads/cloudflared"
       timeout: 60
-      is_safe: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1572
   is_safe: true

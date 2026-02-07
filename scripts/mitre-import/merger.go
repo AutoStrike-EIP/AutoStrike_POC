@@ -1,5 +1,9 @@
 package main
 
+import (
+	"regexp"
+	"strings"
+)
 
 // MergedTechnique represents a technique after merging STIX metadata with Atomic executors
 type MergedTechnique struct {
@@ -86,8 +90,8 @@ func Merge(stix map[string]*STIXTechnique, atomics map[string]*AtomicTechnique) 
 			if !platformSet[exec.Platform] {
 				continue
 			}
-			// Safety is determined solely by elevation_required from Atomic Red Team
-			execSafe := !exec.ElevationRequired
+			// Safety: no elevation AND no dangerous command patterns
+			execSafe := !exec.ElevationRequired && !hasDangerousPattern(exec.Command) && !hasDangerousPattern(exec.Cleanup)
 			if execSafe {
 				hasSafeExecutor = true
 			}
@@ -165,4 +169,41 @@ func truncateDescription(desc string) string {
 		return desc
 	}
 	return desc[:maxLen] + "..."
+}
+
+// dangerousPatterns matches command patterns that are destructive or dangerous
+var dangerousPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)\brm\s+-[^\s]*r[^\s]*f`),      // rm -rf, rm -fr
+	regexp.MustCompile(`(?i)\brm\s+-[^\s]*f[^\s]*r`),      // rm -fr variant
+	regexp.MustCompile(`(?i)\bdel\s+/[^\s]*f`),             // del /f (Windows)
+	regexp.MustCompile(`(?i)\brd\s+/s`),                    // rd /s (Windows recursive delete)
+	regexp.MustCompile(`(?i)\brmdir\s+/s`),                 // rmdir /s (Windows)
+	regexp.MustCompile(`(?i)\bdd\s+.*\bof=/dev/`),          // dd of=/dev/sda etc.
+	regexp.MustCompile(`(?i)\bmkfs\b`),                     // mkfs (format filesystem)
+	regexp.MustCompile(`(?i)\bfdisk\b`),                    // fdisk (partition table)
+	regexp.MustCompile(`(?i)\bformat\s+[a-z]:`),            // format C: (Windows)
+	regexp.MustCompile(`(?i)\bshutdown\b`),                 // shutdown
+	regexp.MustCompile(`(?i)\breboot\b`),                   // reboot
+	regexp.MustCompile(`(?i)\binit\s+0\b`),                 // init 0 (halt)
+	regexp.MustCompile(`(?i)\btaskkill\s+/f`),              // taskkill /f (force kill)
+	regexp.MustCompile(`(?i)\bkill\s+-9\b`),                // kill -9
+	regexp.MustCompile(`(?i)\bkillall\b`),                  // killall
+	regexp.MustCompile(`(?i)\bpkill\b`),                    // pkill
+	regexp.MustCompile(`(?i)>\s*/dev/sd[a-z]`),             // > /dev/sda (overwrite disk)
+	regexp.MustCompile(`(?i)\bsystemctl\s+(stop|disable)`), // systemctl stop/disable
+	regexp.MustCompile(`(?i)\bchmod\s+000\b`),              // chmod 000 (remove all perms)
+	regexp.MustCompile(`(?i)\biptables\s+-F\b`),            // iptables -F (flush rules)
+}
+
+// hasDangerousPattern checks if a command contains any destructive patterns
+func hasDangerousPattern(command string) bool {
+	if strings.TrimSpace(command) == "" {
+		return false
+	}
+	for _, pattern := range dangerousPatterns {
+		if pattern.MatchString(command) {
+			return true
+		}
+	}
+	return false
 }

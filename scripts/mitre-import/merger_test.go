@@ -285,6 +285,134 @@ func TestMerge_MultiTactic(t *testing.T) {
 	}
 }
 
+func TestHasDangerousPattern(t *testing.T) {
+	dangerous := []struct {
+		name    string
+		command string
+	}{
+		{"rm -rf", "rm -rf /tmp/test"},
+		{"rm -fr", "rm -fr /var/log"},
+		{"del /f", "del /f /q C:\\Windows\\Temp"},
+		{"rd /s", "rd /s /q C:\\temp"},
+		{"rmdir /s", "rmdir /s C:\\temp"},
+		{"dd to device", "dd if=/dev/zero of=/dev/sda bs=1M"},
+		{"mkfs", "mkfs.ext4 /dev/sda1"},
+		{"fdisk", "echo 'n\\np\\n\\n\\n\\nw' | fdisk /dev/sda"},
+		{"format drive", "format C: /fs:NTFS"},
+		{"shutdown", "shutdown /s /t 0"},
+		{"reboot", "reboot -f"},
+		{"init 0", "init 0"},
+		{"taskkill /f", "taskkill /f /im explorer.exe"},
+		{"kill -9", "kill -9 1234"},
+		{"killall", "killall nginx"},
+		{"pkill", "pkill -f sshd"},
+		{"overwrite disk", "echo test > /dev/sda"},
+		{"systemctl stop", "systemctl stop firewalld"},
+		{"systemctl disable", "systemctl disable iptables"},
+		{"chmod 000", "chmod 000 /etc/passwd"},
+		{"iptables flush", "iptables -F"},
+	}
+
+	for _, tt := range dangerous {
+		t.Run(tt.name, func(t *testing.T) {
+			if !hasDangerousPattern(tt.command) {
+				t.Errorf("hasDangerousPattern(%q) = false, want true", tt.command)
+			}
+		})
+	}
+
+	safe := []struct {
+		name    string
+		command string
+	}{
+		{"echo", "echo hello"},
+		{"whoami", "whoami"},
+		{"systeminfo", "systeminfo"},
+		{"cat file", "cat /etc/hostname"},
+		{"ls", "ls -la /tmp"},
+		{"dir", "dir C:\\Windows"},
+		{"uname", "uname -a"},
+		{"rm single file", "rm /tmp/test.txt"},
+		{"net user", "net user"},
+		{"ipconfig", "ipconfig /all"},
+		{"empty", ""},
+		{"whitespace", "   "},
+	}
+
+	for _, tt := range safe {
+		t.Run("safe_"+tt.name, func(t *testing.T) {
+			if hasDangerousPattern(tt.command) {
+				t.Errorf("hasDangerousPattern(%q) = true, want false", tt.command)
+			}
+		})
+	}
+}
+
+func TestMerge_DangerousCommandIsUnsafe(t *testing.T) {
+	stix := map[string]*STIXTechnique{
+		"T1070": {
+			ID:        "T1070",
+			Tactics:   []string{"defense-evasion"},
+			Platforms: []string{"linux"},
+		},
+	}
+
+	atomics := map[string]*AtomicTechnique{
+		"T1070": {
+			ID: "T1070",
+			Executors: []AtomicExecutorResult{
+				{Name: "safe-cmd", Type: "bash", Platform: "linux", Command: "echo test", ElevationRequired: false},
+				{Name: "dangerous-cmd", Type: "bash", Platform: "linux", Command: "rm -rf /var/log/*", ElevationRequired: false},
+			},
+		},
+	}
+
+	merged, _ := Merge(stix, atomics)
+
+	if len(merged) != 1 {
+		t.Fatalf("Expected 1 merged, got %d", len(merged))
+	}
+
+	tech := merged[0]
+	for _, exec := range tech.Executors {
+		if exec.Name == "dangerous-cmd" && exec.IsSafe {
+			t.Error("Executor with rm -rf should not be safe")
+		}
+		if exec.Name == "safe-cmd" && !exec.IsSafe {
+			t.Error("Executor with echo should be safe")
+		}
+	}
+}
+
+func TestMerge_DangerousCleanupIsUnsafe(t *testing.T) {
+	stix := map[string]*STIXTechnique{
+		"T1082": {
+			ID:        "T1082",
+			Tactics:   []string{"discovery"},
+			Platforms: []string{"linux"},
+		},
+	}
+
+	atomics := map[string]*AtomicTechnique{
+		"T1082": {
+			ID: "T1082",
+			Executors: []AtomicExecutorResult{
+				{Name: "dangerous-cleanup", Type: "bash", Platform: "linux", Command: "whoami", Cleanup: "rm -rf /tmp/test", ElevationRequired: false},
+			},
+		},
+	}
+
+	merged, _ := Merge(stix, atomics)
+
+	if len(merged) != 1 {
+		t.Fatalf("Expected 1 merged, got %d", len(merged))
+	}
+
+	if merged[0].Executors[0].IsSafe {
+		t.Error("Executor with dangerous cleanup should not be safe")
+	}
+}
+
 func TestMerge_EmptyInputs(t *testing.T) {
 	merged, stats := Merge(nil, nil)
 	if len(merged) != 0 {

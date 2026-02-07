@@ -30,7 +30,7 @@
       command: net.exe start >> %temp%\service-list.txt
       cleanup: del /f /q /s %temp%\service-list.txt >nul 2>&1
       timeout: 120
-      is_safe: true
+      is_safe: false
     - name: System Service Discovery - systemctl/service
       type: bash
       platform: linux
@@ -105,10 +105,10 @@
         %TEMP%\T1010.exe
       cleanup: del /f /q /s %TEMP%\T1010.exe >nul 2>&1
       timeout: 120
-      is_safe: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1010
-  is_safe: true
+  is_safe: false
 - id: T1012
   name: Query Registry
   description: |-
@@ -1364,7 +1364,7 @@
         rm -force -recurse .\LocalRecon -ErrorAction Ignore
         rm -force -recurse .\Vulnerabilities -ErrorAction Ignore
       timeout: 120
-      is_safe: true
+      is_safe: false
     - name: WinPwn - General privesc checks
       type: powershell
       platform: windows
@@ -2058,7 +2058,7 @@
       command: ldapdomaindump -u domain\user -p password 127.0.0.1 -o /tmp/T1087
       cleanup: rm -rf /tmp/T1087/ 2>/dev/null
       timeout: 60
-      is_safe: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1087/002
   is_safe: true

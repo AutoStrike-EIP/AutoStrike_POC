@@ -12,8 +12,8 @@ type DescPart = { type: 'text' | 'link' | 'citation' | 'code'; value: string; hr
  */
 function DescriptionText({ text }: Readonly<{ text: string }>) {
   const parts = useMemo(() => {
-    // Single regex that matches markdown links, HTML <code> tags, or backtick code
-    const combinedRegex = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)|<code>([^<]+)<\/code>|`([^`]+)`/g;
+    // Matches markdown links, HTML <code> tags, or backtick code (atomic alternation, no backtracking risk)
+    const combinedRegex = /\[([^\]]{1,200})\]\((https?:\/\/[^)]{1,2000})\)|<code>([^<]{1,500})<\/code>|`([^`]{1,500})`/g;
     const result: DescPart[] = [];
     let lastIndex = 0;
     let match;
@@ -43,11 +43,12 @@ function DescriptionText({ text }: Readonly<{ text: string }>) {
 
   return (
     <span>
-      {parts.map((part, i) => {
+      {parts.map((part) => {
+        const key = `${part.type}-${part.value.slice(0, 30)}-${part.href?.slice(-20) ?? ''}`;
         if (part.type === 'citation') {
           return (
             <a
-              key={i}
+              key={key}
               href={part.href}
               target="_blank"
               rel="noopener noreferrer"
@@ -61,7 +62,7 @@ function DescriptionText({ text }: Readonly<{ text: string }>) {
         if (part.type === 'link') {
           return (
             <a
-              key={i}
+              key={key}
               href={part.href}
               target="_blank"
               rel="noopener noreferrer"
@@ -74,14 +75,14 @@ function DescriptionText({ text }: Readonly<{ text: string }>) {
         if (part.type === 'code') {
           return (
             <code
-              key={i}
+              key={key}
               className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-red-600 dark:text-red-400 text-xs font-mono"
             >
               {part.value}
             </code>
           );
         }
-        return <span key={i}>{part.value}</span>;
+        return <span key={key}>{part.value}</span>;
       })}
     </span>
   );

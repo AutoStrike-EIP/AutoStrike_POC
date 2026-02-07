@@ -153,7 +153,7 @@
         taskkill /f /im calculator.exe >nul 2>nul
         taskkill /f /im CalculatorApp.exe >nul 2>nul
       timeout: 120
-      is_safe: true
+      is_safe: false
     - name: DLP Evasion via Sensitive Data in VBA Macro over email
       type: powershell
       platform: windows
@@ -186,7 +186,7 @@
       command: '"PathToAtomicsFolder\..\ExternalPayloads\temp_T1027js.zip\T1027js.js"'
       cleanup: taskkill /f /im calculator.exe >nul 2>nul
       timeout: 120
-      is_safe: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1027
   is_safe: true
@@ -785,7 +785,7 @@
         './testdirwithspaceend /init '
       cleanup: rm -rf /tmp/atomic-test-T1036.006
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Space After Filename
       type: sh
       platform: linux
@@ -798,10 +798,10 @@
         './testdirwithspaceend /init '
       cleanup: rm -rf /tmp/atomic-test-T1036.006
       timeout: 60
-      is_safe: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1036/006
-  is_safe: true
+  is_safe: false
 - id: T1036.007
   name: Double File Extension
   description: "Adversaries may abuse a double extension in the filename as a means of masquerading the true file type. A file name may include a secondary file type extension that may cause only the first extension to be displayed (ex: <code>File.txt.exe</code> may render in some views as just <code>File.txt</code>). However, the second extension is the true file type that determines how the file is opened and executed. The real file extension may be hidden by the operating system in the file browser (ex: explorer.exe), as well as in any software configured using or similar to the system’s policies.[1](https://www.pcmag.com/encyclopedia/term/double-extension)[2](https://socprime.com/blog/rule-of-the-week-possible-malicious-file-double-extension/) \n\nAdversaries may abuse double extensions to attempt to conceal dangerous file types of payloads. A very common usage involves tricking a user into opening what they think is a benign file type but is actually executable code. Such files often pose as email attachments and allow an adversary to gain [Initial Access](https://attack.mitre.org/tactics/TA0001) into a user’s system via [Spearphishing Attachment](https://attack.mitre.org/techniques/T1566/001) then [User Execution](https://attack.mitre.org/techniques/T1204). For example, an executable file attachment named <code>Evil.txt.exe</code> may display as <code>Evil.txt</code> to a user. The user may then view it as a benign text file and open it, inadvertently executing the hidden malware.[2](https://socprime.com/blog/rule-of-the-week-possible-malicious-file-double-extension/)\n\nCommon file types, such as text files (.txt, .doc, etc.) and image files (.jpg, .gif, etc.) are typically used as the first extension to appear benign. Executable extensions commonly regarded as dangerous, such as .exe, .lnk, .hta, and .scr, often appear as the second extension and true file type."
@@ -842,10 +842,10 @@
         del /f %temp%\T1036.007_masquerading.pdf.ps1 > nul 2>&1
         del /f %temp%\T1036.007_masquerading.rtf.ps1 > nul 2>&1
       timeout: 120
-      is_safe: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1036/007
-  is_safe: true
+  is_safe: false
 - id: T1055
   name: Process Injection
   description: "Adversaries may inject code into processes in order to evade process-based defenses as well as possibly elevate privileges. Process injection is a method of executing arbitrary code in the address space of a separate live process. Running code in the context of another process may allow access to the process's memory, system/network resources, and possibly elevated privileges. Execution via process injection may also evade detection from security products since the execution is masked under a legitimate process. \n\nThere are many different ways to inject code into a process, many of which abuse legitimate functionalities. These implementations exist for every major OS but are typically platform specific. \n\nMore sophisticated samples may perform multiple process injections to segment modules and further evade detection, utilizing named pipes or other inter-process communication (IPC) mechanisms as a communication channel."
@@ -1624,26 +1624,26 @@
       command: rm -f /tmp/victim-files/T1070.004-test.txt
       cleanup: rm -rf /tmp/victim-files/
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Delete a single file - FreeBSD/Linux/macOS
       type: sh
       platform: macos
       command: rm -f /tmp/victim-files/T1070.004-test.txt
       cleanup: rm -rf /tmp/victim-files/
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Delete an entire folder - FreeBSD/Linux/macOS
       type: sh
       platform: linux
       command: rm -rf /tmp/victim-folder
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Delete an entire folder - FreeBSD/Linux/macOS
       type: sh
       platform: macos
       command: rm -rf /tmp/victim-folder
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Overwrite and delete a file with shred
       type: sh
       platform: linux
@@ -1655,13 +1655,13 @@
       platform: windows
       command: del /f %temp%\deleteme_T1551.004
       timeout: 120
-      is_safe: true
+      is_safe: false
     - name: Delete an entire folder - Windows cmd
       type: cmd
       platform: windows
       command: rmdir /s /q %temp%\deleteme_T1551.004
       timeout: 120
-      is_safe: true
+      is_safe: false
     - name: Delete a single file - Windows PowerShell
       type: powershell
       platform: windows
@@ -1679,7 +1679,7 @@
       platform: linux
       command: '[ "$(uname)" = ''Linux'' ] && rm -rf / --no-preserve-root > /dev/null 2> /dev/null || chflags -R 0 / && rm -rf / > /dev/null 2> /dev/null'
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Delete Prefetch File
       type: powershell
       platform: windows
@@ -3742,7 +3742,7 @@
       command: wuauclt.exe /UpdateDeploymentProvider "PathToAtomicsFolder\T1218\bin\calc.dll" /RunHandlerComServer
       cleanup: taskkill /f /im calculator.exe > nul 2>&1
       timeout: 120
-      is_safe: true
+      is_safe: false
     - name: Lolbin Gpscript logon option
       type: cmd
       platform: windows
@@ -5553,7 +5553,7 @@
           systemctl disable cbdaemon
         fi
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Disable SELinux
       type: sh
       platform: linux
@@ -6224,7 +6224,7 @@
       command: '"PathToAtomicsFolder\T1562.002\bin\Phant0m.exe"'
       cleanup: echo "Sorry you have to reboot"
       timeout: 120
-      is_safe: true
+      is_safe: false
     - name: Modify Event Log Channel Access Permissions via Registry - PowerShell
       type: powershell
       platform: windows
@@ -6974,7 +6974,7 @@
         echo "T1564.001" > /var/tmp/.hidden-directory/.hidden-file
       cleanup: rm -rf /var/tmp/.hidden-directory/
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Create a hidden file in a hidden directory
       type: sh
       platform: macos
@@ -6983,7 +6983,7 @@
         echo "T1564.001" > /var/tmp/.hidden-directory/.hidden-file
       cleanup: rm -rf /var/tmp/.hidden-directory/
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Mac Hidden file
       type: sh
       platform: macos
@@ -7199,7 +7199,7 @@
         echo too many secrets > %temp%\...$.......::$index_allocation\secrets.txt
       cleanup: rmdir /S /Q %temp%\...$.......::$index_allocation >nul 2>&1
       timeout: 120
-      is_safe: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1564/004
   is_safe: true

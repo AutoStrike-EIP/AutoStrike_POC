@@ -1214,7 +1214,7 @@
         rm -rf /tmp/atomic_hook_poc.txt
         echo "[+] Successful Removed atomic_hook_poc.txt under /tmp"
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Python Startup Hook - atomic_hook.pth (macOS)
       type: sh
       platform: macos
@@ -1232,7 +1232,7 @@
         [ -f /tmp/atomic_python_hook_path.txt ] && rm -rf $(cat /tmp/atomic_python_hook_path.txt) && rm -f /tmp/atomic_python_hook_path.txt
         echo "[+] Successful Removed atomic_hook.pth and terminated Calculator"
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Python Startup Hook - usercustomize.py (Linux / MacOS)
       type: sh
       platform: linux
@@ -1252,7 +1252,7 @@
         rm -rf /tmp/poc.txt
         echo "[+] Successful remove poc.txt under /tmp"
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Python Startup Hook - usercustomize.py (Linux / MacOS)
       type: sh
       platform: macos
@@ -1272,7 +1272,7 @@
         rm -rf /tmp/poc.txt
         echo "[+] Successful remove poc.txt under /tmp"
       timeout: 60
-      is_safe: true
+      is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1546/018
   is_safe: true
@@ -2185,7 +2185,7 @@
       command: '"PathToAtomicsFolder\T1574.002\bin\GUP.exe"'
       cleanup: taskkill /F /IM calculator.exe >nul 2>&1
       timeout: 120
-      is_safe: true
+      is_safe: false
     - name: DLL Side-Loading using the dotnet startup hook environment variable
       type: cmd
       platform: windows
@@ -2195,7 +2195,7 @@
         echo.
       cleanup: taskkill /F /IM calculator.exe >nul 2>&1
       timeout: 120
-      is_safe: true
+      is_safe: false
     - name: DLL Search Order Hijacking,DLL Sideloading Of KeyScramblerIE.DLL Via KeyScrambler.EXE
       type: powershell
       platform: windows
@@ -2221,7 +2221,7 @@
       is_safe: false
   references:
     - https://attack.mitre.org/techniques/T1574/001
-  is_safe: true
+  is_safe: false
 - id: T1574.006
   name: Dynamic Linker Hijacking
   description: |-

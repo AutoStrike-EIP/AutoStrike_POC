@@ -57,7 +57,7 @@
         ls -l /tmp/T1030
       cleanup: if [ -f /tmp/T1030/safe_to_delete ]; then rm -rf /tmp/T1030; fi;
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Data Transfer Size Limits
       type: sh
       platform: linux
@@ -66,7 +66,7 @@
         ls -l /tmp/T1030
       cleanup: if [ -f /tmp/T1030/safe_to_delete ]; then rm -rf /tmp/T1030; fi;
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Network-Based Data Transfer in Small Chunks
       type: powershell
       platform: windows
