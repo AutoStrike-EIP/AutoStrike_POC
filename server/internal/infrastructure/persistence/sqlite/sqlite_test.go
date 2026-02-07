@@ -4234,6 +4234,197 @@ func TestNotificationRepository_CreateNotification_NilData(t *testing.T) {
 
 // --- Closed DB error path tests ---
 
+func TestTechniqueRepository_CreateWithTacticsAndReferences(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	technique := &entity.Technique{
+		ID:          "T-MULTI",
+		Name:        "Multi-Tactic Technique",
+		Description: "Test technique with tactics and references",
+		Tactic:      entity.TacticDiscovery,
+		Tactics:     []entity.TacticType{entity.TacticDiscovery, entity.TacticCollection},
+		Platforms:   []string{"linux", "windows"},
+		Executors: []entity.Executor{
+			{Name: "whoami-linux", Type: "bash", Platform: "linux", Command: "whoami", Timeout: 30},
+			{Name: "whoami-win", Type: "psh", Platform: "windows", Command: "whoami", Timeout: 30},
+		},
+		References: []string{"https://attack.mitre.org/techniques/T-MULTI"},
+		IsSafe:     true,
+	}
+
+	if err := repo.Create(ctx, technique); err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	found, err := repo.FindByID(ctx, "T-MULTI")
+	if err != nil {
+		t.Fatalf("FindByID failed: %v", err)
+	}
+	if len(found.Tactics) != 2 {
+		t.Errorf("Expected 2 tactics, got %d", len(found.Tactics))
+	}
+	if found.Tactics[0] != entity.TacticDiscovery {
+		t.Errorf("Tactics[0] = %s, want discovery", found.Tactics[0])
+	}
+	if found.Tactics[1] != entity.TacticCollection {
+		t.Errorf("Tactics[1] = %s, want collection", found.Tactics[1])
+	}
+	if len(found.References) != 1 {
+		t.Errorf("Expected 1 reference, got %d", len(found.References))
+	}
+	if found.Executors[0].Name != "whoami-linux" {
+		t.Errorf("Executor name = %s, want whoami-linux", found.Executors[0].Name)
+	}
+	if found.Executors[0].Platform != "linux" {
+		t.Errorf("Executor platform = %s, want linux", found.Executors[0].Platform)
+	}
+}
+
+func TestTechniqueRepository_UpdateWithTacticsAndReferences(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	technique := &entity.Technique{
+		ID:        "T-UPD",
+		Name:      "Original",
+		Tactic:    entity.TacticExecution,
+		Platforms: []string{"linux"},
+		Executors: []entity.Executor{{Type: "bash", Command: "echo test", Timeout: 30}},
+		IsSafe:    true,
+	}
+	if err := repo.Create(ctx, technique); err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	technique.Name = "Updated"
+	technique.Tactics = []entity.TacticType{entity.TacticExecution, entity.TacticPersistence}
+	technique.References = []string{"https://ref1.com", "https://ref2.com"}
+	if err := repo.Update(ctx, technique); err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
+
+	found, err := repo.FindByID(ctx, "T-UPD")
+	if err != nil {
+		t.Fatalf("FindByID failed: %v", err)
+	}
+	if found.Name != "Updated" {
+		t.Errorf("Name = %s, want Updated", found.Name)
+	}
+	if len(found.Tactics) != 2 {
+		t.Errorf("Expected 2 tactics, got %d", len(found.Tactics))
+	}
+	if len(found.References) != 2 {
+		t.Errorf("Expected 2 references, got %d", len(found.References))
+	}
+}
+
+func TestTechniqueRepository_FindByTactic_MultiTactic(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	// Create a technique with primary tactic "execution" but also in "persistence" via tactics JSON
+	technique := &entity.Technique{
+		ID:        "T-MT",
+		Name:      "Multi-Tactic",
+		Tactic:    entity.TacticExecution,
+		Tactics:   []entity.TacticType{entity.TacticExecution, entity.TacticPersistence},
+		Platforms: []string{"linux"},
+		Executors: []entity.Executor{{Type: "bash", Command: "echo test", Timeout: 30}},
+		IsSafe:    true,
+	}
+	if err := repo.Create(ctx, technique); err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	// Should find by primary tactic
+	techs, err := repo.FindByTactic(ctx, entity.TacticExecution)
+	if err != nil {
+		t.Fatalf("FindByTactic (execution) failed: %v", err)
+	}
+	if len(techs) != 1 {
+		t.Errorf("Expected 1 technique for execution, got %d", len(techs))
+	}
+
+	// Should also find via multi-tactic JSON search
+	techs, err = repo.FindByTactic(ctx, entity.TacticPersistence)
+	if err != nil {
+		t.Fatalf("FindByTactic (persistence) failed: %v", err)
+	}
+	if len(techs) != 1 {
+		t.Errorf("Expected 1 technique for persistence (multi-tactic), got %d", len(techs))
+	}
+
+	// Should NOT find for unrelated tactic
+	techs, err = repo.FindByTactic(ctx, entity.TacticImpact)
+	if err != nil {
+		t.Fatalf("FindByTactic (impact) failed: %v", err)
+	}
+	if len(techs) != 0 {
+		t.Errorf("Expected 0 techniques for impact, got %d", len(techs))
+	}
+}
+
+func TestTechniqueRepository_FindByID_NullTacticsAndReferences(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	// Create technique without tactics/references (legacy format)
+	technique := &entity.Technique{
+		ID:        "T-LEGACY",
+		Name:      "Legacy Technique",
+		Tactic:    entity.TacticDiscovery,
+		Platforms: []string{"linux"},
+		Executors: []entity.Executor{{Type: "bash", Command: "echo test", Timeout: 30}},
+		IsSafe:    true,
+	}
+	if err := repo.Create(ctx, technique); err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	found, err := repo.FindByID(ctx, "T-LEGACY")
+	if err != nil {
+		t.Fatalf("FindByID failed: %v", err)
+	}
+	// Tactics should be nil (not set)
+	if found.Tactics != nil && len(found.Tactics) > 0 {
+		// empty slice from JSON marshal is ok
+		if len(found.Tactics) > 0 && found.Tactics[0] != "" {
+			t.Errorf("Expected nil/empty tactics for legacy technique, got %v", found.Tactics)
+		}
+	}
+}
+
+func TestMigrate_AddColumnsIdempotent(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	defer db.Close()
+
+	if err := InitSchema(db); err != nil {
+		t.Fatalf("InitSchema failed: %v", err)
+	}
+
+	// Running Migrate again should be idempotent
+	if err := Migrate(db); err != nil {
+		t.Fatalf("Second Migrate failed: %v", err)
+	}
+
+	// Running a third time should still work
+	if err := Migrate(db); err != nil {
+		t.Fatalf("Third Migrate failed: %v", err)
+	}
+}
+
 func TestClosedDB_TechniqueRepository(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewTechniqueRepository(db)

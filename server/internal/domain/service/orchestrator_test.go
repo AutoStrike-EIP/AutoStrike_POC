@@ -486,6 +486,102 @@ func TestAttackOrchestrator_PlanExecution_NoCompatibleExecutor(t *testing.T) {
 	}
 }
 
+func TestAttackOrchestrator_PlanExecution_WithExecutorName(t *testing.T) {
+	technique := &entity.Technique{
+		ID:        "T1059",
+		Name:      "Command Execution",
+		Platforms: []string{"windows"},
+		Executors: []entity.Executor{
+			{Name: "whoami-exec", Type: "psh", Platform: "windows", Command: "whoami", Timeout: 30},
+			{Name: "hostname-exec", Type: "cmd", Platform: "windows", Command: "hostname", Timeout: 30},
+		},
+		IsSafe: true,
+	}
+
+	techRepo := &mockTechniqueRepo{
+		techniques: map[string]*entity.Technique{"T1059": technique},
+	}
+	agentRepo := &mockAgentRepo{}
+	validator := NewTechniqueValidator()
+	orchestrator := NewAttackOrchestrator(agentRepo, techRepo, validator, nil)
+
+	agent := &entity.Agent{
+		Paw:       "test-agent",
+		Platform:  "windows",
+		Executors: []string{"psh", "cmd"},
+		Status:    entity.AgentOnline,
+	}
+
+	scenario := &entity.Scenario{
+		ID:   "test-scenario",
+		Name: "Test Scenario",
+		Phases: []entity.Phase{
+			{Name: "Phase1", Techniques: []entity.TechniqueSelection{
+				{TechniqueID: "T1059", ExecutorName: "hostname-exec"},
+			}},
+		},
+	}
+
+	plan, err := orchestrator.PlanExecution(context.Background(), scenario, []*entity.Agent{agent}, false)
+	if err != nil {
+		t.Fatalf("PlanExecution returned error: %v", err)
+	}
+	if len(plan.Tasks) != 1 {
+		t.Fatalf("Expected 1 task, got %d", len(plan.Tasks))
+	}
+	if plan.Tasks[0].Command != "hostname" {
+		t.Errorf("Expected command 'hostname' from named executor, got '%s'", plan.Tasks[0].Command)
+	}
+}
+
+func TestAttackOrchestrator_PlanExecution_WithInvalidExecutorName(t *testing.T) {
+	technique := &entity.Technique{
+		ID:        "T1059",
+		Name:      "Command Execution",
+		Platforms: []string{"windows"},
+		Executors: []entity.Executor{
+			{Name: "whoami-exec", Type: "psh", Platform: "windows", Command: "whoami", Timeout: 30},
+		},
+		IsSafe: true,
+	}
+
+	techRepo := &mockTechniqueRepo{
+		techniques: map[string]*entity.Technique{"T1059": technique},
+	}
+	agentRepo := &mockAgentRepo{}
+	validator := NewTechniqueValidator()
+	orchestrator := NewAttackOrchestrator(agentRepo, techRepo, validator, nil)
+
+	agent := &entity.Agent{
+		Paw:       "test-agent",
+		Platform:  "windows",
+		Executors: []string{"psh"},
+		Status:    entity.AgentOnline,
+	}
+
+	scenario := &entity.Scenario{
+		ID:   "test-scenario",
+		Name: "Test Scenario",
+		Phases: []entity.Phase{
+			{Name: "Phase1", Techniques: []entity.TechniqueSelection{
+				{TechniqueID: "T1059", ExecutorName: "nonexistent-exec"},
+			}},
+		},
+	}
+
+	// Should fallback to auto-select since named executor doesn't exist
+	plan, err := orchestrator.PlanExecution(context.Background(), scenario, []*entity.Agent{agent}, false)
+	if err != nil {
+		t.Fatalf("PlanExecution returned error: %v", err)
+	}
+	if len(plan.Tasks) != 1 {
+		t.Fatalf("Expected 1 task (fallback), got %d", len(plan.Tasks))
+	}
+	if plan.Tasks[0].Command != "whoami" {
+		t.Errorf("Expected fallback command 'whoami', got '%s'", plan.Tasks[0].Command)
+	}
+}
+
 func TestExecutionPlan_Struct(t *testing.T) {
 	plan := &ExecutionPlan{
 		ID: "plan-123",

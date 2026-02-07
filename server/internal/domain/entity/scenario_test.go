@@ -3,6 +3,8 @@ package entity
 import (
 	"encoding/json"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // sel is a helper to create TechniqueSelection from an ID
@@ -264,5 +266,95 @@ func TestTechniqueSelection_Struct(t *testing.T) {
 	}
 	if s.ExecutorName != "test-exec" {
 		t.Errorf("ExecutorName = %s, want test-exec", s.ExecutorName)
+	}
+}
+
+func TestTechniqueSelection_UnmarshalYAML_ScalarNode(t *testing.T) {
+	yamlData := `- T1059
+- T1082`
+	var selections []TechniqueSelection
+	if err := yaml.Unmarshal([]byte(yamlData), &selections); err != nil {
+		t.Fatalf("UnmarshalYAML failed: %v", err)
+	}
+	if len(selections) != 2 {
+		t.Fatalf("Expected 2 selections, got %d", len(selections))
+	}
+	if selections[0].TechniqueID != "T1059" {
+		t.Errorf("selections[0].TechniqueID = %s, want T1059", selections[0].TechniqueID)
+	}
+	if selections[0].ExecutorName != "" {
+		t.Errorf("selections[0].ExecutorName = %s, want empty", selections[0].ExecutorName)
+	}
+	if selections[1].TechniqueID != "T1082" {
+		t.Errorf("selections[1].TechniqueID = %s, want T1082", selections[1].TechniqueID)
+	}
+}
+
+func TestTechniqueSelection_UnmarshalYAML_MappingNode(t *testing.T) {
+	yamlData := `- technique_id: T1059
+  executor_name: whoami
+- technique_id: T1082`
+	var selections []TechniqueSelection
+	if err := yaml.Unmarshal([]byte(yamlData), &selections); err != nil {
+		t.Fatalf("UnmarshalYAML failed: %v", err)
+	}
+	if len(selections) != 2 {
+		t.Fatalf("Expected 2 selections, got %d", len(selections))
+	}
+	if selections[0].TechniqueID != "T1059" {
+		t.Errorf("TechniqueID = %s, want T1059", selections[0].TechniqueID)
+	}
+	if selections[0].ExecutorName != "whoami" {
+		t.Errorf("ExecutorName = %s, want whoami", selections[0].ExecutorName)
+	}
+	if selections[1].TechniqueID != "T1082" {
+		t.Errorf("TechniqueID = %s, want T1082", selections[1].TechniqueID)
+	}
+	if selections[1].ExecutorName != "" {
+		t.Errorf("ExecutorName = %s, want empty", selections[1].ExecutorName)
+	}
+}
+
+func TestTechniqueSelection_UnmarshalYAML_InvalidMapping(t *testing.T) {
+	yamlData := `- [invalid, yaml, sequence]`
+	var selections []TechniqueSelection
+	err := yaml.Unmarshal([]byte(yamlData), &selections)
+	if err == nil {
+		t.Error("Expected error for invalid YAML mapping, got nil")
+	}
+}
+
+func TestPhase_UnmarshalJSON_InvalidJSON(t *testing.T) {
+	data := `{invalid json}`
+	var phase Phase
+	err := json.Unmarshal([]byte(data), &phase)
+	if err == nil {
+		t.Error("Expected error for invalid JSON, got nil")
+	}
+}
+
+func TestPhase_UnmarshalJSON_InvalidTechniques(t *testing.T) {
+	data := `{"name":"Phase1","techniques":123,"order":1}`
+	var phase Phase
+	err := json.Unmarshal([]byte(data), &phase)
+	if err == nil {
+		t.Error("Expected error for invalid techniques field, got nil")
+	}
+}
+
+func TestPhase_UnmarshalJSON_FallbackWhenTechniqueIDEmpty(t *testing.T) {
+	// This tests the case where JSON unmarshal into []TechniqueSelection succeeds
+	// but TechniqueID is empty (it's actually a string array parsed as objects)
+	data := `{"name":"Phase1","techniques":["T1059","T1082"],"order":1}`
+	var phase Phase
+	if err := json.Unmarshal([]byte(data), &phase); err != nil {
+		t.Fatalf("UnmarshalJSON failed: %v", err)
+	}
+	// Should fall back to old format parsing
+	if len(phase.Techniques) != 2 {
+		t.Fatalf("Expected 2 techniques, got %d", len(phase.Techniques))
+	}
+	if phase.Techniques[0].TechniqueID != "T1059" {
+		t.Errorf("TechniqueID = %s, want T1059", phase.Techniques[0].TechniqueID)
 	}
 }
