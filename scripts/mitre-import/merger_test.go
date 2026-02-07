@@ -236,13 +236,13 @@ func TestTruncateDescription(t *testing.T) {
 		t.Error("Short description should not be truncated")
 	}
 
-	long := make([]byte, 2500)
+	long := make([]byte, 7000)
 	for i := range long {
 		long[i] = 'x'
 	}
 	result := truncateDescription(string(long))
-	if len(result) != 2003 { // 2000 + "..."
-		t.Errorf("Truncated length = %d, want 2003", len(result))
+	if len(result) != 6003 { // 6000 + "..."
+		t.Errorf("Truncated length = %d, want 6003", len(result))
 	}
 }
 

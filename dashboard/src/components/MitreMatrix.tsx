@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Technique, TacticType } from '../types';
 
-type DescPart = { type: 'text' | 'link' | 'code'; value: string; href?: string };
+type DescPart = { type: 'text' | 'link' | 'citation' | 'code'; value: string; href?: string };
 
 /**
  * Renders a description string with rich formatting:
  * - Markdown links [text](url) → clickable anchors
+ * - Numbered citation links [N](url) → superscript clickable references (MITRE style)
  * - HTML <code>text</code> → styled inline code
  * - Backtick `text` → styled inline code
  */
@@ -22,8 +23,9 @@ function DescriptionText({ text }: Readonly<{ text: string }>) {
         result.push({ type: 'text', value: text.slice(lastIndex, match.index) });
       }
       if (match[1] !== undefined) {
-        // Markdown link: [text](url)
-        result.push({ type: 'link', value: match[1], href: match[2] });
+        // Markdown link: [text](url) — detect numbered citations like [1], [2]
+        const isCitation = /^\d+$/.test(match[1]);
+        result.push({ type: isCitation ? 'citation' : 'link', value: match[1], href: match[2] });
       } else if (match[3] !== undefined) {
         // HTML <code>text</code>
         result.push({ type: 'code', value: match[3] });
@@ -42,6 +44,20 @@ function DescriptionText({ text }: Readonly<{ text: string }>) {
   return (
     <span>
       {parts.map((part, i) => {
+        if (part.type === 'citation') {
+          return (
+            <a
+              key={i}
+              href={part.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-600 dark:text-primary-400 hover:underline text-[10px] align-super font-medium"
+              title={part.href}
+            >
+              [{part.value}]
+            </a>
+          );
+        }
         if (part.type === 'link') {
           return (
             <a

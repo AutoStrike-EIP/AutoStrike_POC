@@ -291,6 +291,37 @@ describe('MitreMatrix', () => {
     expect(codeEl.tagName).toBe('CODE');
   });
 
+  it('renders numbered citations as superscript links (MITRE style)', () => {
+    const citationTechniques: Technique[] = [
+      {
+        id: 'T1003.007',
+        name: 'Proc Filesystem',
+        description: 'Adversaries may gather credentials from /proc.[1](https://example.com/ref1)[2](https://example.com/ref2)',
+        tactic: 'credential_access',
+        platforms: ['linux'],
+        is_safe: false,
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={citationTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1003.007: Proc Filesystem');
+    fireEvent.click(techniqueButton);
+
+    // Citations should render as superscript links with [N] format
+    const citation1 = screen.getByText('[1]');
+    expect(citation1).toBeInTheDocument();
+    expect(citation1.tagName).toBe('A');
+    expect(citation1).toHaveAttribute('href', 'https://example.com/ref1');
+    expect(citation1.className).toContain('align-super');
+
+    const citation2 = screen.getByText('[2]');
+    expect(citation2).toBeInTheDocument();
+    expect(citation2.tagName).toBe('A');
+    expect(citation2).toHaveAttribute('href', 'https://example.com/ref2');
+  });
+
   it('renders references as clickable links', () => {
     render(<MitreMatrix techniques={mockTechniques} />);
 

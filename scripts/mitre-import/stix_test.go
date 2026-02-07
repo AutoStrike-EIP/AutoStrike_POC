@@ -239,7 +239,7 @@ func TestResolveCitations_WithURL(t *testing.T) {
 	input := "Adversaries may use (Citation: Picus Labs) to do stuff."
 	result := resolveCitations(input, citations)
 
-	expected := "Adversaries may use [Picus Labs](https://www.picussecurity.com/resource/blog/picus-10-critical-mitre-attack-techniques) to do stuff."
+	expected := "Adversaries may use [1](https://www.picussecurity.com/resource/blog/picus-10-critical-mitre-attack-techniques) to do stuff."
 	if result != expected {
 		t.Errorf("resolveCitations =\n%s\nwant\n%s", result, expected)
 	}
@@ -250,7 +250,7 @@ func TestResolveCitations_WithoutURL(t *testing.T) {
 	input := "Adversaries may use (Citation: Unknown Source) to do stuff."
 	result := resolveCitations(input, citations)
 
-	expected := "Adversaries may use (Ref: Unknown Source) to do stuff."
+	expected := "Adversaries may use [1] to do stuff."
 	if result != expected {
 		t.Errorf("resolveCitations =\n%s\nwant\n%s", result, expected)
 	}
@@ -264,7 +264,20 @@ func TestResolveCitations_MultipleCitations(t *testing.T) {
 	input := "Text (Citation: Source A) middle (Citation: Source B) end (Citation: Unknown)."
 	result := resolveCitations(input, citations)
 
-	expected := "Text [Source A](https://example.com/a) middle [Source B](https://example.com/b) end (Ref: Unknown)."
+	expected := "Text [1](https://example.com/a) middle [2](https://example.com/b) end [3]."
+	if result != expected {
+		t.Errorf("resolveCitations =\n%s\nwant\n%s", result, expected)
+	}
+}
+
+func TestResolveCitations_RepeatedCitationSameNumber(t *testing.T) {
+	citations := map[string]string{
+		"Source A": "https://example.com/a",
+	}
+	input := "First (Citation: Source A) and again (Citation: Source A)."
+	result := resolveCitations(input, citations)
+
+	expected := "First [1](https://example.com/a) and again [1](https://example.com/a)."
 	if result != expected {
 		t.Errorf("resolveCitations =\n%s\nwant\n%s", result, expected)
 	}
@@ -310,7 +323,7 @@ func TestParseSTIXData_CitationsResolved(t *testing.T) {
 		t.Fatal("T1234 not found")
 	}
 
-	expected := "Adversaries may use [My Source](https://example.com/source) to attack."
+	expected := "Adversaries may use [1](https://example.com/source) to attack."
 	if tech.Description != expected {
 		t.Errorf("Description =\n%s\nwant\n%s", tech.Description, expected)
 	}

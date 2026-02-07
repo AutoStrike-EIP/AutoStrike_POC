@@ -143,20 +143,30 @@ func ParseSTIXData(data []byte) (map[string]*STIXTechnique, error) {
 // citationRegex matches (Citation: Source Name) patterns in STIX descriptions
 var citationRegex = regexp.MustCompile(`\(Citation: ([^)]+)\)`)
 
-// resolveCitations replaces (Citation: Name) with [Name](url) when a URL is available,
-// or removes the citation markup if no URL exists.
+// resolveCitations replaces (Citation: Name) with numbered references [N](url)
+// matching the MITRE ATT&CK website style. Each unique citation gets a sequential number.
 func resolveCitations(description string, citationURLs map[string]string) string {
+	counter := 0
+	citationNumbers := make(map[string]int)
+
 	return citationRegex.ReplaceAllStringFunc(description, func(match string) string {
 		sub := citationRegex.FindStringSubmatch(match)
 		if len(sub) < 2 {
 			return match
 		}
 		name := sub[1]
-		if url, ok := citationURLs[name]; ok {
-			return "[" + name + "](" + url + ")"
+
+		num, exists := citationNumbers[name]
+		if !exists {
+			counter++
+			num = counter
+			citationNumbers[name] = num
 		}
-		// No URL: keep as plain text reference
-		return "(Ref: " + name + ")"
+
+		if url, ok := citationURLs[name]; ok {
+			return fmt.Sprintf("[%d](%s)", num, url)
+		}
+		return fmt.Sprintf("[%d]", num)
 	})
 }
 
