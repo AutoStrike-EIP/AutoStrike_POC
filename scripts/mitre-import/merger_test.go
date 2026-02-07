@@ -134,76 +134,87 @@ func TestMerge_NoExecutorsAfterFilter(t *testing.T) {
 	}
 }
 
-func TestDetermineSafety_DiscoveryIsSafe(t *testing.T) {
-	executors := []MergedExecutor{
-		{Name: "test", Command: "whoami"},
+func TestMerge_IsSafeBasedOnElevation(t *testing.T) {
+	stix := map[string]*STIXTechnique{
+		"T1082": {
+			ID:        "T1082",
+			Tactics:   []string{"discovery"},
+			Platforms: []string{"linux"},
+		},
 	}
 
-	if !determineSafety("discovery", executors) {
-		t.Error("discovery tactic should be safe")
-	}
-}
-
-func TestDetermineSafety_ReconIsSafe(t *testing.T) {
-	executors := []MergedExecutor{
-		{Name: "test", Command: "nslookup example.com"},
-	}
-
-	if !determineSafety("reconnaissance", executors) {
-		t.Error("reconnaissance tactic should be safe")
-	}
-}
-
-func TestDetermineSafety_ImpactIsUnsafe(t *testing.T) {
-	executors := []MergedExecutor{
-		{Name: "test", Command: "echo test"},
+	atomics := map[string]*AtomicTechnique{
+		"T1082": {
+			ID: "T1082",
+			Executors: []AtomicExecutorResult{
+				{Name: "no-elev", Type: "bash", Platform: "linux", Command: "whoami", ElevationRequired: false},
+				{Name: "needs-elev", Type: "bash", Platform: "linux", Command: "cat /etc/shadow", ElevationRequired: true},
+			},
+		},
 	}
 
-	if determineSafety("impact", executors) {
-		t.Error("impact tactic should be unsafe")
-	}
-}
+	merged, stats := Merge(stix, atomics)
 
-func TestDetermineSafety_ElevationForcesUnsafe(t *testing.T) {
-	executors := []MergedExecutor{
-		{Name: "test", Command: "whoami", ElevationRequired: true},
+	if len(merged) != 1 {
+		t.Fatalf("Expected 1 merged, got %d", len(merged))
 	}
 
-	if determineSafety("discovery", executors) {
-		t.Error("elevation_required should force unsafe even for discovery")
-	}
-}
+	tech := merged[0]
 
-func TestDetermineSafety_DangerousCommandForcesUnsafe(t *testing.T) {
-	tests := []struct {
-		name    string
-		command string
-	}{
-		{"rm -rf", "rm -rf /tmp/test"},
-		{"del /f", "del /f C:\\temp\\file"},
-		{"shutdown", "shutdown /s /t 0"},
-		{"taskkill", "taskkill /f /im process.exe"},
+	// Technique is safe if at least one executor doesn't require elevation
+	if !tech.IsSafe {
+		t.Error("Technique should be safe (has at least one non-elevated executor)")
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			executors := []MergedExecutor{
-				{Name: "test", Command: tt.command},
-			}
-			if determineSafety("discovery", executors) {
-				t.Errorf("Command %q should force unsafe", tt.command)
-			}
-		})
+	// Verify per-executor is_safe
+	if len(tech.Executors) != 2 {
+		t.Fatalf("Expected 2 executors, got %d", len(tech.Executors))
+	}
+
+	for _, exec := range tech.Executors {
+		if exec.Name == "no-elev" && !exec.IsSafe {
+			t.Error("no-elev executor should be safe")
+		}
+		if exec.Name == "needs-elev" && exec.IsSafe {
+			t.Error("needs-elev executor should not be safe")
+		}
+	}
+
+	if stats.SafeCount != 1 {
+		t.Errorf("SafeCount = %d, want 1", stats.SafeCount)
 	}
 }
 
-func TestDetermineSafety_DangerousCleanupForcesUnsafe(t *testing.T) {
-	executors := []MergedExecutor{
-		{Name: "test", Command: "whoami", Cleanup: "rm -rf /tmp/output"},
+func TestMerge_AllElevatedIsUnsafe(t *testing.T) {
+	stix := map[string]*STIXTechnique{
+		"T1082": {
+			ID:        "T1082",
+			Tactics:   []string{"discovery"},
+			Platforms: []string{"linux"},
+		},
 	}
 
-	if determineSafety("discovery", executors) {
-		t.Error("Dangerous cleanup command should force unsafe")
+	atomics := map[string]*AtomicTechnique{
+		"T1082": {
+			ID: "T1082",
+			Executors: []AtomicExecutorResult{
+				{Name: "elev1", Type: "bash", Platform: "linux", Command: "cat /etc/shadow", ElevationRequired: true},
+			},
+		},
+	}
+
+	merged, stats := Merge(stix, atomics)
+
+	if len(merged) != 1 {
+		t.Fatalf("Expected 1 merged, got %d", len(merged))
+	}
+
+	if merged[0].IsSafe {
+		t.Error("Technique with only elevated executors should not be safe")
+	}
+
+	if stats.UnsafeCount != 1 {
+		t.Errorf("UnsafeCount = %d, want 1", stats.UnsafeCount)
 	}
 }
 
@@ -225,13 +236,13 @@ func TestTruncateDescription(t *testing.T) {
 		t.Error("Short description should not be truncated")
 	}
 
-	long := make([]byte, 600)
+	long := make([]byte, 2500)
 	for i := range long {
 		long[i] = 'x'
 	}
 	result := truncateDescription(string(long))
-	if len(result) != 503 { // 500 + "..."
-		t.Errorf("Truncated length = %d, want 503", len(result))
+	if len(result) != 2003 { // 2000 + "..."
+		t.Errorf("Truncated length = %d, want 2003", len(result))
 	}
 }
 

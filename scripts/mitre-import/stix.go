@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -89,9 +90,10 @@ func ParseSTIXData(data []byte) (map[string]*STIXTechnique, error) {
 			continue
 		}
 
-		// Extract MITRE ATT&CK ID
+		// Extract MITRE ATT&CK ID and build citation map
 		id := ""
 		var refs []string
+		citationURLs := make(map[string]string)
 		for _, ref := range ap.ExternalReferences {
 			if ref.SourceName == "mitre-attack" {
 				if ref.ExternalID != "" {
@@ -100,6 +102,8 @@ func ParseSTIXData(data []byte) (map[string]*STIXTechnique, error) {
 				if ref.URL != "" {
 					refs = append(refs, ref.URL)
 				}
+			} else if ref.URL != "" {
+				citationURLs[ref.SourceName] = ref.URL
 			}
 		}
 		if id == "" {
@@ -120,10 +124,13 @@ func ParseSTIXData(data []byte) (map[string]*STIXTechnique, error) {
 			continue // Skip cloud-only techniques
 		}
 
+		// Resolve (Citation: Name) to markdown links
+		description := resolveCitations(ap.Description, citationURLs)
+
 		techniques[id] = &STIXTechnique{
 			ID:          id,
 			Name:        ap.Name,
-			Description: ap.Description,
+			Description: description,
 			Tactics:     tactics,
 			Platforms:   platforms,
 			References:  refs,
@@ -131,6 +138,26 @@ func ParseSTIXData(data []byte) (map[string]*STIXTechnique, error) {
 	}
 
 	return techniques, nil
+}
+
+// citationRegex matches (Citation: Source Name) patterns in STIX descriptions
+var citationRegex = regexp.MustCompile(`\(Citation: ([^)]+)\)`)
+
+// resolveCitations replaces (Citation: Name) with [Name](url) when a URL is available,
+// or removes the citation markup if no URL exists.
+func resolveCitations(description string, citationURLs map[string]string) string {
+	return citationRegex.ReplaceAllStringFunc(description, func(match string) string {
+		sub := citationRegex.FindStringSubmatch(match)
+		if len(sub) < 2 {
+			return match
+		}
+		name := sub[1]
+		if url, ok := citationURLs[name]; ok {
+			return "[" + name + "](" + url + ")"
+		}
+		// No URL: keep as plain text reference
+		return "(Ref: " + name + ")"
+	})
 }
 
 // normalizePlatforms normalizes STIX platform names to lowercase and filters non-supported ones

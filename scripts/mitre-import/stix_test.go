@@ -231,3 +231,87 @@ func TestParseSTIX_FileNotFound(t *testing.T) {
 		t.Error("Expected error for nonexistent file")
 	}
 }
+
+func TestResolveCitations_WithURL(t *testing.T) {
+	citations := map[string]string{
+		"Picus Labs": "https://www.picussecurity.com/resource/blog/picus-10-critical-mitre-attack-techniques",
+	}
+	input := "Adversaries may use (Citation: Picus Labs) to do stuff."
+	result := resolveCitations(input, citations)
+
+	expected := "Adversaries may use [Picus Labs](https://www.picussecurity.com/resource/blog/picus-10-critical-mitre-attack-techniques) to do stuff."
+	if result != expected {
+		t.Errorf("resolveCitations =\n%s\nwant\n%s", result, expected)
+	}
+}
+
+func TestResolveCitations_WithoutURL(t *testing.T) {
+	citations := map[string]string{}
+	input := "Adversaries may use (Citation: Unknown Source) to do stuff."
+	result := resolveCitations(input, citations)
+
+	expected := "Adversaries may use (Ref: Unknown Source) to do stuff."
+	if result != expected {
+		t.Errorf("resolveCitations =\n%s\nwant\n%s", result, expected)
+	}
+}
+
+func TestResolveCitations_MultipleCitations(t *testing.T) {
+	citations := map[string]string{
+		"Source A": "https://example.com/a",
+		"Source B": "https://example.com/b",
+	}
+	input := "Text (Citation: Source A) middle (Citation: Source B) end (Citation: Unknown)."
+	result := resolveCitations(input, citations)
+
+	expected := "Text [Source A](https://example.com/a) middle [Source B](https://example.com/b) end (Ref: Unknown)."
+	if result != expected {
+		t.Errorf("resolveCitations =\n%s\nwant\n%s", result, expected)
+	}
+}
+
+func TestResolveCitations_NoCitations(t *testing.T) {
+	citations := map[string]string{"X": "https://x.com"}
+	input := "No citations in this text."
+	result := resolveCitations(input, citations)
+
+	if result != input {
+		t.Errorf("resolveCitations should not modify text without citations, got: %s", result)
+	}
+}
+
+func TestParseSTIXData_CitationsResolved(t *testing.T) {
+	data := []byte(`{
+		"objects": [
+			{
+				"type": "attack-pattern",
+				"name": "Test Tech",
+				"description": "Adversaries may use (Citation: My Source) to attack.",
+				"external_references": [
+					{"source_name": "mitre-attack", "external_id": "T1234", "url": "https://attack.mitre.org/techniques/T1234"},
+					{"source_name": "My Source", "url": "https://example.com/source"}
+				],
+				"kill_chain_phases": [
+					{"kill_chain_name": "mitre-attack", "phase_name": "execution"}
+				],
+				"x_mitre_platforms": ["Windows"],
+				"revoked": false
+			}
+		]
+	}`)
+
+	techniques, err := ParseSTIXData(data)
+	if err != nil {
+		t.Fatalf("ParseSTIXData failed: %v", err)
+	}
+
+	tech := techniques["T1234"]
+	if tech == nil {
+		t.Fatal("T1234 not found")
+	}
+
+	expected := "Adversaries may use [My Source](https://example.com/source) to attack."
+	if tech.Description != expected {
+		t.Errorf("Description =\n%s\nwant\n%s", tech.Description, expected)
+	}
+}
