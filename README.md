@@ -15,7 +15,7 @@ AutoStrike est une plateforme open-source de validation continue des defenses de
 
 ## Fonctionnalites
 
-- **296 techniques MITRE ATT&CK** couvrant 13 tactiques sur 14 (48 built-in + 248 importees via MITRE STIX + Atomic Red Team)
+- **294 techniques MITRE ATT&CK** couvrant 12 tactiques (importees via MITRE STIX + Atomic Red Team)
 - **Matrice MITRE interactive** - Visualisation de la couverture de detection
 - **Scenarios d'attaque** - Execution automatisee de techniques par phases
 - **Agents multi-plateformes** - Windows, Linux et macOS (Rust)
@@ -102,23 +102,22 @@ Ouvrir **https://localhost:8443** (accepter le certificat auto-signe)
 
 ## Techniques MITRE ATT&CK
 
-296 techniques implementees couvrant 13 tactiques (apres `make import-mitre`) :
+294 techniques importees couvrant 12 tactiques (apres `make import-mitre`) :
 
-| Tactique | Count | Exemples built-in |
-|----------|-------|-------------------|
-| **Reconnaissance** | 2 | T1592.004, T1595.002 |
-| **Initial Access** | 4 | T1078, T1133, T1190 |
-| **Execution** | 22 | T1059.001, T1059.003, T1047 |
-| **Persistence** | 44 | T1053.005, T1547.001, T1053.003 |
-| **Privilege Escalation** | 18 | T1548.001, T1548.002, T1078.003 |
-| **Defense Evasion** | 89 | T1070.004, T1562.001, T1027 |
-| **Credential Access** | 34 | T1552.001, T1555.003, T1003.008 |
-| **Discovery** | 30 | T1082, T1083, T1057, T1016 |
-| **Lateral Movement** | 8 | T1021.001, T1021.002, T1021.004 |
-| **Collection** | 16 | T1005, T1039, T1074.001 |
-| **Command and Control** | 13 | T1071.001, T1105, T1572 |
-| **Exfiltration** | 8 | T1048.003, T1041, T1567.002 |
-| **Impact** | 8 | T1490, T1489, T1486 |
+| Tactique | Count |
+|----------|-------|
+| **Initial Access** | 4 |
+| **Execution** | 22 |
+| **Persistence** | 44 |
+| **Privilege Escalation** | 18 |
+| **Defense Evasion** | 89 |
+| **Credential Access** | 34 |
+| **Discovery** | 30 |
+| **Lateral Movement** | 8 |
+| **Collection** | 16 |
+| **Command and Control** | 13 |
+| **Exfiltration** | 8 |
+| **Impact** | 8 |
 
 ## Tests
 

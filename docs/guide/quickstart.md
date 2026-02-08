@@ -149,13 +149,12 @@ Filter by platform (Windows/Linux) using the dropdown.
 
 ---
 
-## Available Techniques (296 total)
+## Available Techniques (294 total)
 
-AutoStrike includes **296 MITRE ATT&CK techniques** across **13 tactics** (48 built-in + 248 imported via `make import-mitre` from MITRE STIX + Atomic Red Team, 1791 executors):
+AutoStrike includes **294 MITRE ATT&CK techniques** across **12 tactics** (imported via `make import-mitre` from MITRE STIX + Atomic Red Team):
 
 | Tactic | Count |
 |--------|-------|
-| Reconnaissance | 2 |
 | Initial Access | 4 |
 | Execution | 22 |
 | Persistence | 44 |
@@ -169,9 +168,9 @@ AutoStrike includes **296 MITRE ATT&CK techniques** across **13 tactics** (48 bu
 | Exfiltration | 8 |
 | Impact | 8 |
 
-All 48 built-in techniques are **Safe Mode** compatible. Imported techniques include per-executor safety classification (220 safe, 74 unsafe). Use `make import-mitre-safe` to import only safe techniques.
+Per-executor safety classification: 220 safe, 74 unsafe. Use `make import-mitre-safe` to import only safe techniques.
 
-See the [detailed technique list](../mitre/techniques.md) for built-in technique details.
+See the [detailed technique list](../mitre/techniques.md) for more details.
 
 ---
 

@@ -12,11 +12,10 @@ MITRE ATT&CK (Adversarial Tactics, Techniques, and Common Knowledge) est une bas
 
 ## Tactiques implementees
 
-AutoStrike implemente actuellement **13 tactiques** avec **296 techniques** (48 built-in + 248 importees via MITRE STIX + Atomic Red Team, 1791 executors) :
+AutoStrike implemente actuellement **12 tactiques** avec **294 techniques** (importees via MITRE STIX + Atomic Red Team) :
 
 | ID | Tactique | Techniques | Description |
 |----|----------|------------|-------------|
-| TA0043 | Reconnaissance | 2 | Collecte d'informations sur la cible |
 | TA0001 | Initial Access | 4 | Acces initial au reseau |
 | TA0002 | Execution | 22 | Execution de commandes via shells |
 | TA0003 | Persistence | 44 | Maintien de l'acces |
