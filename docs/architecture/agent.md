@@ -15,6 +15,7 @@ The AutoStrike agent is built in **Rust** for performance, memory safety, and cr
 - **Exponential backoff** for reconnection (1s → 60s max)
 - **Agent authentication** via `X-Agent-Key` header
 - **Output truncation** at 1 MB to prevent memory issues
+- **File output capture** — automatically reads redirected file output (`/tmp/`, `%TEMP%`) when stdout is empty (<50 bytes)
 
 ---
 
@@ -23,12 +24,13 @@ The AutoStrike agent is built in **Rust** for performance, memory safety, and cr
 ```
 agent/
 ├── src/
-│   ├── main.rs          # Entry point, CLI (clap)
-│   ├── config.rs        # YAML configuration management
-│   ├── client.rs        # WebSocket client, protocol handling
-│   ├── executor.rs      # Command execution with timeout
-│   └── system.rs        # System detection (OS, hostname, executors)
-├── Cargo.toml           # Rust dependencies
+│   ├── main.rs              # Entry point, CLI (clap)
+│   ├── config.rs            # YAML configuration management
+│   ├── client.rs            # WebSocket client, protocol handling
+│   ├── executor.rs          # Command execution with timeout
+│   ├── output_capture.rs    # File output capture (redirected /tmp/ files)
+│   └── system.rs            # System detection (OS, hostname, executors)
+├── Cargo.toml               # Rust dependencies
 ├── Cargo.lock
 └── Dockerfile           # Multi-stage build
 ```
@@ -49,6 +51,7 @@ agent/
 | `clap` | CLI parsing |
 | `anyhow` | Error handling |
 | `uuid` | PAW generation |
+| `regex` | Output file path extraction |
 
 ---
 
@@ -266,6 +269,15 @@ The agent will retry indefinitely until connection is restored.
 - Combined into single output string
 - UTF-8 decoding with lossy conversion
 - Trimmed of leading/trailing whitespace
+
+### File Output Capture
+
+Many Atomic Red Team commands redirect output to files (`ps >> /tmp/loot.txt`). When stdout is nearly empty (<50 bytes), the agent:
+
+1. Parses the command with regex to extract redirected file paths
+2. Reads files from safe directories only (`/tmp/` on Unix, `%TEMP%`/`$env:TEMP` on Windows)
+3. Returns file contents as the command output
+4. Respects the 1 MB output budget
 
 ---
 

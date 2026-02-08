@@ -78,8 +78,7 @@ server/
 │   └── main.go                    # Entry point, DI, startup
 ├── configs/
 │   └── techniques/                # YAML technique definitions (auto-loaded via os.ReadDir)
-│       ├── reconnaissance.yaml    # 13 built-in files + any imported via make import-mitre
-│       ├── initial-access.yaml
+│       ├── initial-access.yaml    # 12 files imported via make import-mitre
 │       ├── execution.yaml
 │       ├── persistence.yaml
 │       ├── privilege-escalation.yaml
@@ -478,15 +477,17 @@ type Execution struct {
 ### ExecutionResult
 ```go
 type ExecutionResult struct {
-    ID          string
-    ExecutionID string
-    TechniqueID string
-    AgentPaw    string
-    Status      ResultStatus // pending, success, blocked, detected, failed
-    Output      string
-    ExitCode    int
-    StartedAt   time.Time
-    CompletedAt *time.Time
+    ID           string
+    ExecutionID  string
+    TechniqueID  string
+    AgentPaw     string
+    Status       ResultStatus // pending, success, blocked, detected, failed
+    Output       string
+    ExitCode     int
+    ExecutorName string       // Name of the executor used
+    Command      string       // The command that was executed
+    StartedAt    time.Time
+    CompletedAt  *time.Time
 }
 ```
 

@@ -275,7 +275,6 @@ Available MITRE tactics:
 
 | Tactic | Description |
 |--------|-------------|
-| `reconnaissance` | Gathering information |
 | `initial-access` | Getting into the network |
 | `execution` | Running malicious code |
 | `persistence` | Maintaining presence |
@@ -311,7 +310,6 @@ GET /api/v1/techniques/coverage
 
 ```json
 {
-  "reconnaissance": 2,
   "initial-access": 4,
   "execution": 22,
   "persistence": 44,
@@ -582,6 +580,8 @@ GET /api/v1/executions/:id/results
     "agent_paw": "agent-001",
     "status": "detected",
     "output": "Host Name: WORKSTATION-01...",
+    "executor_name": "System info via cmd",
+    "command": "systeminfo",
     "detected": true,
     "start_time": "2024-01-01T12:00:05Z",
     "end_time": "2024-01-01T12:00:10Z"

@@ -31,9 +31,9 @@ AutoStrike implemente actuellement **12 tactiques** avec **294 techniques** (imp
 
 ---
 
-## Techniques built-in (48 techniques)
+## Techniques
 
-Les 48 techniques built-in sont detaillees dans la [liste des techniques](techniques.md). Apres `make import-mitre`, 248 techniques supplementaires sont ajoutees depuis MITRE STIX + Atomic Red Team. La liste complete est disponible via l'API (`GET /api/v1/techniques`) ou dans le dashboard.
+Les 294 techniques sont importees via `make import-mitre` (inner join MITRE STIX + Atomic Red Team). Il n'y a pas de techniques built-in — toutes proviennent de l'import. La liste complete est disponible via l'API (`GET /api/v1/techniques`), dans le dashboard, ou dans la [liste des techniques](techniques.md).
 
 ---
 
@@ -54,14 +54,8 @@ Chaque executor possede son propre champ `is_safe`, determine par :
 `rm -rf`, `del /f`, `rd /s`, `dd of=/dev/`, `mkfs`, `fdisk`, `format C:`, `shutdown`, `reboot`, `taskkill /f`, `kill -9`, `killall`, `pkill`, `systemctl stop/disable`, `chmod 000`, `iptables -F`
 
 ### Statistiques actuelles
-- **220 techniques safe** (toutes les built-in + la majorite des importees)
+- **220 techniques safe** (la majorite des techniques importees)
 - **74 techniques unsafe** (necessitent elevation ou contiennent des commandes dangereuses)
-
-Les 48 techniques built-in restent toutes safe et se limitent a :
-- Lecture d'informations systeme
-- Requetes read-only (registry, services, processes)
-- Simulations sans modification
-- Enumeration et detection
 
 ---
 

@@ -44,7 +44,7 @@ autostrike/
 │   │   └── infrastructure/ # Adapters (HTTP, SQLite, WebSocket)
 │   └── pkg/         # Shared utilities
 ├── agent/           # Rust agent
-│   └── src/         # Client, executor, config, system info
+│   └── src/         # Client, executor, config, system info, output capture
 ├── dashboard/       # React frontend
 │   └── src/
 │       ├── components/  # MitreMatrix, RunExecutionModal, Layout, ProtectedRoute
@@ -79,6 +79,7 @@ autostrike/
 - Platform-specific command execution (PowerShell/cmd/bash/sh)
 - JSON-based WebSocket protocol
 - Heartbeat every 30 seconds
+- File output capture (reads redirected /tmp/ files when stdout empty)
 
 ### Dashboard (React)
 - TanStack Query for server state
@@ -321,6 +322,15 @@ After import: 220 safe, 74 unsafe. Safety is determined **per-executor** based o
 
 Phase `techniques` field accepts both `[]string` (legacy) and `[]TechniqueSelection` (new format) via custom JSON unmarshaling.
 
+**ExecutionResult** (extended fields):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `executor_name` | string | Name of the executor used for this task |
+| `command` | string | The command that was executed |
+
+**Multi-executor execution**: 1 technique → N tasks (one per compatible executor per agent). The orchestrator calls `GetExecutorsForPlatform()` and creates a separate task for each matching executor.
+
 ## Important Notes
 
 1. **Security**: This is a security testing tool. Use only on authorized systems.
@@ -330,7 +340,7 @@ Phase `techniques` field accepts both `[]string` (legacy) and `[]TechniqueSelect
 
 ## Testing
 
-**Test coverage (Phase 3):**
+**Test coverage:**
 - **Server**: 200+ tests
   - application: 83.0%
   - entity: 95.0%
@@ -341,7 +351,7 @@ Phase `techniques` field accepts both `[]string` (legacy) and `[]TechniqueSelect
   - rest/server: 87.9%
   - sqlite: 85.0%
 - **Agent**: 67 unit tests (`cargo test`)
-- **Dashboard**: 985 tests across 32 files (`npm test`)
+- **Dashboard**: 1004 tests across 32 files (`npm test`)
 
 ```bash
 # Run all tests

@@ -96,7 +96,7 @@ npm run build
 | `npm run preview` | Preview du build |
 | `npm run lint` | Vérification ESLint |
 | `npm run type-check` | Vérification TypeScript |
-| `npm test` | Tests Vitest (513 tests) |
+| `npm test` | Tests Vitest (1004 tests) |
 
 ## Configuration
 
@@ -143,13 +143,13 @@ import { api } from '@/lib/api';
 - Last seen avec formatage relatif
 
 ### Techniques (`/techniques`)
-- Tableau des 48 techniques MITRE ATT&CK
+- Tableau des 294 techniques MITRE ATT&CK
 - Filtrage par tactique et plateforme
 - Badge safe/unsafe
 - Import depuis fichiers YAML
 
 ### Matrix (`/matrix`)
-- Matrice MITRE ATT&CK interactive (14 colonnes)
+- Matrice MITRE ATT&CK interactive (12 colonnes)
 - Statistiques de couverture (composant CoverageReport)
 - Filtrage par plateforme
 
@@ -162,18 +162,20 @@ import { api } from '@/lib/api';
 ### Executions (`/executions`)
 - Historique des exécutions
 - Score, statut, mode (safe/full)
+- Compteurs blocked/detected/successful/failed
 - Mises à jour temps réel via WebSocket
 
 ### ExecutionDetails (`/executions/:id`)
 - Détails des résultats par technique
-- Breakdown blocked/detected/successful
+- 5 cartes: Blocked/Detected/Successful/Failed/Total
+- Colonne Executor avec nom + "View input" (commande expansible)
 - Output extensible
 
 ### Analytics (`/analytics`)
 - Graphiques de tendance du score (7j, 30j, 90j)
 - Comparaison de périodes
 - Résumé des exécutions
-- Score par tactique
+- Performance par scénario (résolution des noms)
 
 ### Scheduler (`/scheduler`)
 - Création/modification de schedules
@@ -255,7 +257,7 @@ Le conteneur utilise Nginx pour servir les fichiers statiques avec :
 
 ## Tests
 
-513 tests across 25 fichiers :
+1004 tests across 32 fichiers :
 
 ```bash
 npm test          # Mode watch

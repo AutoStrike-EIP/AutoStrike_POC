@@ -43,7 +43,7 @@ AutoStrike uses a 3-tier architecture with three main components.
 
 | Component | Language | Role |
 |-----------|----------|------|
-| [Dashboard](dashboard.md) | React/TypeScript | User interface (11 pages) |
+| [Dashboard](dashboard.md) | React/TypeScript | User interface (13 pages) |
 | [Backend](backend.md) | Go | API, orchestration, storage, WebSocket hub |
 | [Agent](agent.md) | Rust | Technique execution on endpoints |
 
@@ -72,13 +72,14 @@ The Go server on **port 8443** handles everything:
 ```
 1. User clicks "Run" on a scenario in Dashboard
 2. Dashboard sends POST /api/v1/executions
-3. Server creates execution, plans tasks
+3. Server creates execution, plans tasks (multi-executor: 1 technique → N tasks)
 4. Server broadcasts "execution_started" to dashboards
-5. Server sends "task" to each agent via WebSocket
-6. Agent executes command, sends "task_result"
-7. Server updates result, checks completion
-8. Server broadcasts "execution_completed" when done
-9. Dashboard auto-refreshes via WebSocket event
+5. Server sends "task" to each agent via WebSocket (one per compatible executor)
+6. Agent executes command, captures output (including file redirections)
+7. Agent sends "task_result" with output
+8. Server classifies result (success/blocked/detected/failed), stores executor_name + command
+9. Server broadcasts "execution_completed" when all tasks done
+10. Dashboard auto-refreshes via WebSocket event
 ```
 
 ---

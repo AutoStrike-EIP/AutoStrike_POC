@@ -15,7 +15,7 @@ AutoStrike is an open-source platform for **continuous security defense validati
 | Feature | Description |
 |---------|-------------|
 | **294 MITRE ATT&CK Techniques** | 12 tactics from Initial Access to Impact (imported from MITRE STIX + Atomic Red Team) |
-| **Interactive MITRE Matrix** | Visual detection coverage with 14 tactic columns |
+| **Interactive MITRE Matrix** | Visual detection coverage with 12 tactic columns |
 | **Attack Scenarios** | Automated technique execution with phases |
 | **Multi-platform Agents** | Windows, Linux, and macOS support (Rust) |
 | **Real-time Dashboard** | Live execution monitoring via WebSocket |
@@ -94,7 +94,7 @@ See the [Quick Start Guide](guide/quickstart.md) for detailed instructions.
 | **Dashboard** | Overview with stats, security score, recent activity |
 | **Agents** | Connected agents with status and deployment commands |
 | **Techniques** | Browse and import MITRE ATT&CK techniques |
-| **ATT&CK Matrix** | Interactive 14-column MITRE matrix visualization |
+| **ATT&CK Matrix** | Interactive 12-column MITRE matrix visualization |
 | **Scenarios** | Attack scenarios with phases, import/export, Run |
 | **Executions** | Execution history with real-time WebSocket updates |
 | **Analytics** | Score trends, period comparisons, charts |

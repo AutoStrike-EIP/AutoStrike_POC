@@ -128,10 +128,10 @@ make test
 # Par composant
 cd server && go test ./... -cover   # 200+ tests, 95%+ coverage domaine
 cd agent && cargo test              # 67 tests
-cd dashboard && npm test -- --run   # 985 tests
+cd dashboard && npm test -- --run   # 1004 tests
 ```
 
-**1250+ tests au total** couvrant server, agent et dashboard.
+**1270+ tests au total** couvrant server, agent et dashboard.
 
 ## Documentation
 
