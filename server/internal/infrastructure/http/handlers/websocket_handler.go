@@ -222,6 +222,12 @@ var failurePatterns = []string{
 	"password is required",
 }
 
+// maxFailureCheckLen is the maximum output length (in bytes) for which we
+// check failure patterns. Longer outputs are likely legitimate attack results
+// that may incidentally contain error strings (e.g. a credential dump that
+// includes "access denied" log entries from other users).
+const maxFailureCheckLen = 500
+
 // classifyTaskResult determines the actual execution status by looking at
 // the exit code AND the command output. A command that exits 0 but prints
 // "permission denied" is not a successful attack. Empty output with exit 0
@@ -239,12 +245,15 @@ func classifyTaskResult(agentSuccess bool, exitCode int, output string) entity.R
 		return entity.StatusSuccess
 	}
 
-	// Agent reported success (exit 0), but verify the output
-	lower := strings.ToLower(trimmed)
-
-	for _, pattern := range failurePatterns {
-		if strings.Contains(lower, pattern) {
-			return entity.StatusFailed
+	// Only check failure patterns on short outputs (error messages).
+	// Long outputs are likely legitimate attack results that may
+	// incidentally contain error-like strings.
+	if len(trimmed) <= maxFailureCheckLen {
+		lower := strings.ToLower(trimmed)
+		for _, pattern := range failurePatterns {
+			if strings.Contains(lower, pattern) {
+				return entity.StatusFailed
+			}
 		}
 	}
 

@@ -117,21 +117,27 @@ pub fn resolve_path(raw_path: &str) -> Option<PathBuf> {
 }
 
 /// Reads a single file up to `budget` bytes, returning its content and bytes consumed.
+/// Only reads the needed amount from disk to avoid OOM on large files.
 async fn read_single_file(resolved: &PathBuf, budget: u64) -> Option<(String, u64)> {
+    use tokio::io::AsyncReadExt;
+
     let metadata = tokio::fs::metadata(resolved).await.ok()?;
     if !metadata.is_file() {
         return None;
     }
 
-    let to_read = metadata.len().min(budget);
+    let to_read = metadata.len().min(budget) as usize;
     if to_read == 0 {
         return None;
     }
 
-    let bytes = tokio::fs::read(resolved).await.ok()?;
-    let truncated = &bytes[..bytes.len().min(to_read as usize)];
-    let content = String::from_utf8_lossy(truncated).into_owned();
-    Some((content, truncated.len() as u64))
+    let mut file = tokio::fs::File::open(resolved).await.ok()?;
+    let mut buf = vec![0u8; to_read];
+    let n = file.read(&mut buf).await.ok()?;
+    buf.truncate(n);
+
+    let content = String::from_utf8_lossy(&buf).into_owned();
+    Some((content, n as u64))
 }
 
 /// Reads output files asynchronously, respecting a total byte budget.

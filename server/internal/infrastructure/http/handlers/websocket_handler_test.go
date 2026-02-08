@@ -1557,3 +1557,13 @@ func TestClassifyTaskResult_CaseInsensitive(t *testing.T) {
 		t.Errorf("Expected failed for ACCESS DENIED, got %s", status)
 	}
 }
+
+func TestClassifyTaskResult_LongOutputIgnoresPatterns(t *testing.T) {
+	// Long output (>500 bytes) that incidentally contains a failure pattern
+	// should still be classified as success — it's likely legitimate attack output
+	longOutput := strings.Repeat("credential data line\n", 30) + "access denied for user xyz\n"
+	status := classifyTaskResult(true, 0, longOutput)
+	if status != entity.StatusSuccess {
+		t.Errorf("Expected success for long output with incidental pattern, got %s", status)
+	}
+}
