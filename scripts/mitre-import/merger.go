@@ -3,6 +3,7 @@ package main
 import (
 	"regexp"
 	"strings"
+	"unicode/utf8"
 )
 
 // MergedTechnique represents a technique after merging STIX metadata with Atomic executors
@@ -162,13 +163,18 @@ func defaultTimeout(execType string) int {
 	}
 }
 
-// truncateDescription truncates extremely long descriptions for YAML readability
+// truncateDescription truncates extremely long descriptions for YAML readability.
+// Truncates at a valid UTF-8 rune boundary to avoid splitting multi-byte characters.
 func truncateDescription(desc string) string {
 	const maxLen = 6000
 	if len(desc) <= maxLen {
 		return desc
 	}
-	return desc[:maxLen] + "..."
+	cut := maxLen
+	for cut > 0 && !utf8.RuneStart(desc[cut]) {
+		cut--
+	}
+	return desc[:cut] + "..."
 }
 
 // dangerousPatterns matches command patterns that are destructive or dangerous

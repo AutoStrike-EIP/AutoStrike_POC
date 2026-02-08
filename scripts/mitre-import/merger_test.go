@@ -2,6 +2,7 @@ package main
 
 import (
 	"testing"
+	"unicode/utf8"
 )
 
 func TestMerge_InnerJoin(t *testing.T) {
@@ -243,6 +244,40 @@ func TestTruncateDescription(t *testing.T) {
 	result := truncateDescription(string(long))
 	if len(result) != 6003 { // 6000 + "..."
 		t.Errorf("Truncated length = %d, want 6003", len(result))
+	}
+
+	// UTF-8 multi-byte: 'é' is 2 bytes (0xC3 0xA9).
+	// Build a string that forces a cut in the middle of a multi-byte rune.
+	prefix := make([]byte, 5999)
+	for i := range prefix {
+		prefix[i] = 'a'
+	}
+	// 5999 ASCII bytes + 'é' (2 bytes) = 6001 bytes total → exceeds maxLen (6000)
+	// Naive slice at byte 6000 would cut 'é' in half.
+	utf8Str := string(prefix) + "é" + "xxxxxxxx"
+	result = truncateDescription(utf8Str)
+	if !utf8.ValidString(result) {
+		t.Error("Truncated UTF-8 string should be valid UTF-8")
+	}
+	// Should cut before 'é' (at byte 5999) + "..." = 6002 bytes
+	if len(result) != 5999+3 {
+		t.Errorf("UTF-8 truncated length = %d, want %d", len(result), 5999+3)
+	}
+
+	// Edge: string of only multi-byte chars exceeding limit
+	// '€' is 3 bytes (0xE2 0x82 0xAC). 2000 euros = 6000 bytes exactly → no truncation
+	euros := ""
+	for i := 0; i < 2000; i++ {
+		euros += "€"
+	}
+	if truncateDescription(euros) != euros {
+		t.Error("Exactly 6000 bytes should not be truncated")
+	}
+	// 2001 euros = 6003 bytes → truncation needed at rune boundary
+	euros += "€"
+	result = truncateDescription(euros)
+	if !utf8.ValidString(result) {
+		t.Error("Truncated euro string should be valid UTF-8")
 	}
 }
 
