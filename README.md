@@ -15,7 +15,7 @@ AutoStrike est une plateforme open-source de validation continue des defenses de
 
 ## Fonctionnalites
 
-- **48 techniques MITRE ATT&CK** couvrant 13 tactiques sur 14 (de Reconnaissance a Impact)
+- **296 techniques MITRE ATT&CK** couvrant 13 tactiques sur 14 (48 built-in + 248 importees via MITRE STIX + Atomic Red Team)
 - **Matrice MITRE interactive** - Visualisation de la couverture de detection
 - **Scenarios d'attaque** - Execution automatisee de techniques par phases
 - **Agents multi-plateformes** - Windows, Linux et macOS (Rust)
@@ -25,7 +25,7 @@ AutoStrike est une plateforme open-source de validation continue des defenses de
 - **Scheduling** - Executions planifiees (cron, daily, weekly, monthly)
 - **Notifications** - Email SMTP + webhooks automatiques
 - **Analytics** - Tendances, comparaisons de periodes, graphiques
-- **Safe Mode** - Toutes les techniques sont non-destructives
+- **Safe Mode** - Classification de securite per-executor (220 safe, 74 unsafe) avec detection de patterns dangereux
 - **Security hardening** - Rate limiting, security headers, CSP, HSTS
 - **Docker ready** - docker-compose prod + dev + 3 Dockerfiles multi-stage
 
@@ -102,23 +102,23 @@ Ouvrir **https://localhost:8443** (accepter le certificat auto-signe)
 
 ## Techniques MITRE ATT&CK
 
-48 techniques implementees couvrant 13 tactiques :
+296 techniques implementees couvrant 13 tactiques (apres `make import-mitre`) :
 
-| Tactique | Techniques |
-|----------|------------|
-| **Reconnaissance** (2) | T1592.004, T1595.002 |
-| **Initial Access** (3) | T1078, T1133, T1190 |
-| **Execution** (5) | T1059.001, T1059.003, T1059.004, T1047, T1059.006 |
-| **Persistence** (4) | T1053.005, T1547.001, T1053.003, T1543.002 |
-| **Privilege Escalation** (4) | T1548.001, T1548.002, T1078.003, T1134.001 |
-| **Defense Evasion** (6) | T1070.004, T1562.001, T1027, T1070.001, T1036.005, T1218.011 |
-| **Credential Access** (4) | T1552.001, T1555.003, T1003.008, T1552.004 |
-| **Discovery** (9) | T1082, T1083, T1057, T1016, T1049, T1087, T1069, T1018, T1007 |
-| **Lateral Movement** (3) | T1021.001, T1021.002, T1021.004 |
-| **Collection** (4) | T1005, T1039, T1074.001, T1119 |
-| **Command and Control** (3) | T1071.001, T1105, T1572 |
-| **Exfiltration** (3) | T1048.003, T1041, T1567.002 |
-| **Impact** (3) | T1490, T1489, T1486 |
+| Tactique | Count | Exemples built-in |
+|----------|-------|-------------------|
+| **Reconnaissance** | 2 | T1592.004, T1595.002 |
+| **Initial Access** | 4 | T1078, T1133, T1190 |
+| **Execution** | 22 | T1059.001, T1059.003, T1047 |
+| **Persistence** | 44 | T1053.005, T1547.001, T1053.003 |
+| **Privilege Escalation** | 18 | T1548.001, T1548.002, T1078.003 |
+| **Defense Evasion** | 89 | T1070.004, T1562.001, T1027 |
+| **Credential Access** | 34 | T1552.001, T1555.003, T1003.008 |
+| **Discovery** | 30 | T1082, T1083, T1057, T1016 |
+| **Lateral Movement** | 8 | T1021.001, T1021.002, T1021.004 |
+| **Collection** | 16 | T1005, T1039, T1074.001 |
+| **Command and Control** | 13 | T1071.001, T1105, T1572 |
+| **Exfiltration** | 8 | T1048.003, T1041, T1567.002 |
+| **Impact** | 8 | T1490, T1489, T1486 |
 
 ## Tests
 
@@ -129,10 +129,10 @@ make test
 # Par composant
 cd server && go test ./... -cover   # 200+ tests, 95%+ coverage domaine
 cd agent && cargo test              # 67 tests
-cd dashboard && npm test -- --run   # 513 tests
+cd dashboard && npm test -- --run   # 985 tests
 ```
 
-**780+ tests au total** couvrant server, agent et dashboard.
+**1250+ tests au total** couvrant server, agent et dashboard.
 
 ## Documentation
 

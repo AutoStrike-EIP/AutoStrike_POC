@@ -453,6 +453,7 @@ type Executor struct {
     Cleanup           string
     Timeout           int
     ElevationRequired bool   // Needs admin/root privileges (optional)
+    IsSafe            bool   // Safe = !elevation_required && no dangerous patterns
 }
 
 type TechniqueSelection struct {

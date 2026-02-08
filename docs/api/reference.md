@@ -230,12 +230,18 @@ GET /api/v1/techniques
     "description": "Adversaries may attempt to get detailed information...",
     "tactic": "discovery",
     "platforms": ["windows", "linux"],
+    "tactics": ["discovery"],
+    "references": ["https://attack.mitre.org/techniques/T1082"],
     "executors": [
       {
+        "name": "System info via cmd",
         "type": "cmd",
+        "platform": "windows",
         "command": "systeminfo",
         "cleanup": "",
-        "timeout": 60
+        "timeout": 60,
+        "elevation_required": false,
+        "is_safe": true
       }
     ],
     "detection": [
@@ -306,18 +312,18 @@ GET /api/v1/techniques/coverage
 ```json
 {
   "reconnaissance": 2,
-  "initial-access": 3,
-  "execution": 5,
-  "persistence": 4,
-  "privilege-escalation": 4,
-  "defense-evasion": 6,
-  "credential-access": 4,
-  "discovery": 9,
-  "lateral-movement": 3,
-  "collection": 4,
-  "command-and-control": 3,
-  "exfiltration": 3,
-  "impact": 3
+  "initial-access": 4,
+  "execution": 22,
+  "persistence": 44,
+  "privilege-escalation": 18,
+  "defense-evasion": 89,
+  "credential-access": 34,
+  "discovery": 30,
+  "lateral-movement": 8,
+  "collection": 16,
+  "command-and-control": 13,
+  "exfiltration": 8,
+  "impact": 8
 }
 ```
 

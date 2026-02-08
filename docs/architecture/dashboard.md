@@ -204,7 +204,9 @@ interface MitreMatrixProps {
 - CSS Grid with 14 tactic columns
 - Platform filtering
 - Safety indicators (green/red dots)
-- Detail modal on click
+- Detail modal with citation superscripts, inline code tags, executor details with elevation status
+- Per-executor safety classification display
+- STIX descriptions with numbered MITRE-style citations [N](url)
 
 ### RunExecutionModal
 

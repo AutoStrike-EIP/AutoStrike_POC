@@ -1,6 +1,6 @@
 # MITRE ATT&CK Techniques
 
-AutoStrike implements 48 MITRE ATT&CK techniques across 13 tactics.
+AutoStrike implements 296 MITRE ATT&CK techniques across 13 tactics (48 built-in + 248 imported from MITRE STIX + Atomic Red Team).
 
 ---
 
@@ -9,20 +9,20 @@ AutoStrike implements 48 MITRE ATT&CK techniques across 13 tactics.
 | Tactic | Count | Description |
 |--------|-------|-------------|
 | Reconnaissance | 2 | Information gathering about the target |
-| Initial Access | 3 | Gaining initial access to the network |
-| Execution | 5 | Running commands via shells and interpreters |
-| Persistence | 4 | Maintaining access to the system |
-| Privilege Escalation | 4 | Gaining higher permissions |
-| Defense Evasion | 6 | Avoiding detection by security tools |
-| Credential Access | 4 | Stealing credentials and secrets |
-| Discovery | 9 | Information gathering about the system and network |
-| Lateral Movement | 3 | Moving through the network |
-| Collection | 4 | Gathering target data |
-| Command and Control | 3 | Communicating with compromised systems |
-| Exfiltration | 3 | Stealing data from the target |
-| Impact | 3 | Manipulating or destroying systems |
+| Initial Access | 4 | Gaining initial access to the network |
+| Execution | 22 | Running commands via shells and interpreters |
+| Persistence | 44 | Maintaining access to the system |
+| Privilege Escalation | 18 | Gaining higher permissions |
+| Defense Evasion | 89 | Avoiding detection by security tools |
+| Credential Access | 34 | Stealing credentials and secrets |
+| Discovery | 30 | Information gathering about the system and network |
+| Lateral Movement | 8 | Moving through the network |
+| Collection | 16 | Gathering target data |
+| Command and Control | 13 | Communicating with compromised systems |
+| Exfiltration | 8 | Stealing data from the target |
+| Impact | 8 | Manipulating or destroying systems |
 
-**All techniques are Safe Mode compatible** (non-destructive).
+**48 built-in techniques are Safe Mode compatible** (non-destructive). Imported techniques include per-executor safety classification: 220 safe, 74 unsafe.
 
 ---
 
@@ -1099,6 +1099,7 @@ techniques:
 | `cleanup` | string (optional) | Cleanup command run after execution |
 | `timeout` | int | Execution timeout in seconds |
 | `elevation_required` | bool (optional) | Whether root/admin privileges are needed |
+| `is_safe` | bool (optional) | Per-executor safety (auto-computed: `!elevation_required && no dangerous patterns in command/cleanup`) |
 
 ### Import Techniques
 
@@ -1131,15 +1132,15 @@ Techniques in `server/configs/techniques/` are auto-imported at server startup (
 | File | Tactic | Count |
 |------|--------|-------|
 | `reconnaissance.yaml` | Reconnaissance | 2 |
-| `initial-access.yaml` | Initial Access | 3 |
-| `execution.yaml` | Execution | 5 |
-| `persistence.yaml` | Persistence | 4 |
-| `privilege-escalation.yaml` | Privilege Escalation | 4 |
-| `defense-evasion.yaml` | Defense Evasion | 6 |
-| `credential-access.yaml` | Credential Access | 4 |
-| `discovery.yaml` | Discovery | 9 |
-| `lateral-movement.yaml` | Lateral Movement | 3 |
-| `collection.yaml` | Collection | 4 |
-| `command-and-control.yaml` | Command and Control | 3 |
-| `exfiltration.yaml` | Exfiltration | 3 |
-| `impact.yaml` | Impact | 3 |
+| `initial-access.yaml` | Initial Access | 4 |
+| `execution.yaml` | Execution | 22 |
+| `persistence.yaml` | Persistence | 44 |
+| `privilege-escalation.yaml` | Privilege Escalation | 18 |
+| `defense-evasion.yaml` | Defense Evasion | 89 |
+| `credential-access.yaml` | Credential Access | 34 |
+| `discovery.yaml` | Discovery | 30 |
+| `lateral-movement.yaml` | Lateral Movement | 8 |
+| `collection.yaml` | Collection | 16 |
+| `command-and-control.yaml` | Command and Control | 13 |
+| `exfiltration.yaml` | Exfiltration | 8 |
+| `impact.yaml` | Impact | 8 |
