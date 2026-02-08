@@ -680,6 +680,161 @@ describe('MitreMatrix Multi-Tactic Support', () => {
     expect(screen.getByText('execution, persistence, privilege escalation')).toBeInTheDocument();
   });
 
+  it('expands executor to show command details on click', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    // Click on T1059.001 (PowerShell) to open detail panel
+    const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
+    fireEvent.click(techniqueButton);
+
+    // Executors should be visible but commands should NOT be visible yet
+    expect(screen.getByText('Executors (2)')).toBeInTheDocument();
+    expect(screen.getByText('Mimikatz')).toBeInTheDocument();
+    expect(screen.queryByText('Invoke-Mimikatz')).not.toBeInTheDocument();
+
+    // Click on the first executor (Mimikatz) to expand it
+    const mimikatzButton = screen.getByText('Mimikatz').closest('button');
+    expect(mimikatzButton).not.toBeNull();
+    fireEvent.click(mimikatzButton!);
+
+    // Command should now be visible
+    expect(screen.getByText('Invoke-Mimikatz')).toBeInTheDocument();
+    expect(screen.getByText('Command')).toBeInTheDocument();
+    expect(screen.getByText('Timeout: 120s')).toBeInTheDocument();
+  });
+
+  it('collapses executor on second click', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
+    fireEvent.click(techniqueButton);
+
+    // Expand first executor
+    const mimikatzButton = screen.getByText('Mimikatz').closest('button');
+    fireEvent.click(mimikatzButton!);
+    expect(screen.getByText('Invoke-Mimikatz')).toBeInTheDocument();
+
+    // Click again to collapse
+    fireEvent.click(mimikatzButton!);
+    expect(screen.queryByText('Invoke-Mimikatz')).not.toBeInTheDocument();
+  });
+
+  it('shows only one expanded executor at a time', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
+    fireEvent.click(techniqueButton);
+
+    // Expand first executor (Mimikatz)
+    const mimikatzButton = screen.getByText('Mimikatz').closest('button');
+    fireEvent.click(mimikatzButton!);
+    expect(screen.getByText('Invoke-Mimikatz')).toBeInTheDocument();
+
+    // Click second executor (Encoded Command)
+    const encodedButton = screen.getByText('Encoded Command').closest('button');
+    fireEvent.click(encodedButton!);
+
+    // First should collapse, second should expand
+    expect(screen.queryByText('Invoke-Mimikatz')).not.toBeInTheDocument();
+    expect(screen.getByText('powershell -enc')).toBeInTheDocument();
+  });
+
+  it('shows elevation badge on unsafe executor', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
+    fireEvent.click(techniqueButton);
+
+    // The Mimikatz executor has elevation_required: true
+    expect(screen.getByText('Elevation')).toBeInTheDocument();
+  });
+
+  it('shows cleanup command when present', () => {
+    const techniquesWithCleanup: Technique[] = [
+      {
+        id: 'T1070',
+        name: 'Indicator Removal',
+        description: 'Adversaries may clear logs.',
+        tactic: 'defense_evasion',
+        platforms: ['linux'],
+        is_safe: false,
+        executors: [
+          {
+            type: 'bash',
+            platform: 'linux',
+            command: 'echo test > /tmp/test.txt',
+            cleanup: 'rm /tmp/test.txt',
+            timeout: 30,
+            is_safe: true,
+          },
+        ],
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={techniquesWithCleanup} />);
+
+    const techniqueButton = screen.getByTitle('T1070: Indicator Removal');
+    fireEvent.click(techniqueButton);
+
+    // Expand executor
+    const executorButtons = screen.getAllByRole('button').filter(b => b.textContent?.includes('bash'));
+    const bashButton = executorButtons.find(b => b.closest('[class*="rounded bg-"]'));
+    fireEvent.click(bashButton!);
+
+    expect(screen.getByText('Cleanup')).toBeInTheDocument();
+    expect(screen.getByText('rm /tmp/test.txt')).toBeInTheDocument();
+  });
+
+  it('shows (empty) for executor with no command', () => {
+    const techniquesEmptyCmd: Technique[] = [
+      {
+        id: 'T1001',
+        name: 'Data Obfuscation',
+        description: 'Test technique.',
+        tactic: 'command_and_control',
+        platforms: ['windows'],
+        is_safe: true,
+        executors: [
+          { type: 'cmd', platform: 'windows', command: '', timeout: 60, is_safe: true },
+        ],
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={techniquesEmptyCmd} />);
+
+    const techniqueButton = screen.getByTitle('T1001: Data Obfuscation');
+    fireEvent.click(techniqueButton);
+
+    // Expand executor
+    const execButton = screen.getByText('cmd').closest('button');
+    fireEvent.click(execButton!);
+
+    expect(screen.getByText('(empty)')).toBeInTheDocument();
+  });
+
+  it('resets expanded executor when switching techniques', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    // Open T1059.001 and expand an executor
+    const psButton = screen.getByTitle('T1059.001: PowerShell');
+    fireEvent.click(psButton);
+    const mimikatzButton = screen.getByText('Mimikatz').closest('button');
+    fireEvent.click(mimikatzButton!);
+    expect(screen.getByText('Invoke-Mimikatz')).toBeInTheDocument();
+
+    // Close and open T1082
+    const closeButton = screen.getByLabelText('Close modal');
+    fireEvent.click(closeButton);
+    const sysInfoButton = screen.getByTitle('T1082: System Information Discovery');
+    fireEvent.click(sysInfoButton);
+
+    // Executors should not be expanded
+    expect(screen.queryByText('Command')).not.toBeInTheDocument();
+    expect(screen.queryByText('Invoke-Mimikatz')).not.toBeInTheDocument();
+  });
+
   it('uses fallback grey color for unknown tactic in detail modal', () => {
     // Technique has an unknown primary tactic but uses tactics array with a known tactic
     // so it appears in the grid. The detail modal badge uses tactic (unknown) for color.

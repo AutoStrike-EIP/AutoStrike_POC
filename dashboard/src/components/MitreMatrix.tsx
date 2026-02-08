@@ -160,6 +160,7 @@ interface MitreMatrixProps {
 export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatrixProps>) {
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [selectedTechnique, setSelectedTechnique] = useState<Technique | null>(null);
+  const [expandedExecutor, setExpandedExecutor] = useState<number | null>(null);
 
   // Get all tactics for a technique (multi-tactic support with fallback)
   const getTactics = (t: Technique): TacticType[] => {
@@ -183,11 +184,13 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
 
   const handleTechniqueClick = (technique: Technique) => {
     setSelectedTechnique(technique);
+    setExpandedExecutor(null);
     onTechniqueClick?.(technique);
   };
 
   const handleCloseDetail = () => {
     setSelectedTechnique(null);
+    setExpandedExecutor(null);
   };
 
   // Handle Escape key to close modal at document level
@@ -327,26 +330,66 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
                     {selectedTechnique.executors.map((exec, idx) => (
                       <div
                         key={`${exec.type}-${exec.platform ?? ''}-${idx}`}
-                        className="flex items-center justify-between p-2 rounded bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600"
+                        className="rounded bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 overflow-hidden"
                       >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
-                            {exec.type}
-                          </span>
-                          {exec.platform && (
-                            <span className="text-xs text-gray-500 dark:text-gray-400">{exec.platform}</span>
-                          )}
-                          {exec.name && (
-                            <span className="text-xs text-gray-600 dark:text-gray-300">{exec.name}</span>
-                          )}
-                        </div>
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                          exec.is_safe
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400'
-                            : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400'
-                        }`}>
-                          {exec.is_safe ? 'Safe' : 'Unsafe'}
-                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedExecutor(expandedExecutor === idx ? null : idx)}
+                          className="flex items-center justify-between w-full p-2 text-left hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <svg className={`h-3 w-3 text-gray-400 transition-transform ${expandedExecutor === idx ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                            <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
+                              {exec.type}
+                            </span>
+                            {exec.platform && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400">{exec.platform}</span>
+                            )}
+                            {exec.name && (
+                              <span className="text-xs text-gray-600 dark:text-gray-300">{exec.name}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {exec.elevation_required && (
+                              <span className="text-xs px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400">
+                                Elevation
+                              </span>
+                            )}
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                              exec.is_safe
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400'
+                                : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400'
+                            }`}>
+                              {exec.is_safe ? 'Safe' : 'Unsafe'}
+                            </span>
+                          </div>
+                        </button>
+                        {expandedExecutor === idx && (
+                          <div className="px-3 pb-3 space-y-2 border-t border-gray-200 dark:border-gray-600">
+                            <div className="pt-2">
+                              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Command</span>
+                              <pre className="mt-1 p-2 rounded bg-gray-900 text-green-400 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
+                                {exec.command || '(empty)'}
+                              </pre>
+                            </div>
+                            {exec.cleanup && (
+                              <div>
+                                <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Cleanup</span>
+                                <pre className="mt-1 p-2 rounded bg-gray-900 text-yellow-400 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all max-h-32 overflow-y-auto">
+                                  {exec.cleanup}
+                                </pre>
+                              </div>
+                            )}
+                            <div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400">
+                              <span>Timeout: {exec.timeout}s</span>
+                              {exec.elevation_required !== undefined && (
+                                <span>Elevation: {exec.elevation_required ? 'Required' : 'No'}</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
