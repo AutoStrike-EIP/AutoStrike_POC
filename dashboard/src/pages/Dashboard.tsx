@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
 import { api, techniqueApi } from '../lib/api';
-import { Agent, Execution } from '../types';
+import { Agent, Execution, Technique } from '../types';
 import { SecurityScore } from '../components/SecurityScore';
 import { CoverageReport } from '../components/CoverageReport';
 
@@ -30,11 +30,16 @@ export default function Dashboard() {
     queryFn: () => techniqueApi.getCoverage().then(res => res.data),
   });
 
+  const { data: techniques } = useQuery<Technique[]>({
+    queryKey: ['techniques'],
+    queryFn: () => api.get('/techniques').then(res => res.data),
+  });
+
   const onlineAgents = agents?.filter((a) => a.status === 'online').length || 0;
   const totalAgents = agents?.length || 0;
 
   const latestExecution = executions?.[0];
-  const totalTechniques = coverage ? Object.values(coverage).reduce((sum, count) => sum + count, 0) : 0;
+  const totalTechniques = techniques?.length || 0;
 
   const scoreData = {
     labels: ['Blocked', 'Detected', 'Successful'],

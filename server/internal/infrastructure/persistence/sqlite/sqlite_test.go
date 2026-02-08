@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -694,7 +695,7 @@ func TestScenarioRepository_Create(t *testing.T) {
 		Name:        "Test Scenario",
 		Description: "A test",
 		Phases: []entity.Phase{
-			{Name: "Phase1", Techniques: []string{"T1059"}},
+			{Name: "Phase1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}},
 		},
 		Tags:      []string{"test"},
 			UpdatedAt: time.Now(),
@@ -716,7 +717,7 @@ func TestScenarioRepository_FindByID(t *testing.T) {
 		ID:   "s1",
 		Name: "Test",
 		Phases: []entity.Phase{
-			{Name: "Phase1", Techniques: []string{"T1059"}},
+			{Name: "Phase1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}},
 		},
 		Tags:      []string{"test"},
 			UpdatedAt: time.Now(),
@@ -753,7 +754,7 @@ func TestScenarioRepository_Update(t *testing.T) {
 	scenario := &entity.Scenario{
 		ID:        "s1",
 		Name:      "Old Name",
-		Phases:    []entity.Phase{{Name: "P1", Techniques: []string{"T1"}}},
+		Phases:    []entity.Phase{{Name: "P1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1"}}}},
 		Tags:      []string{},
 			UpdatedAt: time.Now(),
 	}
@@ -780,7 +781,7 @@ func TestScenarioRepository_Delete(t *testing.T) {
 	scenario := &entity.Scenario{
 		ID:        "s1",
 		Name:      "Test",
-		Phases:    []entity.Phase{{Name: "P1", Techniques: []string{"T1"}}},
+		Phases:    []entity.Phase{{Name: "P1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1"}}}},
 		Tags:      []string{},
 			UpdatedAt: time.Now(),
 	}
@@ -807,7 +808,7 @@ func TestScenarioRepository_FindAll(t *testing.T) {
 		scenario := &entity.Scenario{
 			ID:        "s" + string(rune('0'+i)),
 			Name:      "Scenario",
-			Phases:    []entity.Phase{{Name: "P", Techniques: []string{"T1"}}},
+			Phases:    []entity.Phase{{Name: "P", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1"}}}},
 			Tags:      []string{},
 					UpdatedAt: time.Now(),
 		}
@@ -832,14 +833,14 @@ func TestScenarioRepository_FindByTag(t *testing.T) {
 	tagged := &entity.Scenario{
 		ID:        "s1",
 		Name:      "Tagged",
-		Phases:    []entity.Phase{{Name: "P", Techniques: []string{"T1"}}},
+		Phases:    []entity.Phase{{Name: "P", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1"}}}},
 		Tags:      []string{"important"},
 			UpdatedAt: time.Now(),
 	}
 	untagged := &entity.Scenario{
 		ID:        "s2",
 		Name:      "Untagged",
-		Phases:    []entity.Phase{{Name: "P", Techniques: []string{"T1"}}},
+		Phases:    []entity.Phase{{Name: "P", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1"}}}},
 		Tags:      []string{"other"},
 			UpdatedAt: time.Now(),
 	}
@@ -3609,17 +3610,57 @@ func TestMigrate_AddColumnsToExistingTable(t *testing.T) {
 		t.Fatalf("Failed to create users table: %v", err)
 	}
 
+	// Create a minimal techniques table WITHOUT tactics and references
+	_, err = db.Exec(`CREATE TABLE techniques (
+		id TEXT PRIMARY KEY,
+		name TEXT NOT NULL,
+		description TEXT,
+		tactic TEXT NOT NULL,
+		platforms TEXT NOT NULL,
+		executors TEXT NOT NULL,
+		detection TEXT,
+		is_safe BOOLEAN DEFAULT 1,
+		created_at DATETIME NOT NULL
+	)`)
+	if err != nil {
+		t.Fatalf("Failed to create techniques table: %v", err)
+	}
+
+	// Create a minimal execution_results table WITHOUT executor_name and command
+	_, err = db.Exec(`CREATE TABLE execution_results (
+		id TEXT PRIMARY KEY,
+		execution_id TEXT NOT NULL,
+		technique_id TEXT NOT NULL,
+		agent_paw TEXT NOT NULL,
+		status TEXT NOT NULL,
+		output TEXT,
+		exit_code INTEGER DEFAULT 0,
+		detected BOOLEAN DEFAULT 0,
+		started_at DATETIME NOT NULL,
+		completed_at DATETIME
+	)`)
+	if err != nil {
+		t.Fatalf("Failed to create execution_results table: %v", err)
+	}
+
 	// Migrate should add the missing columns via ALTER TABLE
 	err = Migrate(db)
 	if err != nil {
 		t.Fatalf("Migrate failed: %v", err)
 	}
 
-	// Verify columns were added
+	// Verify columns were added to users
 	_, err = db.Exec(`INSERT INTO users (id, username, email, password_hash, role, is_active, last_login_at, created_at, updated_at)
 		VALUES ('u1', 'testuser', 'test@test.com', 'hash', 'admin', 1, datetime('now'), datetime('now'), datetime('now'))`)
 	if err != nil {
-		t.Fatalf("Failed to insert with new columns: %v", err)
+		t.Fatalf("Failed to insert with new user columns: %v", err)
+	}
+
+	// Verify executor_name and command columns were added to execution_results
+	_, err = db.Exec(`INSERT INTO execution_results (id, execution_id, technique_id, agent_paw, status, executor_name, command, started_at)
+		VALUES ('r1', 'e1', 't1', 'a1', 'completed', 'Find AWS Creds', 'find / -name credentials', datetime('now'))`)
+	if err != nil {
+		t.Fatalf("Failed to insert with new execution_results columns: %v", err)
 	}
 }
 
@@ -4218,6 +4259,194 @@ func TestNotificationRepository_CreateNotification_NilData(t *testing.T) {
 
 // --- Closed DB error path tests ---
 
+func TestTechniqueRepository_CreateWithTacticsAndReferences(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	technique := &entity.Technique{
+		ID:          "T-MULTI",
+		Name:        "Multi-Tactic Technique",
+		Description: "Test technique with tactics and references",
+		Tactic:      entity.TacticDiscovery,
+		Tactics:     []entity.TacticType{entity.TacticDiscovery, entity.TacticCollection},
+		Platforms:   []string{"linux", "windows"},
+		Executors: []entity.Executor{
+			{Name: "whoami-linux", Type: "bash", Platform: "linux", Command: "whoami", Timeout: 30},
+			{Name: "whoami-win", Type: "psh", Platform: "windows", Command: "whoami", Timeout: 30},
+		},
+		References: []string{"https://attack.mitre.org/techniques/T-MULTI"},
+		IsSafe:     true,
+	}
+
+	if err := repo.Create(ctx, technique); err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	found, err := repo.FindByID(ctx, "T-MULTI")
+	if err != nil {
+		t.Fatalf("FindByID failed: %v", err)
+	}
+	if len(found.Tactics) != 2 {
+		t.Errorf("Expected 2 tactics, got %d", len(found.Tactics))
+	}
+	if found.Tactics[0] != entity.TacticDiscovery {
+		t.Errorf("Tactics[0] = %s, want discovery", found.Tactics[0])
+	}
+	if found.Tactics[1] != entity.TacticCollection {
+		t.Errorf("Tactics[1] = %s, want collection", found.Tactics[1])
+	}
+	if len(found.References) != 1 {
+		t.Errorf("Expected 1 reference, got %d", len(found.References))
+	}
+	if found.Executors[0].Name != "whoami-linux" {
+		t.Errorf("Executor name = %s, want whoami-linux", found.Executors[0].Name)
+	}
+	if found.Executors[0].Platform != "linux" {
+		t.Errorf("Executor platform = %s, want linux", found.Executors[0].Platform)
+	}
+}
+
+func TestTechniqueRepository_UpdateWithTacticsAndReferences(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	technique := &entity.Technique{
+		ID:        "T-UPD",
+		Name:      "Original",
+		Tactic:    entity.TacticExecution,
+		Platforms: []string{"linux"},
+		Executors: []entity.Executor{{Type: "bash", Command: "echo test", Timeout: 30}},
+		IsSafe:    true,
+	}
+	if err := repo.Create(ctx, technique); err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	technique.Name = "Updated"
+	technique.Tactics = []entity.TacticType{entity.TacticExecution, entity.TacticPersistence}
+	technique.References = []string{"https://ref1.com", "https://ref2.com"}
+	if err := repo.Update(ctx, technique); err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
+
+	found, err := repo.FindByID(ctx, "T-UPD")
+	if err != nil {
+		t.Fatalf("FindByID failed: %v", err)
+	}
+	if found.Name != "Updated" {
+		t.Errorf("Name = %s, want Updated", found.Name)
+	}
+	if len(found.Tactics) != 2 {
+		t.Errorf("Expected 2 tactics, got %d", len(found.Tactics))
+	}
+	if len(found.References) != 2 {
+		t.Errorf("Expected 2 references, got %d", len(found.References))
+	}
+}
+
+func TestTechniqueRepository_FindByTactic_MultiTactic(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	// Create a technique with primary tactic "execution" but also in "persistence" via tactics JSON
+	technique := &entity.Technique{
+		ID:        "T-MT",
+		Name:      "Multi-Tactic",
+		Tactic:    entity.TacticExecution,
+		Tactics:   []entity.TacticType{entity.TacticExecution, entity.TacticPersistence},
+		Platforms: []string{"linux"},
+		Executors: []entity.Executor{{Type: "bash", Command: "echo test", Timeout: 30}},
+		IsSafe:    true,
+	}
+	if err := repo.Create(ctx, technique); err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	// Should find by primary tactic
+	techs, err := repo.FindByTactic(ctx, entity.TacticExecution)
+	if err != nil {
+		t.Fatalf("FindByTactic (execution) failed: %v", err)
+	}
+	if len(techs) != 1 {
+		t.Errorf("Expected 1 technique for execution, got %d", len(techs))
+	}
+
+	// Should also find via multi-tactic JSON search
+	techs, err = repo.FindByTactic(ctx, entity.TacticPersistence)
+	if err != nil {
+		t.Fatalf("FindByTactic (persistence) failed: %v", err)
+	}
+	if len(techs) != 1 {
+		t.Errorf("Expected 1 technique for persistence (multi-tactic), got %d", len(techs))
+	}
+
+	// Should NOT find for unrelated tactic
+	techs, err = repo.FindByTactic(ctx, entity.TacticImpact)
+	if err != nil {
+		t.Fatalf("FindByTactic (impact) failed: %v", err)
+	}
+	if len(techs) != 0 {
+		t.Errorf("Expected 0 techniques for impact, got %d", len(techs))
+	}
+}
+
+func TestTechniqueRepository_FindByID_NullTacticsAndReferences(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	// Create technique without tactics/references (legacy format)
+	technique := &entity.Technique{
+		ID:        "T-LEGACY",
+		Name:      "Legacy Technique",
+		Tactic:    entity.TacticDiscovery,
+		Platforms: []string{"linux"},
+		Executors: []entity.Executor{{Type: "bash", Command: "echo test", Timeout: 30}},
+		IsSafe:    true,
+	}
+	if err := repo.Create(ctx, technique); err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+
+	found, err := repo.FindByID(ctx, "T-LEGACY")
+	if err != nil {
+		t.Fatalf("FindByID failed: %v", err)
+	}
+	// Tactics should be nil or empty (not set)
+	if len(found.Tactics) > 0 && found.Tactics[0] != "" {
+		t.Errorf("Expected nil/empty tactics for legacy technique, got %v", found.Tactics)
+	}
+}
+
+func TestMigrate_AddColumnsIdempotent(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	defer db.Close()
+
+	if err := InitSchema(db); err != nil {
+		t.Fatalf("InitSchema failed: %v", err)
+	}
+
+	// Running Migrate again should be idempotent
+	if err := Migrate(db); err != nil {
+		t.Fatalf("Second Migrate failed: %v", err)
+	}
+
+	// Running a third time should still work
+	if err := Migrate(db); err != nil {
+		t.Fatalf("Third Migrate failed: %v", err)
+	}
+}
+
 func TestClosedDB_TechniqueRepository(t *testing.T) {
 	db := setupTestDB(t)
 	repo := NewTechniqueRepository(db)
@@ -4665,3 +4894,191 @@ func TestScenarioRepository_ImportFromYAML_ValidFile(t *testing.T) {
 		t.Fatalf("ImportFromYAML upsert failed: %v", err)
 	}
 }
+
+// --- schema.go migration error path tests ---
+
+func TestMigrate_NoTechniquesTable(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	defer db.Close()
+
+	// Create only the users table with is_active and last_login_at columns
+	// so the users migration passes, but do NOT create the techniques table
+	_, err = db.Exec(`CREATE TABLE users (
+		id TEXT PRIMARY KEY,
+		username TEXT UNIQUE NOT NULL,
+		email TEXT UNIQUE NOT NULL,
+		password_hash TEXT NOT NULL,
+		role TEXT NOT NULL DEFAULT 'viewer',
+		is_active BOOLEAN NOT NULL DEFAULT 1,
+		last_login_at DATETIME,
+		created_at DATETIME NOT NULL,
+		updated_at DATETIME NOT NULL
+	)`)
+	if err != nil {
+		t.Fatalf("Failed to create users table: %v", err)
+	}
+
+	// Migrate should fail when trying to add tactics column to non-existent techniques table
+	err = Migrate(db)
+	if err == nil {
+		t.Fatal("Expected error from Migrate when techniques table does not exist")
+	}
+	if !strings.Contains(err.Error(), "tactics") {
+		t.Errorf("Expected error to mention 'tactics', got: %s", err.Error())
+	}
+}
+
+// --- technique_repository.go additional coverage tests ---
+
+func TestTechniqueRepository_ImportFromYAML_ClosedDB(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	yamlContent := `
+- id: "T-CLOSED"
+  name: "Closed DB Technique"
+  tactic: "discovery"
+  description: "Test technique"
+  platforms: ["linux"]
+  executors:
+    - type: "sh"
+      command: "echo test"
+      timeout: 30
+  is_safe: true
+`
+	tmpFile := filepath.Join(t.TempDir(), "techniques.yaml")
+	if err := os.WriteFile(tmpFile, []byte(yamlContent), 0644); err != nil {
+		t.Fatalf("Failed to write YAML: %v", err)
+	}
+
+	// Close DB before importing to trigger upsert error at line 170
+	db.Close()
+
+	err := repo.ImportFromYAML(ctx, tmpFile)
+	if err == nil {
+		t.Fatal("Expected error from ImportFromYAML on closed DB")
+	}
+}
+
+func TestTechniqueRepository_FindByID_CorruptTacticsJSON(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+
+	// Insert technique with valid base fields but corrupt tactics JSON
+	_, err := db.Exec(`INSERT INTO techniques (id, name, description, tactic, platforms, executors, detection, is_safe, tactics, `+"`references`"+`, created_at)
+		VALUES ('T-BAD-TACTICS', 'Bad Tactics', 'Test', 'discovery', '["linux"]', '[]', '[]', 1, 'NOT VALID JSON', NULL, datetime('now'))`)
+	if err != nil {
+		t.Fatalf("Failed to insert technique with corrupt tactics: %v", err)
+	}
+
+	repo := NewTechniqueRepository(db)
+	tech, err := repo.FindByID(ctx, "T-BAD-TACTICS")
+	if err != nil {
+		t.Fatalf("FindByID should succeed with tactics fallback: %v", err)
+	}
+	// Corrupt tactics should result in nil (fallback at lines 203-205)
+	if tech.Tactics != nil {
+		t.Errorf("Expected nil tactics for corrupt JSON, got %v", tech.Tactics)
+	}
+}
+
+func TestTechniqueRepository_FindByID_CorruptReferencesJSON(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+
+	// Insert technique with valid base fields but corrupt references JSON
+	_, err := db.Exec(`INSERT INTO techniques (id, name, description, tactic, platforms, executors, detection, is_safe, tactics, `+"`references`"+`, created_at)
+		VALUES ('T-BAD-REFS', 'Bad References', 'Test', 'discovery', '["linux"]', '[]', '[]', 1, '["discovery"]', 'NOT VALID JSON', datetime('now'))`)
+	if err != nil {
+		t.Fatalf("Failed to insert technique with corrupt references: %v", err)
+	}
+
+	repo := NewTechniqueRepository(db)
+	tech, err := repo.FindByID(ctx, "T-BAD-REFS")
+	if err != nil {
+		t.Fatalf("FindByID should succeed with references fallback: %v", err)
+	}
+	// Valid tactics should still parse
+	if len(tech.Tactics) != 1 || string(tech.Tactics[0]) != "discovery" {
+		t.Errorf("Expected tactics [discovery], got %v", tech.Tactics)
+	}
+	// Corrupt references should result in nil (fallback at lines 208-210)
+	if tech.References != nil {
+		t.Errorf("Expected nil references for corrupt JSON, got %v", tech.References)
+	}
+}
+
+func TestTechniqueRepository_Upsert_ViaImportTwice(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	yamlContent := `
+- id: "T-UPSERT2"
+  name: "First Import"
+  description: "First version"
+  tactic: "execution"
+  platforms:
+    - "linux"
+  executors:
+    - type: "sh"
+      command: "echo first"
+      timeout: 30
+  is_safe: true
+`
+	tmpFile := filepath.Join(t.TempDir(), "upsert_test.yaml")
+	if err := os.WriteFile(tmpFile, []byte(yamlContent), 0644); err != nil {
+		t.Fatalf("Failed to write YAML: %v", err)
+	}
+
+	// First import
+	if err := repo.ImportFromYAML(ctx, tmpFile); err != nil {
+		t.Fatalf("First ImportFromYAML failed: %v", err)
+	}
+
+	tech, err := repo.FindByID(ctx, "T-UPSERT2")
+	if err != nil {
+		t.Fatalf("FindByID after first import failed: %v", err)
+	}
+	if tech.Name != "First Import" {
+		t.Errorf("Expected 'First Import', got '%s'", tech.Name)
+	}
+
+	// Second import with same ID but updated name (covers upsert ON CONFLICT path at lines 184-188)
+	yamlContent2 := `
+- id: "T-UPSERT2"
+  name: "Second Import"
+  description: "Updated version"
+  tactic: "execution"
+  platforms:
+    - "linux"
+  executors:
+    - type: "sh"
+      command: "echo second"
+      timeout: 30
+  is_safe: true
+`
+	if err := os.WriteFile(tmpFile, []byte(yamlContent2), 0644); err != nil {
+		t.Fatalf("Failed to write updated YAML: %v", err)
+	}
+
+	if err := repo.ImportFromYAML(ctx, tmpFile); err != nil {
+		t.Fatalf("Second ImportFromYAML (upsert) failed: %v", err)
+	}
+
+	tech2, err := repo.FindByID(ctx, "T-UPSERT2")
+	if err != nil {
+		t.Fatalf("FindByID after upsert failed: %v", err)
+	}
+	if tech2.Name != "Second Import" {
+		t.Errorf("Expected 'Second Import' after upsert, got '%s'", tech2.Name)
+	}
+}
+

@@ -110,7 +110,7 @@ MITRE ATT&CK catalog:
 ### Matrix (`/matrix`)
 
 Interactive MITRE ATT&CK matrix:
-- 14 tactic columns
+- 12 tactic columns
 - Technique cells with safety indicators
 - Platform filter dropdown
 - Click to view technique details
@@ -129,7 +129,7 @@ Attack scenarios:
 
 Execution history:
 - Table with score, status, mode
-- Details: blocked/detected/successful counts
+- Details: blocked/detected/successful/failed counts
 - Stop button for running executions
 - **Real-time WebSocket updates**
 - Click row → ExecutionDetails page
@@ -138,8 +138,9 @@ Execution history:
 
 Detailed results:
 - Execution summary header
-- Score breakdown (blocked/detected/successful/total)
-- Results table with technique, agent, status, output
+- Score breakdown (5 cards: blocked/detected/successful/failed/total)
+- Results table with technique, agent, executor, status, output
+- Executor column: executor name + expandable "View input" for command
 - Expandable output viewer
 - Real-time polling while running
 
@@ -158,7 +159,7 @@ Security analytics:
 - Score trend charts (7d, 30d, 90d)
 - Period comparison
 - Execution summary statistics
-- Score by tactic breakdown
+- Performance by scenario (name resolution)
 
 ### Scheduler (`/scheduler`)
 
@@ -201,10 +202,12 @@ interface MitreMatrixProps {
 ```
 
 **Features:**
-- CSS Grid with 14 tactic columns
+- CSS Grid with 12 tactic columns
 - Platform filtering
 - Safety indicators (green/red dots)
-- Detail modal on click
+- Detail modal with citation superscripts, inline code tags, executor details with elevation status
+- Per-executor safety classification display
+- STIX descriptions with numbered MITRE-style citations [N](url)
 
 ### RunExecutionModal
 
@@ -349,14 +352,14 @@ npm run build     # Production build
 npm run preview   # Preview build
 npm run lint      # ESLint check
 npm run type-check # TypeScript check
-npm test          # Vitest tests (513 tests)
+npm test          # Vitest tests (1004 tests)
 ```
 
 ---
 
 ## Testing
 
-513 tests across 25 test files:
+1004 tests across 32 test files:
 
 - Component tests (Layout, MitreMatrix, RunExecutionModal, SecurityScore, CoverageReport, Modal, Table, ThemeToggle, LoadingState, EmptyState, ErrorBoundary, ProtectedRoute)
 - Page tests (Dashboard, Agents, Techniques, Scenarios, Executions, etc.)

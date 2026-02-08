@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MitreMatrix } from './MitreMatrix';
-import { Technique } from '../types';
+import { Technique, TacticType } from '../types';
 
 const mockTechniques: Technique[] = [
   {
@@ -11,6 +11,10 @@ const mockTechniques: Technique[] = [
     tactic: 'discovery',
     platforms: ['windows', 'linux'],
     is_safe: true,
+    executors: [
+      { type: 'cmd', platform: 'windows', command: 'systeminfo', timeout: 60, is_safe: true },
+      { type: 'sh', platform: 'linux', command: 'uname -a', timeout: 60, is_safe: true },
+    ],
     detection: [
       { source: 'Process Creation', indicator: 'systeminfo.exe execution' },
     ],
@@ -22,15 +26,22 @@ const mockTechniques: Technique[] = [
     tactic: 'discovery',
     platforms: ['windows', 'linux'],
     is_safe: true,
+    executors: [
+      { type: 'cmd', platform: 'windows', command: 'dir', timeout: 60, is_safe: true },
+    ],
     detection: [],
   },
   {
     id: 'T1059.001',
     name: 'PowerShell',
-    description: 'Adversaries may abuse PowerShell commands.',
+    description: 'Adversaries may abuse the <code>PowerShell</code> utility and `Invoke-Expression` cmdlet.',
     tactic: 'execution',
     platforms: ['windows'],
     is_safe: false,
+    executors: [
+      { name: 'Mimikatz', type: 'psh', platform: 'windows', command: 'Invoke-Mimikatz', timeout: 120, elevation_required: true, is_safe: false },
+      { name: 'Encoded Command', type: 'psh', platform: 'windows', command: 'powershell -enc', timeout: 60, is_safe: true },
+    ],
     detection: [
       { source: 'Script Block', indicator: 'PowerShell execution' },
     ],
@@ -38,11 +49,12 @@ const mockTechniques: Technique[] = [
   {
     id: 'T1566',
     name: 'Phishing',
-    description: 'Adversaries may send phishing messages.',
+    description: 'Adversaries may use [spearphishing](https://attack.mitre.org/techniques/T1566) to gain access.',
     tactic: 'initial_access',
     platforms: ['windows', 'linux', 'macos'],
     is_safe: true,
     detection: [],
+    references: ['https://attack.mitre.org/techniques/T1566', 'https://example.com/phishing-guide'],
   },
 ];
 
@@ -143,7 +155,9 @@ describe('MitreMatrix', () => {
     // Modal should appear with technique details
     expect(screen.getByRole('heading', { name: 'System Information Discovery' })).toBeInTheDocument();
     expect(screen.getByText('Adversaries may attempt to get detailed information about the operating system.')).toBeInTheDocument();
-    expect(screen.getByText('Safe')).toBeInTheDocument();
+    // Technique badge + executor badges all say "Safe"
+    const safeElements = screen.getAllByText('Safe');
+    expect(safeElements.length).toBeGreaterThanOrEqual(1);
   });
 
   it('closes technique detail panel when close button clicked', () => {
@@ -212,7 +226,116 @@ describe('MitreMatrix', () => {
     const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
     fireEvent.click(techniqueButton);
 
-    expect(screen.getByText('Unsafe')).toBeInTheDocument();
+    const unsafeBadges = screen.getAllByText('Unsafe');
+    expect(unsafeBadges.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('shows executor details with safety status in detail panel', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    // T1059.001 has 2 executors: one unsafe (Mimikatz), one safe (Encoded Command)
+    const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
+    fireEvent.click(techniqueButton);
+
+    expect(screen.getByText('Executors (2)')).toBeInTheDocument();
+    expect(screen.getByText('Mimikatz')).toBeInTheDocument();
+    expect(screen.getByText('Encoded Command')).toBeInTheDocument();
+    // Multiple "Unsafe" (technique badge + Mimikatz executor) and "Safe" (Encoded Command executor + legend)
+    const unsafeBadges = screen.getAllByText('Unsafe');
+    expect(unsafeBadges.length).toBeGreaterThanOrEqual(2);
+    const safeBadges = screen.getAllByText('Safe');
+    expect(safeBadges.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('shows executor types and platforms', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1082: System Information Discovery');
+    fireEvent.click(techniqueButton);
+
+    expect(screen.getByText('Executors (2)')).toBeInTheDocument();
+    expect(screen.getByText('cmd')).toBeInTheDocument();
+    expect(screen.getByText('sh')).toBeInTheDocument();
+  });
+
+  it('renders markdown links as clickable anchors in description', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1566: Phishing');
+    fireEvent.click(techniqueButton);
+
+    const link = screen.getByText('spearphishing');
+    expect(link).toBeInTheDocument();
+    expect(link.tagName).toBe('A');
+    expect(link).toHaveAttribute('href', 'https://attack.mitre.org/techniques/T1566');
+    expect(link).toHaveAttribute('target', '_blank');
+  });
+
+  it('renders HTML <code> tags as styled inline code', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
+    fireEvent.click(techniqueButton);
+
+    // <code>PowerShell</code> should render as a <code> element
+    const codeEl = screen.getByText('PowerShell', { selector: 'code' });
+    expect(codeEl).toBeInTheDocument();
+    expect(codeEl.tagName).toBe('CODE');
+  });
+
+  it('renders backtick code as styled inline code', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
+    fireEvent.click(techniqueButton);
+
+    // `Invoke-Expression` should render as a <code> element
+    const codeEl = screen.getByText('Invoke-Expression');
+    expect(codeEl).toBeInTheDocument();
+    expect(codeEl.tagName).toBe('CODE');
+  });
+
+  it('renders numbered citations as superscript links (MITRE style)', () => {
+    const citationTechniques: Technique[] = [
+      {
+        id: 'T1003.007',
+        name: 'Proc Filesystem',
+        description: 'Adversaries may gather credentials from /proc.[1](https://example.com/ref1)[2](https://example.com/ref2)',
+        tactic: 'credential_access',
+        platforms: ['linux'],
+        is_safe: false,
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={citationTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1003.007: Proc Filesystem');
+    fireEvent.click(techniqueButton);
+
+    // Citations should render as superscript links with [N] format
+    const citation1 = screen.getByText('[1]');
+    expect(citation1).toBeInTheDocument();
+    expect(citation1.tagName).toBe('A');
+    expect(citation1).toHaveAttribute('href', 'https://example.com/ref1');
+    expect(citation1.className).toContain('align-super');
+
+    const citation2 = screen.getByText('[2]');
+    expect(citation2).toBeInTheDocument();
+    expect(citation2.tagName).toBe('A');
+    expect(citation2).toHaveAttribute('href', 'https://example.com/ref2');
+  });
+
+  it('renders references as clickable links', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1566: Phishing');
+    fireEvent.click(techniqueButton);
+
+    expect(screen.getByText('References')).toBeInTheDocument();
+    const refLink = screen.getByText('https://example.com/phishing-guide');
+    expect(refLink.tagName).toBe('A');
+    expect(refLink).toHaveAttribute('href', 'https://example.com/phishing-guide');
   });
 
   it('calls onTechniqueClick callback when provided', () => {
@@ -236,8 +359,8 @@ describe('MitreMatrix', () => {
   it('renders legend', () => {
     render(<MitreMatrix techniques={mockTechniques} />);
 
-    expect(screen.getByText('Safe technique')).toBeInTheDocument();
-    expect(screen.getByText('Potentially unsafe')).toBeInTheDocument();
+    expect(screen.getByText('Safe')).toBeInTheDocument();
+    expect(screen.getByText('Unsafe')).toBeInTheDocument();
   });
 
   it('handles techniques with hyphenated tactics', () => {
@@ -402,5 +525,345 @@ describe('MitreMatrix', () => {
     expect(screen.getByText('T1082')).toBeInTheDocument();
     expect(screen.getByText('T1059.001')).toBeInTheDocument();
     expect(screen.getByText('T1566')).toBeInTheDocument();
+  });
+});
+
+describe('MitreMatrix Multi-Tactic Support', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('displays a multi-tactic technique in multiple columns', () => {
+    const multiTacticTechniques: Technique[] = [
+      {
+        id: 'T1078',
+        name: 'Valid Accounts',
+        description: 'Adversaries may use valid accounts.',
+        tactic: 'initial_access',
+        tactics: ['initial_access', 'persistence', 'privilege_escalation', 'defense_evasion'],
+        platforms: ['windows', 'linux'],
+        is_safe: false,
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={multiTacticTechniques} />);
+
+    // T1078 should appear in all 4 tactic columns
+    const techniqueButtons = screen.getAllByTitle('T1078: Valid Accounts');
+    expect(techniqueButtons.length).toBe(4);
+
+    // Check the counts in the headers
+    const initialAccessCount = screen.getByText('Initial Access').parentElement?.querySelector('.text-white\\/70');
+    expect(initialAccessCount?.textContent).toBe('1');
+
+    const persistenceCount = screen.getByText('Persistence').parentElement?.querySelector('.text-white\\/70');
+    expect(persistenceCount?.textContent).toBe('1');
+
+    const privEscCount = screen.getByText('Privilege Escalation').parentElement?.querySelector('.text-white\\/70');
+    expect(privEscCount?.textContent).toBe('1');
+
+    const defenseEvasionCount = screen.getByText('Defense Evasion').parentElement?.querySelector('.text-white\\/70');
+    expect(defenseEvasionCount?.textContent).toBe('1');
+  });
+
+  it('falls back to single tactic when tactics array is absent', () => {
+    const singleTacticTechniques: Technique[] = [
+      {
+        id: 'T1082',
+        name: 'System Information Discovery',
+        description: 'Test',
+        tactic: 'discovery',
+        // No tactics array
+        platforms: ['windows'],
+        is_safe: true,
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={singleTacticTechniques} />);
+
+    // Should appear only in discovery column
+    const techniqueButtons = screen.getAllByTitle('T1082: System Information Discovery');
+    expect(techniqueButtons.length).toBe(1);
+
+    const discoveryCount = screen.getByText('Discovery').parentElement?.querySelector('.text-white\\/70');
+    expect(discoveryCount?.textContent).toBe('1');
+  });
+
+  it('shows all tactics in the detail panel for a multi-tactic technique', () => {
+    const multiTacticTechniques: Technique[] = [
+      {
+        id: 'T1078',
+        name: 'Valid Accounts',
+        description: 'Adversaries may use valid accounts.',
+        tactic: 'initial_access',
+        tactics: ['initial_access', 'persistence'],
+        platforms: ['windows'],
+        is_safe: false,
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={multiTacticTechniques} />);
+
+    // Click on the technique
+    const techniqueButtons = screen.getAllByTitle('T1078: Valid Accounts');
+    fireEvent.click(techniqueButtons[0]);
+
+    // Detail panel should show all tactics
+    expect(screen.getByText('initial access, persistence')).toBeInTheDocument();
+  });
+
+  it('counts multi-tactic techniques correctly in each column header', () => {
+    const techniques: Technique[] = [
+      {
+        id: 'T1078',
+        name: 'Valid Accounts',
+        description: 'Test',
+        tactic: 'initial_access',
+        tactics: ['initial_access', 'persistence'],
+        platforms: ['windows'],
+        is_safe: false,
+        detection: [],
+      },
+      {
+        id: 'T1053.005',
+        name: 'Scheduled Task',
+        description: 'Test',
+        tactic: 'persistence',
+        tactics: ['persistence', 'execution'],
+        platforms: ['windows'],
+        is_safe: false,
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={techniques} />);
+
+    // Persistence should have 2 techniques (T1078 + T1053.005)
+    const persistenceCount = screen.getByText('Persistence').parentElement?.querySelector('.text-white\\/70');
+    expect(persistenceCount?.textContent).toBe('2');
+
+    // Initial Access should have 1 (T1078)
+    const initialAccessCount = screen.getByText('Initial Access').parentElement?.querySelector('.text-white\\/70');
+    expect(initialAccessCount?.textContent).toBe('1');
+
+    // Execution should have 1 (T1053.005)
+    const executionCount = screen.getByText('Execution').parentElement?.querySelector('.text-white\\/70');
+    expect(executionCount?.textContent).toBe('1');
+  });
+
+  it('normalizes hyphenated tactic names in tactics array to underscored form', () => {
+    const techniquesWithHyphenatedTactics: Technique[] = [
+      {
+        id: 'T1053.005',
+        name: 'Scheduled Task',
+        description: 'Adversaries may abuse task scheduling.',
+        tactic: 'execution',
+        tactics: ['execution', 'persistence', 'privilege-escalation' as TacticType],
+        platforms: ['windows'],
+        is_safe: true,
+        executors: [{ type: 'cmd', platform: 'windows', command: 'schtasks', timeout: 60, is_safe: true }],
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={techniquesWithHyphenatedTactics} />);
+
+    // T1053.005 should appear in all 3 tactic columns (execution, persistence, privilege_escalation)
+    const techniqueButtons = screen.getAllByTitle('T1053.005: Scheduled Task');
+    expect(techniqueButtons.length).toBe(3);
+
+    // Open detail modal and check subtitle shows all tactics
+    fireEvent.click(techniqueButtons[0]);
+    expect(screen.getByText('execution, persistence, privilege escalation')).toBeInTheDocument();
+  });
+
+  it('expands executor to show command details on click', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    // Click on T1059.001 (PowerShell) to open detail panel
+    const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
+    fireEvent.click(techniqueButton);
+
+    // Executors should be visible but commands should NOT be visible yet
+    expect(screen.getByText('Executors (2)')).toBeInTheDocument();
+    expect(screen.getByText('Mimikatz')).toBeInTheDocument();
+    expect(screen.queryByText('Invoke-Mimikatz')).not.toBeInTheDocument();
+
+    // Click on the first executor (Mimikatz) to expand it
+    const mimikatzButton = screen.getByText('Mimikatz').closest('button');
+    expect(mimikatzButton).not.toBeNull();
+    fireEvent.click(mimikatzButton!);
+
+    // Command should now be visible
+    expect(screen.getByText('Invoke-Mimikatz')).toBeInTheDocument();
+    expect(screen.getByText('Command')).toBeInTheDocument();
+    expect(screen.getByText('Timeout: 120s')).toBeInTheDocument();
+  });
+
+  it('collapses executor on second click', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
+    fireEvent.click(techniqueButton);
+
+    // Expand first executor
+    const mimikatzButton = screen.getByText('Mimikatz').closest('button');
+    fireEvent.click(mimikatzButton!);
+    expect(screen.getByText('Invoke-Mimikatz')).toBeInTheDocument();
+
+    // Click again to collapse
+    fireEvent.click(mimikatzButton!);
+    expect(screen.queryByText('Invoke-Mimikatz')).not.toBeInTheDocument();
+  });
+
+  it('shows only one expanded executor at a time', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
+    fireEvent.click(techniqueButton);
+
+    // Expand first executor (Mimikatz)
+    const mimikatzButton = screen.getByText('Mimikatz').closest('button');
+    fireEvent.click(mimikatzButton!);
+    expect(screen.getByText('Invoke-Mimikatz')).toBeInTheDocument();
+
+    // Click second executor (Encoded Command)
+    const encodedButton = screen.getByText('Encoded Command').closest('button');
+    fireEvent.click(encodedButton!);
+
+    // First should collapse, second should expand
+    expect(screen.queryByText('Invoke-Mimikatz')).not.toBeInTheDocument();
+    expect(screen.getByText('powershell -enc')).toBeInTheDocument();
+  });
+
+  it('shows elevation badge on unsafe executor', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
+    fireEvent.click(techniqueButton);
+
+    // The Mimikatz executor has elevation_required: true
+    expect(screen.getByText('Elevation')).toBeInTheDocument();
+  });
+
+  it('shows cleanup command when present', () => {
+    const techniquesWithCleanup: Technique[] = [
+      {
+        id: 'T1070',
+        name: 'Indicator Removal',
+        description: 'Adversaries may clear logs.',
+        tactic: 'defense_evasion',
+        platforms: ['linux'],
+        is_safe: false,
+        executors: [
+          {
+            type: 'bash',
+            platform: 'linux',
+            command: 'echo test > /tmp/test.txt',
+            cleanup: 'rm /tmp/test.txt',
+            timeout: 30,
+            is_safe: true,
+          },
+        ],
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={techniquesWithCleanup} />);
+
+    const techniqueButton = screen.getByTitle('T1070: Indicator Removal');
+    fireEvent.click(techniqueButton);
+
+    // Expand executor
+    const executorButtons = screen.getAllByRole('button').filter(b => b.textContent?.includes('bash'));
+    const bashButton = executorButtons.find(b => b.closest('[class*="rounded bg-"]'));
+    fireEvent.click(bashButton!);
+
+    expect(screen.getByText('Cleanup')).toBeInTheDocument();
+    expect(screen.getByText('rm /tmp/test.txt')).toBeInTheDocument();
+  });
+
+  it('shows (empty) for executor with no command', () => {
+    const techniquesEmptyCmd: Technique[] = [
+      {
+        id: 'T1001',
+        name: 'Data Obfuscation',
+        description: 'Test technique.',
+        tactic: 'command_and_control',
+        platforms: ['windows'],
+        is_safe: true,
+        executors: [
+          { type: 'cmd', platform: 'windows', command: '', timeout: 60, is_safe: true },
+        ],
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={techniquesEmptyCmd} />);
+
+    const techniqueButton = screen.getByTitle('T1001: Data Obfuscation');
+    fireEvent.click(techniqueButton);
+
+    // Expand executor
+    const execButton = screen.getByText('cmd').closest('button');
+    fireEvent.click(execButton!);
+
+    expect(screen.getByText('(empty)')).toBeInTheDocument();
+  });
+
+  it('resets expanded executor when switching techniques', () => {
+    render(<MitreMatrix techniques={mockTechniques} />);
+
+    // Open T1059.001 and expand an executor
+    const psButton = screen.getByTitle('T1059.001: PowerShell');
+    fireEvent.click(psButton);
+    const mimikatzButton = screen.getByText('Mimikatz').closest('button');
+    fireEvent.click(mimikatzButton!);
+    expect(screen.getByText('Invoke-Mimikatz')).toBeInTheDocument();
+
+    // Close and open T1082
+    const closeButton = screen.getByLabelText('Close modal');
+    fireEvent.click(closeButton);
+    const sysInfoButton = screen.getByTitle('T1082: System Information Discovery');
+    fireEvent.click(sysInfoButton);
+
+    // Executors should not be expanded
+    expect(screen.queryByText('Command')).not.toBeInTheDocument();
+    expect(screen.queryByText('Invoke-Mimikatz')).not.toBeInTheDocument();
+  });
+
+  it('uses fallback grey color for unknown tactic in detail modal', () => {
+    // Technique has an unknown primary tactic but uses tactics array with a known tactic
+    // so it appears in the grid. The detail modal badge uses tactic (unknown) for color.
+    const techniqueWithUnknownTactic: Technique[] = [
+      {
+        id: 'T9999',
+        name: 'Mixed Tactic Technique',
+        description: 'Has unknown primary tactic but known tactics array.',
+        tactic: 'unknown_tactic' as TacticType,
+        tactics: ['discovery'],
+        platforms: ['windows'],
+        is_safe: true,
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={techniqueWithUnknownTactic} />);
+
+    // Technique appears in discovery column via tactics array
+    const techniqueButton = screen.getByTitle('T9999: Mixed Tactic Technique');
+    fireEvent.click(techniqueButton);
+
+    // The detail modal badge uses selectedTechnique.tactic (which is 'unknown_tactic')
+    // and the fallback ?? 'bg-gray-600' should be applied
+    // There are two 'T9999' elements: one in the grid cell and one in the modal badge
+    const allT9999 = screen.getAllByText('T9999');
+    const badgeElement = allT9999.find(el => el.className.includes('bg-gray-600'));
+    expect(badgeElement).toBeDefined();
+    expect(badgeElement!.className).toContain('bg-gray-600');
+    expect(badgeElement!.className).toContain('text-white');
   });
 });

@@ -222,12 +222,18 @@ describe('Dashboard', () => {
       discovery: 9,
       execution: 3,
     };
-    vi.mocked(api.get).mockResolvedValue({ data: [] } as never);
+    const mockTechniques = Array.from({ length: 12 }, (_, i) => ({ id: `T${1000 + i}`, name: `Tech ${i}` }));
+    vi.mocked(api.get).mockImplementation((url) => {
+      if (url === '/techniques') {
+        return Promise.resolve({ data: mockTechniques }) as never;
+      }
+      return Promise.resolve({ data: [] }) as never;
+    });
     vi.mocked(techniqueApi.getCoverage).mockResolvedValue({ data: mockCoverage } as never);
 
     renderWithClient(<Dashboard />);
 
-    // Total techniques should be 12
+    // Total techniques should be 12 (from techniques array length)
     expect(await screen.findByText('12')).toBeInTheDocument();
     expect(screen.getByText('discovery')).toBeInTheDocument();
     expect(screen.getByText('execution')).toBeInTheDocument();

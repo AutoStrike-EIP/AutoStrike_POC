@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, Fragment } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ShieldExclamationIcon,
@@ -58,6 +58,8 @@ export default function Techniques() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [expandedTechnique, setExpandedTechnique] = useState<string | null>(null);
+  const [expandedExecutor, setExpandedExecutor] = useState<number | null>(null);
 
   const { data: techniques, isLoading } = useQuery<Technique[]>({
     queryKey: ['techniques'],
@@ -152,39 +154,135 @@ export default function Techniques() {
 
       <div className="card overflow-hidden">
         <table className="w-full">
-          <TableHeader columns={['ID', 'Name', 'Tactic', 'Platforms', 'Safe']} />
+          <TableHeader columns={['ID', 'Name', 'Tactic', 'Platforms', 'Safety']} />
           <TableBody>
             {techniques?.map((technique) => (
-              <TableRow key={technique.id}>
-                <td className={TABLE_CELL_NOWRAP_CLASS}>
-                  <span className="font-mono text-sm">{technique.id}</span>
-                </td>
-                <td className={TABLE_CELL_CLASS}>
-                  <p className="font-medium text-gray-900 dark:text-gray-100">{technique.name}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-md">
-                    {technique.description}
-                  </p>
-                </td>
-                <td className={TABLE_CELL_NOWRAP_CLASS}>
-                  <span className={`badge ${getTacticBadgeColor(technique.tactic)}`}>
-                    {formatTacticName(technique.tactic)}
-                  </span>
-                </td>
-                <td className={TABLE_CELL_CLASS}>
-                  <div className="flex gap-1">
-                    {technique.platforms.map((platform) => (
-                      <span key={platform} className="badge bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                        {platform}
-                      </span>
-                    ))}
-                  </div>
-                </td>
-                <td className={TABLE_CELL_NOWRAP_CLASS}>
-                  <span className={`badge ${technique.is_safe ? 'badge-success' : 'badge-danger'}`}>
-                    {technique.is_safe ? 'Safe' : 'Unsafe'}
-                  </span>
-                </td>
-              </TableRow>
+              <Fragment key={technique.id}>
+                <TableRow>
+                  <td className={TABLE_CELL_NOWRAP_CLASS}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExpandedTechnique(expandedTechnique === technique.id ? null : technique.id);
+                        setExpandedExecutor(null);
+                      }}
+                      className="flex items-center gap-1 font-mono text-sm text-primary-600 dark:text-primary-400 hover:underline cursor-pointer bg-transparent border-none p-0"
+                    >
+                      <svg className={`h-3 w-3 transition-transform ${expandedTechnique === technique.id ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      {technique.id}
+                    </button>
+                  </td>
+                  <td className={TABLE_CELL_CLASS}>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{technique.name}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-md">
+                      {technique.description}
+                    </p>
+                  </td>
+                  <td className={TABLE_CELL_NOWRAP_CLASS}>
+                    <span className={`badge ${getTacticBadgeColor(technique.tactic)}`}>
+                      {formatTacticName(technique.tactic)}
+                    </span>
+                  </td>
+                  <td className={TABLE_CELL_CLASS}>
+                    <div className="flex gap-1">
+                      {technique.platforms.map((platform) => (
+                        <span key={platform} className="badge bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                          {platform}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className={TABLE_CELL_NOWRAP_CLASS}>
+                    <span className={`badge ${technique.is_safe ? 'badge-success' : 'badge-danger'}`}>
+                      {technique.is_safe ? 'Safe' : 'Unsafe'}
+                    </span>
+                  </td>
+                </TableRow>
+                {expandedTechnique === technique.id && (
+                  <tr>
+                    <td colSpan={5} className="px-4 pb-4 bg-gray-50 dark:bg-gray-800/50">
+                      <div className="space-y-2 pt-2">
+                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          Executors ({technique.executors?.length ?? 0})
+                        </h4>
+                        {technique.executors && technique.executors.length > 0 ? (
+                          <div className="space-y-2">
+                            {technique.executors.map((exec, idx) => (
+                              <div
+                                key={`${exec.type}-${exec.platform ?? ''}-${idx}`}
+                                className="rounded bg-white dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 overflow-hidden"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedExecutor(expandedExecutor === idx ? null : idx)}
+                                  className="flex items-center justify-between w-full p-2 text-left hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors cursor-pointer"
+                                >
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <svg className={`h-3 w-3 text-gray-400 transition-transform ${expandedExecutor === idx ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                    <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
+                                      {exec.type}
+                                    </span>
+                                    {exec.platform && (
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">{exec.platform}</span>
+                                    )}
+                                    {exec.name && (
+                                      <span className="text-xs text-gray-600 dark:text-gray-300">{exec.name}</span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {exec.elevation_required && (
+                                      <span className="text-xs px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400">
+                                        Elevation
+                                      </span>
+                                    )}
+                                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                                      exec.is_safe
+                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400'
+                                        : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400'
+                                    }`}>
+                                      {exec.is_safe ? 'Safe' : 'Unsafe'}
+                                    </span>
+                                  </div>
+                                </button>
+                                {expandedExecutor === idx && (
+                                  <div className="px-3 pb-3 space-y-2 border-t border-gray-200 dark:border-gray-600">
+                                    <div className="pt-2">
+                                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Command</span>
+                                      <pre className="mt-1 p-2 rounded bg-gray-900 text-green-400 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
+                                        {exec.command || '(empty)'}
+                                      </pre>
+                                    </div>
+                                    {exec.cleanup && (
+                                      <div>
+                                        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Cleanup</span>
+                                        <pre className="mt-1 p-2 rounded bg-gray-900 text-yellow-400 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all max-h-32 overflow-y-auto">
+                                          {exec.cleanup}
+                                        </pre>
+                                      </div>
+                                    )}
+                                    <div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400">
+                                      <span>Timeout: {exec.timeout}s</span>
+                                      {exec.elevation_required !== undefined && (
+                                        <span>Elevation: {exec.elevation_required ? 'Required' : 'No'}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 italic">No executors available</p>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
           </TableBody>
         </table>

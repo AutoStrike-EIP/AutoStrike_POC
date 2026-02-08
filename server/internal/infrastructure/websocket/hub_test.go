@@ -410,6 +410,7 @@ func TestHub_handleBroadcast_FullChannel(t *testing.T) {
 		hub:      hub,
 		send:     make(chan []byte, 1),
 		agentPaw: "full-channel-agent",
+		logger:   zap.NewNop(),
 	}
 
 	hub.handleRegister(client)
@@ -417,12 +418,16 @@ func TestHub_handleBroadcast_FullChannel(t *testing.T) {
 	// Fill the channel
 	client.send <- []byte("blocking message")
 
-	// Broadcast should remove client with full channel
+	// Broadcast should skip client with full channel (not disconnect it)
 	hub.handleBroadcast([]byte("broadcast"))
 
-	// Client should be removed
-	if _, ok := hub.clients[client]; ok {
-		t.Error("Client with full channel should be removed")
+	// Client should still be registered (not removed)
+	if _, ok := hub.clients[client]; !ok {
+		t.Error("Client with full channel should NOT be removed (just skipped)")
+	}
+
+	if _, ok := hub.agents["full-channel-agent"]; !ok {
+		t.Error("Agent should still be registered")
 	}
 }
 
@@ -595,39 +600,32 @@ func TestHub_Run_ProcessesBroadcast(t *testing.T) {
 	}
 }
 
-func TestHub_Run_BroadcastRemovesSlowClient(t *testing.T) {
+func TestHub_Run_BroadcastSkipsSlowClient(t *testing.T) {
 	logger := zap.NewNop()
 	hub := NewHub(logger)
 	go hub.Run()
-
-	disconnected := make(chan string, 1)
-	hub.SetOnAgentDisconnect(func(paw string) {
-		disconnected <- paw
-	})
 
 	// Register a client with an unbuffered channel (will block on send)
 	slowClient := &Client{
 		hub:      hub,
 		send:     make(chan []byte), // unbuffered = always full
 		agentPaw: "slow-agent",
+		logger:   zap.NewNop(),
 	}
 	hub.Register(slowClient)
 	time.Sleep(50 * time.Millisecond)
 
-	// Broadcast through Run - slow client should be evicted
-	hub.Broadcast([]byte(`{"type":"evict"}`))
+	// Broadcast through Run - slow client should be skipped (not evicted)
+	hub.Broadcast([]byte(`{"type":"skip"}`))
+	time.Sleep(50 * time.Millisecond)
 
-	select {
-	case paw := <-disconnected:
-		if paw != "slow-agent" {
-			t.Errorf("Expected 'slow-agent', got '%s'", paw)
-		}
-	case <-time.After(1 * time.Second):
-		t.Error("Timeout waiting for disconnect callback via Run broadcast")
+	// Slow client should still be connected
+	if !hub.IsAgentConnected("slow-agent") {
+		t.Error("Slow client should still be connected after broadcast skip")
 	}
 }
 
-func TestHub_handleBroadcast_DisconnectCallback(t *testing.T) {
+func TestHub_handleBroadcast_SkipsFullChannel_NoDisconnect(t *testing.T) {
 	logger := zap.NewNop()
 	hub := NewHub(logger)
 
@@ -641,28 +639,104 @@ func TestHub_handleBroadcast_DisconnectCallback(t *testing.T) {
 		hub:      hub,
 		send:     make(chan []byte), // Unbuffered channel
 		agentPaw: "backpressure-agent",
+		logger:   zap.NewNop(),
 	}
 
 	// Register client and agent
 	hub.clients[client] = true
 	hub.agents["backpressure-agent"] = client
 
-	// Try to broadcast - should fail due to full channel and trigger disconnect
+	// Try to broadcast - should skip (not disconnect) client with full channel
 	hub.handleBroadcast([]byte(`{"type":"test"}`))
 
-	// Verify disconnect callback was called
-	if len(disconnectedPaws) != 1 {
-		t.Errorf("Expected 1 disconnected paw, got %d", len(disconnectedPaws))
-	}
-	if len(disconnectedPaws) > 0 && disconnectedPaws[0] != "backpressure-agent" {
-		t.Errorf("Expected 'backpressure-agent', got '%s'", disconnectedPaws[0])
+	// Verify disconnect callback was NOT called
+	if len(disconnectedPaws) != 0 {
+		t.Errorf("Expected 0 disconnected paws, got %d", len(disconnectedPaws))
 	}
 
-	// Verify client was removed
-	if _, ok := hub.clients[client]; ok {
-		t.Error("Client should have been removed")
+	// Verify client is still registered
+	if _, ok := hub.clients[client]; !ok {
+		t.Error("Client should still be registered")
 	}
-	if _, ok := hub.agents["backpressure-agent"]; ok {
-		t.Error("Agent should have been removed")
+	if _, ok := hub.agents["backpressure-agent"]; !ok {
+		t.Error("Agent should still be registered")
+	}
+}
+
+func TestHub_handleUnregister_StaleConnection(t *testing.T) {
+	logger := zap.NewNop()
+	hub := NewHub(logger)
+
+	callbackCalled := false
+	hub.SetOnAgentDisconnect(func(paw string) {
+		callbackCalled = true
+	})
+
+	// Old client registered with paw
+	oldClient := &Client{
+		hub:      hub,
+		send:     make(chan []byte, 256),
+		agentPaw: "shared-paw",
+	}
+	hub.handleRegister(oldClient)
+
+	// New client connects and overwrites the agents map entry
+	newClient := &Client{
+		hub:      hub,
+		send:     make(chan []byte, 256),
+		agentPaw: "shared-paw",
+	}
+	hub.handleRegister(newClient)
+
+	// Old client disconnects — should NOT remove the new client from agents
+	hub.handleUnregister(oldClient)
+
+	// New client should still be in agents map
+	if hub.agents["shared-paw"] != newClient {
+		t.Error("New client should still be registered in agents map after old client unregisters")
+	}
+
+	// New client should still be in clients map
+	if _, ok := hub.clients[newClient]; !ok {
+		t.Error("New client should still be in clients map")
+	}
+
+	// Old client should be removed from clients map
+	if _, ok := hub.clients[oldClient]; ok {
+		t.Error("Old client should be removed from clients map")
+	}
+
+	// Disconnect callback should NOT be called (stale connection, not the active one)
+	if callbackCalled {
+		t.Error("Disconnect callback should not be called for stale connection")
+	}
+}
+
+func TestHub_handleUnregister_ActiveConnection(t *testing.T) {
+	logger := zap.NewNop()
+	hub := NewHub(logger)
+
+	var disconnectedPaw string
+	hub.SetOnAgentDisconnect(func(paw string) {
+		disconnectedPaw = paw
+	})
+
+	// Single client registered with paw
+	client := &Client{
+		hub:      hub,
+		send:     make(chan []byte, 256),
+		agentPaw: "active-paw",
+	}
+	hub.handleRegister(client)
+
+	// Client disconnects — SHOULD remove from agents and fire callback
+	hub.handleUnregister(client)
+
+	if _, ok := hub.agents["active-paw"]; ok {
+		t.Error("Agent should be removed from agents map")
+	}
+
+	if disconnectedPaw != "active-paw" {
+		t.Errorf("Expected disconnect callback for 'active-paw', got '%s'", disconnectedPaw)
 	}
 }

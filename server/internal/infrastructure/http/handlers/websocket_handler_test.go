@@ -1491,3 +1491,105 @@ func TestWebSocketHandler_HandleTaskResult_FailedResultWithError(t *testing.T) {
 		t.Errorf("Expected status 'failed', got '%s'", result.Status)
 	}
 }
+
+func TestClassifyTaskResult_TrueSuccess(t *testing.T) {
+	status := classifyTaskResult(true, 0, "Linux Epitek2 6.14.0 x86_64")
+	if status != entity.StatusSuccess {
+		t.Errorf("Expected success, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_ExitCodeNonZero(t *testing.T) {
+	status := classifyTaskResult(false, 1, "some error")
+	if status != entity.StatusFailed {
+		t.Errorf("Expected failed, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_PermissionDenied(t *testing.T) {
+	status := classifyTaskResult(true, 0, "cat: /etc/shadow: Permission denied")
+	if status != entity.StatusFailed {
+		t.Errorf("Expected failed for permission denied, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_SudoPasswordRequired(t *testing.T) {
+	output := "sudo: a terminal is required to read the password; either use the -S option"
+	status := classifyTaskResult(true, 0, output)
+	if status != entity.StatusFailed {
+		t.Errorf("Expected failed for sudo password required, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_CommandTimedOut(t *testing.T) {
+	status := classifyTaskResult(true, 0, "Command timed out")
+	if status != entity.StatusFailed {
+		t.Errorf("Expected failed for timeout, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_CommandNotFound(t *testing.T) {
+	status := classifyTaskResult(true, 0, "bash: netstat: command not found")
+	if status != entity.StatusFailed {
+		t.Errorf("Expected failed for command not found, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_EmptyOutputIsSuccess(t *testing.T) {
+	// Empty output with exit 0 = success (agent handles file output capture,
+	// and many commands legitimately produce no stdout)
+	status := classifyTaskResult(true, 0, "")
+	if status != entity.StatusSuccess {
+		t.Errorf("Expected success for empty output with exit 0, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_WhitespaceOnlyIsSuccess(t *testing.T) {
+	status := classifyTaskResult(true, 0, "   \n\t  ")
+	if status != entity.StatusSuccess {
+		t.Errorf("Expected success for whitespace-only output with exit 0, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_CaseInsensitive(t *testing.T) {
+	status := classifyTaskResult(true, 0, "ACCESS DENIED by security policy")
+	if status != entity.StatusFailed {
+		t.Errorf("Expected failed for ACCESS DENIED, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_LongOutputIgnoresPatterns(t *testing.T) {
+	// Long output (>200 bytes) that incidentally contains a failure pattern
+	// should still be classified as success — it's likely legitimate attack output
+	longOutput := strings.Repeat("credential data line\n", 15) + "access denied for user xyz\n"
+	status := classifyTaskResult(true, 0, longOutput)
+	if status != entity.StatusSuccess {
+		t.Errorf("Expected success for long output with incidental pattern, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_MixedLinesIsSuccess(t *testing.T) {
+	// Short output with both real results and an error line — partially succeeded
+	output := "user1:x:1000:1000::/home/user1:/bin/bash\ncat: /etc/shadow: Permission denied"
+	status := classifyTaskResult(true, 0, output)
+	if status != entity.StatusSuccess {
+		t.Errorf("Expected success for mixed output (real results + error), got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_AllLinesFailure(t *testing.T) {
+	// Short output where every line is an error
+	output := "cat: /etc/shadow: Permission denied\nbash: netstat: command not found"
+	status := classifyTaskResult(true, 0, output)
+	if status != entity.StatusFailed {
+		t.Errorf("Expected failed when all lines are errors, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_EnumerationOutput(t *testing.T) {
+	// "no such file or directory" should NOT cause failure (removed from patterns)
+	status := classifyTaskResult(true, 0, "ls: /nonexistent: No such file or directory")
+	if status != entity.StatusSuccess {
+		t.Errorf("Expected success for enumeration output, got %s", status)
+	}
+}

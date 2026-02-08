@@ -16,8 +16,8 @@
     - name: "Users & Processes"
       order: 2
       techniques:
-        - "T1087"
-        - "T1069"
+        - "T1087.001"
+        - "T1069.001"
         - "T1057"
     - name: "Services & Files"
       order: 3
@@ -82,8 +82,8 @@
     - name: "Users & Groups"
       order: 2
       techniques:
-        - "T1087"
-        - "T1069"
+        - "T1087.001"
+        - "T1069.001"
     - name: "Processes & Services"
       order: 3
       techniques:
@@ -119,7 +119,7 @@
       techniques:
         - "T1021.001"
         - "T1021.002"
-        - "T1021.004"
+        - "T1021.003"
     - name: "Data Collection"
       order: 4
       techniques:
@@ -145,8 +145,8 @@
     - name: "User Enumeration"
       order: 1
       techniques:
-        - "T1087"
-        - "T1069"
+        - "T1087.001"
+        - "T1069.001"
         - "T1003.008"
     - name: "Credential File Discovery"
       order: 2

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -192,32 +193,30 @@ func main() {
 }
 
 func autoImportTechniques(service *application.TechniqueService, logger *zap.Logger) {
-	// Import techniques from all YAML files in configs/techniques
-	paths := []string{
-		"./configs/techniques/reconnaissance.yaml",
-		"./configs/techniques/initial-access.yaml",
-		"./configs/techniques/discovery.yaml",
-		"./configs/techniques/execution.yaml",
-		"./configs/techniques/persistence.yaml",
-		"./configs/techniques/privilege-escalation.yaml",
-		"./configs/techniques/defense-evasion.yaml",
-		"./configs/techniques/credential-access.yaml",
-		"./configs/techniques/collection.yaml",
-		"./configs/techniques/lateral-movement.yaml",
-		"./configs/techniques/command-and-control.yaml",
-		"./configs/techniques/exfiltration.yaml",
-		"./configs/techniques/impact.yaml",
+	// Import techniques from all YAML/YML files in configs/techniques
+	dir := "./configs/techniques"
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		logger.Debug("No techniques directory found", zap.String("dir", dir), zap.Error(err))
+		return
 	}
 
+	// Sort is already alphabetical from ReadDir
 	imported := 0
-	for _, path := range paths {
-		if _, err := os.Stat(path); err == nil {
-			if err := service.ImportTechniques(context.Background(), path); err != nil {
-				logger.Warn("Failed to import techniques", zap.String("path", path), zap.Error(err))
-			} else {
-				imported++
-				logger.Info("Imported techniques", zap.String("path", path))
-			}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if !strings.HasSuffix(name, ".yaml") && !strings.HasSuffix(name, ".yml") {
+			continue
+		}
+		path := dir + "/" + name
+		if err := service.ImportTechniques(context.Background(), path); err != nil {
+			logger.Warn("Failed to import techniques", zap.String("path", path), zap.Error(err))
+		} else {
+			imported++
+			logger.Info("Imported techniques", zap.String("path", path))
 		}
 	}
 

@@ -12,7 +12,7 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { api, executionApi, scenarioApi, ImportScenariosRequest, ScenarioPhase } from '../lib/api';
-import { Scenario, Technique } from '../types';
+import { Scenario, Technique, TechniqueSelection } from '../types';
 import { LoadingState } from '../components/LoadingState';
 import { EmptyState } from '../components/EmptyState';
 import { Modal } from '../components/Modal';
@@ -68,7 +68,7 @@ export default function Scenarios() {
   const [phaseIdCounter, setPhaseIdCounter] = useState(1);
 
   // Create scenario form initial state
-  const createInitialPhase = (id: number) => ({ id: `phase-${id}`, name: `Phase ${id}`, techniques: [] as string[] });
+  const createInitialPhase = (id: number) => ({ id: `phase-${id}`, name: `Phase ${id}`, techniques: [] as TechniqueSelection[] });
   const initialScenarioForm = {
     name: '',
     description: '',
@@ -265,14 +265,36 @@ export default function Scenarios() {
   };
 
   const toggleTechniqueInPhase = (
-    phase: { id: string; name: string; techniques: string[] },
+    phase: { id: string; name: string; techniques: TechniqueSelection[] },
     techniqueId: string
-  ): { id: string; name: string; techniques: string[] } => {
-    const hasTechnique = phase.techniques.includes(techniqueId);
+  ): { id: string; name: string; techniques: TechniqueSelection[] } => {
+    const hasTechnique = phase.techniques.some(t => t.technique_id === techniqueId);
     const updatedTechniques = hasTechnique
-      ? phase.techniques.filter(t => t !== techniqueId)
-      : [...phase.techniques, techniqueId];
+      ? phase.techniques.filter(t => t.technique_id !== techniqueId)
+      : [...phase.techniques, { technique_id: techniqueId }];
     return { ...phase, techniques: updatedTechniques };
+  };
+
+  const updateExecutorInPhase = (
+    phase: { id: string; name: string; techniques: TechniqueSelection[] },
+    techniqueId: string,
+    executorName: string
+  ) => ({
+    ...phase,
+    techniques: phase.techniques.map(t =>
+      t.technique_id === techniqueId
+        ? { ...t, executor_name: executorName || undefined }
+        : t
+    ),
+  });
+
+  const handleExecutorChange = (phaseIndex: number, techniqueId: string, executorName: string) => {
+    setNewScenario(prev => ({
+      ...prev,
+      phases: prev.phases.map((p, i) =>
+        i === phaseIndex ? updateExecutorInPhase(p, techniqueId, executorName) : p
+      ),
+    }));
   };
 
   const handleTechniqueToggle = (phaseIndex: number, techniqueId: string) => {
@@ -506,7 +528,7 @@ export default function Scenarios() {
                       value={newScenario.tags}
                       onChange={(e) => setNewScenario(prev => ({ ...prev, tags: e.target.value }))}
                       className="input"
-                      placeholder="discovery, safe, windows"
+                      placeholder="discovery, windows, lateral"
                     />
                   </div>
                 </div>
@@ -558,27 +580,48 @@ export default function Scenarios() {
                           )}
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
-                          {techniques?.map((technique) => (
-                            <label
-                              key={technique.id}
-                              aria-label={`Select technique ${technique.id} ${technique.name}`}
-                              className={`flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
-                                phase.techniques.includes(technique.id) ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-gray-200 dark:border-gray-600'
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={phase.techniques.includes(technique.id)}
-                                onChange={() => handleTechniqueToggle(phaseIndex, technique.id)}
-                                className="rounded text-primary-600 focus:ring-primary-500"
-                                aria-label={`${technique.id} ${technique.name}`}
-                              />
-                              <span className="text-sm truncate" aria-hidden="true">
-                                <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{technique.id}</span>
-                                <span className="ml-1 text-gray-900 dark:text-gray-100">{technique.name}</span>
-                              </span>
-                            </label>
-                          ))}
+                          {techniques?.map((technique) => {
+                            const isSelected = phase.techniques.some(t => t.technique_id === technique.id);
+                            const selection = phase.techniques.find(t => t.technique_id === technique.id);
+                            const hasMultipleExecutors = technique.executors && technique.executors.length > 1;
+                            return (
+                              <div key={technique.id} className="flex flex-col">
+                                <label
+                                  aria-label={`Select technique ${technique.id} ${technique.name}`}
+                                  className={`flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                                    isSelected ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-gray-200 dark:border-gray-600'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => handleTechniqueToggle(phaseIndex, technique.id)}
+                                    className="rounded text-primary-600 focus:ring-primary-500"
+                                    aria-label={`${technique.id} ${technique.name}`}
+                                  />
+                                  <span className="text-sm truncate" aria-hidden="true">
+                                    <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{technique.id}</span>
+                                    <span className="ml-1 text-gray-900 dark:text-gray-100">{technique.name}</span>
+                                  </span>
+                                </label>
+                                {isSelected && hasMultipleExecutors && (
+                                  <select
+                                    value={selection?.executor_name ?? ''}
+                                    onChange={(e) => handleExecutorChange(phaseIndex, technique.id, e.target.value)}
+                                    className="mt-1 text-xs border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                                    aria-label={`Executor for ${technique.id}`}
+                                  >
+                                    <option value="">Auto (best match)</option>
+                                    {technique.executors?.filter((exec) => !!exec.name).map((exec) => (
+                                      <option key={exec.name} value={exec.name}>
+                                        {exec.name}{exec.platform ? ` (${exec.platform})` : ''}
+                                      </option>
+                                    ))}
+                                  </select>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                           {phase.techniques.length} technique(s) selected

@@ -1,5 +1,92 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Technique, TacticType } from '../types';
+
+type DescPart = { type: 'text' | 'link' | 'citation' | 'code'; value: string; href?: string };
+
+/**
+ * Renders a description string with rich formatting:
+ * - Markdown links [text](url) → clickable anchors
+ * - Numbered citation links [N](url) → superscript clickable references (MITRE style)
+ * - HTML <code>text</code> → styled inline code
+ * - Backtick `text` → styled inline code
+ */
+function DescriptionText({ text }: Readonly<{ text: string }>) {
+  const parts = useMemo(() => {
+    // Matches markdown links, HTML <code> tags, or backtick code (atomic alternation, no backtracking risk)
+    const combinedRegex = /\[([^\]]{1,200})\]\((https?:\/\/[^)]{1,2000})\)|<code>([^<]{1,500})<\/code>|`([^`]{1,500})`/g;
+    const result: DescPart[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = combinedRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        result.push({ type: 'text', value: text.slice(lastIndex, match.index) });
+      }
+      if (match[1] !== undefined) {
+        // Markdown link: [text](url) — detect numbered citations like [1], [2]
+        const isCitation = /^\d+$/.test(match[1]);
+        result.push({ type: isCitation ? 'citation' : 'link', value: match[1], href: match[2] });
+      } else if (match[3] !== undefined) {
+        // HTML <code>text</code>
+        result.push({ type: 'code', value: match[3] });
+      } else if (match[4] !== undefined) {
+        // Backtick `text`
+        result.push({ type: 'code', value: match[4] });
+      }
+      lastIndex = match.index + match[0].length;
+    }
+    if (lastIndex < text.length) {
+      result.push({ type: 'text', value: text.slice(lastIndex) });
+    }
+    return result;
+  }, [text]);
+
+  return (
+    <span>
+      {parts.map((part, idx) => {
+        const key = `${part.type}-${idx}`;
+        if (part.type === 'citation') {
+          return (
+            <a
+              key={key}
+              href={part.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-600 dark:text-primary-400 hover:underline text-[10px] align-super font-medium"
+              title={part.href}
+            >
+              [{part.value}]
+            </a>
+          );
+        }
+        if (part.type === 'link') {
+          return (
+            <a
+              key={key}
+              href={part.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-600 dark:text-primary-400 hover:underline"
+            >
+              {part.value}
+            </a>
+          );
+        }
+        if (part.type === 'code') {
+          return (
+            <code
+              key={key}
+              className="px-1 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-red-600 dark:text-red-400 text-xs font-mono"
+            >
+              {part.value}
+            </code>
+          );
+        }
+        return <span key={key}>{part.value}</span>;
+      })}
+    </span>
+  );
+}
 
 /**
  * Ordered list of MITRE ATT&CK tactics for matrix display.
@@ -73,16 +160,23 @@ interface MitreMatrixProps {
 export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatrixProps>) {
   const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [selectedTechnique, setSelectedTechnique] = useState<Technique | null>(null);
+  const [expandedExecutor, setExpandedExecutor] = useState<number | null>(null);
 
-  // Group techniques by tactic
+  // Get all tactics for a technique (multi-tactic support with fallback)
+  const getTactics = (t: Technique): TacticType[] => {
+    if (t.tactics && t.tactics.length > 0) {
+      return t.tactics.map(tac => String(tac).replaceAll('-', '_') as TacticType);
+    }
+    return [String(t.tactic).replaceAll('-', '_') as TacticType];
+  };
+
+  // Group techniques by tactic (a technique can appear in multiple columns)
   const techniquesByTactic = TACTICS.reduce((acc, tactic) => {
     acc[tactic.id] = techniques
       .filter(t => {
-        // Map backend tactic format to frontend format
-        const techTactic = String(t.tactic).replaceAll('-', '_');
-        const matches = techTactic === tactic.id;
         const platformMatches = platformFilter === 'all' || t.platforms.includes(platformFilter);
-        return matches && platformMatches;
+        if (!platformMatches) return false;
+        return getTactics(t).includes(tactic.id);
       })
       .sort((a, b) => a.id.localeCompare(b.id));
     return acc;
@@ -90,11 +184,13 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
 
   const handleTechniqueClick = (technique: Technique) => {
     setSelectedTechnique(technique);
+    setExpandedExecutor(null);
     onTechniqueClick?.(technique);
   };
 
   const handleCloseDetail = () => {
     setSelectedTechnique(null);
+    setExpandedExecutor(null);
   };
 
   // Handle Escape key to close modal at document level
@@ -193,7 +289,7 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
               onClick={handleCloseDetail}
               aria-label="Close modal"
             />
-            <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full p-6">
+            <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full p-6 max-h-[85vh] overflow-y-auto">
               <button
                 onClick={handleCloseDetail}
                 className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -209,11 +305,13 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedTechnique.name}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
-                    {String(selectedTechnique.tactic).replaceAll('-', '_').replaceAll('_', ' ')}
+                    {getTactics(selectedTechnique).map(t => t.replaceAll('_', ' ')).join(', ')}
                   </p>
                 </div>
               </div>
-              <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">{selectedTechnique.description}</p>
+              <p className="mt-4 text-sm text-gray-600 dark:text-gray-300 whitespace-pre-line">
+                <DescriptionText text={selectedTechnique.description} />
+              </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className={`badge ${selectedTechnique.is_safe ? 'badge-success' : 'badge-danger'}`}>
                   {selectedTechnique.is_safe ? 'Safe' : 'Unsafe'}
@@ -222,6 +320,81 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
                   <span key={p} className="badge bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">{p}</span>
                 ))}
               </div>
+              {/* Executors */}
+              {selectedTechnique.executors && selectedTechnique.executors.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Executors ({selectedTechnique.executors.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedTechnique.executors.map((exec, idx) => (
+                      <div
+                        key={`${exec.type}-${exec.platform ?? ''}-${idx}`}
+                        className="rounded bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 overflow-hidden"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setExpandedExecutor(expandedExecutor === idx ? null : idx)}
+                          className="flex items-center justify-between w-full p-2 text-left hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <svg className={`h-3 w-3 text-gray-400 transition-transform ${expandedExecutor === idx ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                            <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300">
+                              {exec.type}
+                            </span>
+                            {exec.platform && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400">{exec.platform}</span>
+                            )}
+                            {exec.name && (
+                              <span className="text-xs text-gray-600 dark:text-gray-300">{exec.name}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {exec.elevation_required && (
+                              <span className="text-xs px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400">
+                                Elevation
+                              </span>
+                            )}
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                              exec.is_safe
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400'
+                                : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400'
+                            }`}>
+                              {exec.is_safe ? 'Safe' : 'Unsafe'}
+                            </span>
+                          </div>
+                        </button>
+                        {expandedExecutor === idx && (
+                          <div className="px-3 pb-3 space-y-2 border-t border-gray-200 dark:border-gray-600">
+                            <div className="pt-2">
+                              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Command</span>
+                              <pre className="mt-1 p-2 rounded bg-gray-900 text-green-400 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
+                                {exec.command || '(empty)'}
+                              </pre>
+                            </div>
+                            {exec.cleanup && (
+                              <div>
+                                <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Cleanup</span>
+                                <pre className="mt-1 p-2 rounded bg-gray-900 text-yellow-400 text-xs font-mono overflow-x-auto whitespace-pre-wrap break-all max-h-32 overflow-y-auto">
+                                  {exec.cleanup}
+                                </pre>
+                              </div>
+                            )}
+                            <div className="flex gap-4 text-xs text-gray-500 dark:text-gray-400">
+                              <span>Timeout: {exec.timeout}s</span>
+                              {exec.elevation_required !== undefined && (
+                                <span>Elevation: {exec.elevation_required ? 'Required' : 'No'}</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {selectedTechnique.detection && selectedTechnique.detection.length > 0 && (
                 <div className="mt-4">
                   <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Detection</h4>
@@ -230,6 +403,25 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
                       <li key={`${d.source}-${d.indicator}`} className="flex gap-2">
                         <span className="font-medium">{d.source}:</span>
                         <span>{d.indicator}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {selectedTechnique.references && selectedTechnique.references.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">References</h4>
+                  <ul className="text-sm space-y-1">
+                    {selectedTechnique.references.map((ref) => (
+                      <li key={ref}>
+                        <a
+                          href={ref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary-600 dark:text-primary-400 hover:underline break-all"
+                        >
+                          {ref}
+                        </a>
                       </li>
                     ))}
                   </ul>
@@ -244,11 +436,11 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
       <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
         <div className="flex items-center gap-1">
           <span className="w-3 h-3 rounded-full bg-green-500"></span>
-          <span>Safe technique</span>
+          <span>Safe</span>
         </div>
         <div className="flex items-center gap-1">
           <span className="w-3 h-3 rounded-full bg-red-500"></span>
-          <span>Potentially unsafe</span>
+          <span>Unsafe</span>
         </div>
       </div>
     </div>

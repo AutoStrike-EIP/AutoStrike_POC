@@ -66,29 +66,28 @@ pub struct AgentClient {
     pub config: AgentConfig,
     /// System information.
     pub sys_info: SystemInfo,
-    /// Command executor instance.
-    pub executor: CommandExecutor,
 }
 
 impl AgentClient {
     /// Creates a new agent client with the given configuration and system info.
     pub fn new(config: AgentConfig, sys_info: SystemInfo) -> Result<Self> {
-        let executor = CommandExecutor::new();
-
-        Ok(Self {
-            config,
-            sys_info,
-            executor,
-        })
+        Ok(Self { config, sys_info })
     }
 
     /// Runs the agent client with automatic reconnection on failure.
+    ///
+    /// The mpsc channel is created here (not inside connect_and_run) so that
+    /// in-flight task results survive WebSocket reconnections. Spawned tasks
+    /// hold a clone of `tx`; if the connection drops while they execute, their
+    /// results are buffered in the channel and delivered on the next connection.
     pub async fn run(&mut self) -> Result<()> {
         let mut retry_delay = Duration::from_secs(1);
         let max_delay = Duration::from_secs(60);
 
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(256);
+
         loop {
-            match self.connect_and_run().await {
+            match self.connect_and_run(&tx, &mut rx).await {
                 Ok(_) => {
                     retry_delay = Duration::from_secs(1);
                     info!("Connection closed, reconnecting...");
@@ -106,7 +105,11 @@ impl AgentClient {
         }
     }
 
-    async fn connect_and_run(&mut self) -> Result<()> {
+    async fn connect_and_run(
+        &mut self,
+        tx: &tokio::sync::mpsc::Sender<String>,
+        rx: &mut tokio::sync::mpsc::Receiver<String>,
+    ) -> Result<()> {
         let ws_url = self
             .config
             .server_url
@@ -151,10 +154,8 @@ impl AgentClient {
         let heartbeat_interval = self.config.heartbeat_interval;
         let paw = self.config.paw.clone();
 
-        let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(32);
-
         let tx_heartbeat = tx.clone();
-        tokio::spawn(async move {
+        let heartbeat_handle = tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(heartbeat_interval));
             loop {
                 interval.tick().await;
@@ -176,10 +177,12 @@ impl AgentClient {
             }
         });
 
-        loop {
+        let result: Result<()> = loop {
             tokio::select! {
                 Some(msg) = rx.recv() => {
-                    write.send(WsMessage::Text(msg)).await?;
+                    if let Err(e) = write.send(WsMessage::Text(msg)).await {
+                        break Err(e.into());
+                    }
                 }
 
                 msg = read.next() => {
@@ -187,7 +190,9 @@ impl AgentClient {
                         Some(Ok(WsMessage::Text(text))) => {
                             match serde_json::from_str::<AgentMessage>(&text) {
                                 Ok(agent_msg) => {
-                                    self.handle_message(agent_msg, &tx).await?;
+                                    if let Err(e) = self.handle_message(agent_msg, tx).await {
+                                        break Err(e);
+                                    }
                                 }
                                 Err(e) => {
                                     warn!("Failed to parse message: {} - content: {}", e, text);
@@ -195,27 +200,35 @@ impl AgentClient {
                             }
                         }
                         Some(Ok(WsMessage::Ping(data))) => {
-                            write.send(WsMessage::Pong(data)).await?;
+                            if let Err(e) = write.send(WsMessage::Pong(data)).await {
+                                break Err(e.into());
+                            }
                         }
                         Some(Ok(WsMessage::Close(_))) => {
                             info!("Server closed connection");
-                            break;
+                            break Ok(());
                         }
                         Some(Err(e)) => {
                             error!("WebSocket error: {}", e);
-                            break;
+                            break Err(e.into());
                         }
-                        None => break,
+                        None => break Ok(()),
                         _ => {}
                     }
                 }
             }
-        }
+        };
 
-        Ok(())
+        // Stop heartbeat to prevent duplicate heartbeats after reconnect
+        heartbeat_handle.abort();
+
+        result
     }
 
     /// Handles incoming messages from the server.
+    ///
+    /// Task execution is spawned as a separate tokio task so it doesn't block
+    /// the WebSocket read loop (which must stay responsive for pings/pongs).
     pub async fn handle_message(
         &self,
         msg: AgentMessage,
@@ -226,7 +239,12 @@ impl AgentClient {
         match msg.msg_type.as_str() {
             "task" => {
                 let task: TaskPayload = serde_json::from_value(msg.payload)?;
-                self.execute_task(task, tx).await?;
+                let tx = tx.clone();
+                tokio::spawn(async move {
+                    if let Err(e) = Self::execute_task_static(task, &tx).await {
+                        error!("Task execution failed: {}", e);
+                    }
+                });
             }
             "ping" => {
                 let pong = AgentMessage {
@@ -243,9 +261,18 @@ impl AgentClient {
         Ok(())
     }
 
-    /// Executes a task and sends the result back to the server.
+    /// Executes a task and sends the result back to the server (test helper).
+    #[cfg(test)]
     pub async fn execute_task(
         &self,
+        task: TaskPayload,
+        tx: &tokio::sync::mpsc::Sender<String>,
+    ) -> Result<()> {
+        Self::execute_task_static(task, tx).await
+    }
+
+    /// Static task execution that doesn't require &self, so it can be spawned.
+    async fn execute_task_static(
         task: TaskPayload,
         tx: &tokio::sync::mpsc::Sender<String>,
     ) -> Result<()> {
@@ -254,11 +281,16 @@ impl AgentClient {
             task.id, task.technique_id
         );
 
+        let executor = CommandExecutor::new();
         let timeout = task.timeout.unwrap_or(300);
-        let result = self
-            .executor
+        let result = executor
             .execute(&task.executor, &task.command, Duration::from_secs(timeout))
             .await;
+
+        // Enrich output by reading redirected files when stdout is nearly empty
+        let output =
+            crate::output_capture::enrich_output(&task.command, &task.executor, &result.output)
+                .await;
 
         let response = AgentMessage {
             msg_type: "task_result".to_string(),
@@ -266,7 +298,7 @@ impl AgentClient {
                 "task_id": task.id,
                 "technique_id": task.technique_id,
                 "success": result.success,
-                "output": result.output,
+                "output": output,
                 "exit_code": result.exit_code,
             }),
         };
@@ -275,8 +307,7 @@ impl AgentClient {
 
         if let Some(cleanup) = task.cleanup {
             debug!("Executing cleanup command");
-            let _ = self
-                .executor
+            let _ = executor
                 .execute(&task.executor, &cleanup, Duration::from_secs(30))
                 .await;
         }

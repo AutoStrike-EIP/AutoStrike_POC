@@ -213,7 +213,7 @@ describe('Scheduler Create Modal', () => {
     fireEvent.click(screen.getByText('Create Schedule'));
 
     await waitFor(() => {
-      expect(screen.getByText('Safe Mode')).toBeInTheDocument();
+      expect(screen.getByText('Safe Mode (non-destructive only)')).toBeInTheDocument();
     });
   });
 });
@@ -723,7 +723,7 @@ describe('Scheduler Safe Mode Toggle', () => {
     fireEvent.click(screen.getByText('Create Schedule'));
 
     await waitFor(() => {
-      expect(screen.getByText('Safe Mode')).toBeInTheDocument();
+      expect(screen.getByText('Safe Mode (non-destructive only)')).toBeInTheDocument();
     });
   });
 
@@ -737,7 +737,7 @@ describe('Scheduler Safe Mode Toggle', () => {
     fireEvent.click(screen.getByText('Create Schedule'));
 
     await waitFor(() => {
-      expect(screen.getByText('Safe Mode')).toBeInTheDocument();
+      expect(screen.getByText('Safe Mode (non-destructive only)')).toBeInTheDocument();
     });
 
     const safeModeCheckbox = screen.getByRole('checkbox');

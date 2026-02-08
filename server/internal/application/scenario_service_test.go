@@ -167,7 +167,7 @@ func TestCreateScenario(t *testing.T) {
 	scenario := &entity.Scenario{
 		Name: "Test Scenario",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1059"}},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}},
 		},
 	}
 
@@ -227,7 +227,7 @@ func TestUpdateScenario(t *testing.T) {
 		ID:   "s1",
 		Name: "Updated",
 		Phases: []entity.Phase{
-			{Name: "Phase 1", Techniques: []string{"T1059"}},
+			{Name: "Phase 1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}},
 		},
 	}
 

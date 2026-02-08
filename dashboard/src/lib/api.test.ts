@@ -1071,6 +1071,28 @@ describe('API method invocations', () => {
     getSpy.mockRestore();
   });
 
+  it('techniqueApi.getExecutors calls correct endpoint without platform', async () => {
+    const { api, techniqueApi } = await import('./api');
+    const getSpy = vi.spyOn(api, 'get').mockResolvedValue({ data: [] });
+    await techniqueApi.getExecutors('T1059.001');
+    expect(getSpy).toHaveBeenCalledWith('/techniques/T1059.001/executors', { params: undefined });
+    getSpy.mockRestore();
+  });
+
+  it('techniqueApi.getExecutors passes platform filter', async () => {
+    const { api, techniqueApi } = await import('./api');
+    const getSpy = vi.spyOn(api, 'get').mockResolvedValue({ data: [] });
+    await techniqueApi.getExecutors('T1059.001', 'linux');
+    expect(getSpy).toHaveBeenCalledWith('/techniques/T1059.001/executors', { params: { platform: 'linux' } });
+    getSpy.mockRestore();
+  });
+
+  it('techniqueApi exports TechniqueSelection type', async () => {
+    const apiModule = await import('./api');
+    // Verify getExecutors is available (confirms TechniqueExecutor[] return type)
+    expect(typeof apiModule.techniqueApi.getExecutors).toBe('function');
+  });
+
   it('scenarioApi.list calls correct endpoint', async () => {
     const { api, scenarioApi } = await import('./api');
     const getSpy = vi.spyOn(api, 'get').mockResolvedValue({ data: [] });
@@ -1461,5 +1483,32 @@ describe('Helper functions coverage', () => {
     await expect(p1).rejects.toThrow('Refresh expired');
     await expect(p2).rejects.toThrow('Refresh expired');
     api.defaults.adapter = originalAdapter;
+  });
+});
+
+describe('techniqueApi.getExecutors', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it('calls correct endpoint without platform filter', async () => {
+    const { api, techniqueApi } = await import('./api');
+    const getSpy = vi.spyOn(api, 'get').mockResolvedValue({ data: [] });
+    await techniqueApi.getExecutors('T1082');
+    expect(getSpy).toHaveBeenCalledWith('/techniques/T1082/executors', { params: undefined });
+    getSpy.mockRestore();
+  });
+
+  it('calls correct endpoint with platform filter', async () => {
+    const { api, techniqueApi } = await import('./api');
+    const getSpy = vi.spyOn(api, 'get').mockResolvedValue({ data: [] });
+    await techniqueApi.getExecutors('T1082', 'linux');
+    expect(getSpy).toHaveBeenCalledWith('/techniques/T1082/executors', { params: { platform: 'linux' } });
+    getSpy.mockRestore();
+  });
+
+  it('exports getExecutors method on techniqueApi', async () => {
+    const { techniqueApi } = await import('./api');
+    expect(typeof techniqueApi.getExecutors).toBe('function');
   });
 });

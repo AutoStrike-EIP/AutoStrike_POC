@@ -45,13 +45,15 @@ type ExecutionPlan struct {
 
 // PlannedTask represents a single task in the execution plan
 type PlannedTask struct {
-	TechniqueID string
-	AgentPaw    string
-	Phase       string
-	Order       int
-	Command     string
-	Cleanup     string
-	Timeout     int
+	TechniqueID  string
+	AgentPaw     string
+	Phase        string
+	Order        int
+	Command      string
+	Cleanup      string
+	Timeout      int
+	ExecutorName string // Name of the executor (for display/debugging)
+	ExecutorType string // Type of executor (sh, bash, cmd, powershell)
 }
 
 // PlanExecution creates an execution plan for a scenario
@@ -91,25 +93,24 @@ func (o *AttackOrchestrator) planPhase(
 	var tasks []PlannedTask
 	taskOrder := startOrder
 
-	for _, techID := range phase.Techniques {
-		technique := o.getTechnique(ctx, techID, safeMode)
+	for _, selection := range phase.Techniques {
+		technique := o.getTechnique(ctx, selection.TechniqueID, safeMode)
 		if technique == nil {
 			continue
 		}
 
 		for _, agent := range targetAgents {
-			task := o.createTaskForAgent(agent, technique, phase.Name, taskOrder)
-			if task != nil {
-				tasks = append(tasks, *task)
-				taskOrder++
-			}
+			agentTasks := o.createTasksForAgent(agent, technique, selection.ExecutorName, phase.Name, taskOrder)
+			tasks = append(tasks, agentTasks...)
+			taskOrder += len(agentTasks)
 		}
 	}
 
 	return tasks
 }
 
-// getTechnique retrieves and validates a technique
+// getTechnique retrieves and validates a technique.
+// In safe mode, filters out unsafe executors instead of skipping the whole technique.
 func (o *AttackOrchestrator) getTechnique(ctx context.Context, techID string, safeMode bool) *entity.Technique {
 	technique, err := o.techniqueRepo.FindByID(ctx, techID)
 	if err != nil {
@@ -117,39 +118,91 @@ func (o *AttackOrchestrator) getTechnique(ctx context.Context, techID string, sa
 		return nil
 	}
 
-	if safeMode && !technique.IsSafe {
-		o.logger.Info("Skipping unsafe technique in safe mode", zap.String("technique_id", techID))
-		return nil
+	if safeMode {
+		if !technique.IsSafe {
+			o.logger.Info("Skipping technique with no safe executors", zap.String("technique_id", techID))
+			return nil
+		}
+		// Filter to only safe executors
+		var safeExecutors []entity.Executor
+		for _, exec := range technique.Executors {
+			if exec.IsSafe {
+				safeExecutors = append(safeExecutors, exec)
+			}
+		}
+		if len(safeExecutors) == 0 {
+			// Backward compatibility: if technique is marked safe but no executor has
+			// individual is_safe set (legacy format), use all executors
+			o.logger.Info("Safe technique has no per-executor is_safe flags, using all executors", zap.String("technique_id", techID))
+			return technique
+		}
+		// Return a copy with only safe executors
+		filtered := *technique
+		filtered.Executors = safeExecutors
+		return &filtered
 	}
 
 	return technique
 }
 
-// createTaskForAgent creates a task if the agent is compatible
-func (o *AttackOrchestrator) createTaskForAgent(
+// createTasksForAgent creates tasks for all compatible executors on the agent.
+// If executorName is specified, only that executor is used (single task).
+// If executorName is empty, ALL compatible executors are used (multiple tasks).
+func (o *AttackOrchestrator) createTasksForAgent(
 	agent *entity.Agent,
 	technique *entity.Technique,
+	executorName string,
 	phaseName string,
-	order int,
-) *PlannedTask {
+	startOrder int,
+) []PlannedTask {
 	if !agent.IsCompatible(technique) {
 		return nil
 	}
 
-	executor := technique.GetExecutorForPlatform(agent.Platform, agent.Executors)
-	if executor == nil {
+	// If a specific executor is requested, use only that one
+	if executorName != "" {
+		executor := technique.GetExecutorByName(executorName, agent.Platform, agent.Executors)
+		if executor == nil {
+			// Fallback to auto-select first compatible executor
+			executor = technique.GetExecutorForPlatform(agent.Platform, agent.Executors)
+		}
+		if executor == nil {
+			return nil
+		}
+		return []PlannedTask{{
+			TechniqueID:  technique.ID,
+			AgentPaw:     agent.Paw,
+			Phase:        phaseName,
+			Order:        startOrder,
+			Command:      executor.Command,
+			Cleanup:      executor.Cleanup,
+			Timeout:      executor.Timeout,
+			ExecutorName: executor.Name,
+			ExecutorType: executor.Type,
+		}}
+	}
+
+	// No executor name: run ALL compatible executors
+	executors := technique.GetExecutorsForPlatform(agent.Platform, agent.Executors)
+	if len(executors) == 0 {
 		return nil
 	}
 
-	return &PlannedTask{
-		TechniqueID: technique.ID,
-		AgentPaw:    agent.Paw,
-		Phase:       phaseName,
-		Order:       order,
-		Command:     executor.Command,
-		Cleanup:     executor.Cleanup,
-		Timeout:     executor.Timeout,
+	tasks := make([]PlannedTask, 0, len(executors))
+	for i, exec := range executors {
+		tasks = append(tasks, PlannedTask{
+			TechniqueID:  technique.ID,
+			AgentPaw:     agent.Paw,
+			Phase:        phaseName,
+			Order:        startOrder + i,
+			Command:      exec.Command,
+			Cleanup:      exec.Cleanup,
+			Timeout:      exec.Timeout,
+			ExecutorName: exec.Name,
+			ExecutorType: exec.Type,
+		})
 	}
+	return tasks
 }
 
 // ValidatePlan validates an execution plan

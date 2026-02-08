@@ -66,7 +66,9 @@ func (s *TechniqueService) GetCoverage(ctx context.Context) (map[entity.TacticTy
 
 	coverage := make(map[entity.TacticType]int)
 	for _, t := range techniques {
-		coverage[t.Tactic]++
+		for _, tactic := range t.GetTactics() {
+			coverage[tactic]++
+		}
 	}
 
 	return coverage, nil

@@ -6,6 +6,7 @@
 mod client;
 mod config;
 mod executor;
+mod output_capture;
 mod system;
 
 use anyhow::Result;

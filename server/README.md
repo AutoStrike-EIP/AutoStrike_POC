@@ -11,8 +11,7 @@ server/
 ├── cmd/autostrike/          # Point d'entrée
 │   └── main.go
 ├── configs/
-│   └── techniques/          # Définitions YAML (13 fichiers)
-│       ├── reconnaissance.yaml
+│   └── techniques/          # Définitions YAML (12 fichiers)
 │       ├── initial-access.yaml
 │       ├── execution.yaml
 │       ├── persistence.yaml
@@ -142,11 +141,11 @@ Base URL: `https://localhost:8443/api/v1`
 ### Techniques
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
-| GET | `/techniques` | Liste des 48 techniques |
+| GET | `/techniques` | Liste des 294 techniques |
 | GET | `/techniques/:id` | Détails d'une technique |
 | GET | `/techniques/tactic/:tactic` | Techniques par tactique MITRE |
 | GET | `/techniques/platform/:platform` | Techniques par plateforme |
-| GET | `/techniques/coverage` | Statistiques de couverture (13 tactiques) |
+| GET | `/techniques/coverage` | Statistiques de couverture (12 tactiques) |
 | POST | `/techniques/import` | Importer depuis YAML |
 
 ### Scénarios

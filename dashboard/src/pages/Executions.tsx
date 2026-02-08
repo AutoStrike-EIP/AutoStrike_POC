@@ -42,12 +42,13 @@ function canStopExecution(status: ExecutionStatus): boolean {
  */
 interface StopConfirmModalProps {
   readonly execution: Execution;
+  readonly scenarioName?: string;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
   readonly isLoading: boolean;
 }
 
-function StopConfirmModal({ execution, onConfirm, onCancel, isLoading }: Readonly<StopConfirmModalProps>) {
+function StopConfirmModal({ execution, scenarioName, onConfirm, onCancel, isLoading }: Readonly<StopConfirmModalProps>) {
   return (
     <dialog open className="fixed inset-0 z-50 overflow-y-auto bg-transparent" aria-labelledby="modal-title" aria-modal="true">
       <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -71,7 +72,7 @@ function StopConfirmModal({ execution, onConfirm, onCancel, isLoading }: Readonl
                   </p>
                   <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Execution ID: <span className="font-mono">{execution.id.slice(0, 8)}...</span></p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Scenario: {execution.scenario_id}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Scenario: {scenarioName || execution.scenario_id}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Status: {execution.status}</p>
                   </div>
                   <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
@@ -335,7 +336,7 @@ export default function Executions() {
                 onClick={() => navigate(`/executions/${execution.id}`)}
               >
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <p className="font-medium text-gray-900 dark:text-gray-100">{execution.scenario_id}</p>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{scenarios?.find(s => s.id === execution.scenario_id)?.name || execution.scenario_id}</p>
                   <p className="text-xs text-gray-400">{execution.id.slice(0, 8)}...</p>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -349,7 +350,7 @@ export default function Executions() {
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="flex gap-2 text-sm">
+                  <div className="flex flex-wrap gap-2 text-sm">
                     <span className="text-success-600 dark:text-success-400">
                       {execution.score?.blocked || 0} blocked
                     </span>
@@ -359,6 +360,15 @@ export default function Executions() {
                     <span className="text-danger-600 dark:text-danger-400">
                       {execution.score?.successful || 0} success
                     </span>
+                    {(() => {
+                      const s = execution.score;
+                      const failed = s ? s.total - (s.blocked || 0) - (s.detected || 0) - (s.successful || 0) : 0;
+                      return failed > 0 ? (
+                        <span className="text-gray-500 dark:text-gray-400">
+                          {failed} failed
+                        </span>
+                      ) : null;
+                    })()}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
@@ -366,7 +376,7 @@ export default function Executions() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`badge ${execution.safe_mode ? 'badge-success' : 'badge-danger'}`}>
-                    {execution.safe_mode ? 'Safe' : 'Full'}
+                    {execution.safe_mode ? 'No Elev.' : 'Full'}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -405,6 +415,7 @@ export default function Executions() {
       {executionToStop && (
         <StopConfirmModal
           execution={executionToStop}
+          scenarioName={scenarios?.find(s => s.id === executionToStop.scenario_id)?.name}
           onConfirm={handleConfirmStop}
           onCancel={handleCancelStop}
           isLoading={stopMutation.isPending}

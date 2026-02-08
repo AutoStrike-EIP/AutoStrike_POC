@@ -72,6 +72,8 @@ func InitSchema(db *sql.DB) error {
 		execution_id TEXT NOT NULL,
 		technique_id TEXT NOT NULL,
 		agent_paw TEXT NOT NULL,
+		executor_name TEXT,
+		command TEXT,
 		status TEXT NOT NULL,
 		output TEXT,
 		exit_code INTEGER DEFAULT 0,
@@ -209,6 +211,22 @@ func Migrate(db *sql.DB) error {
 		return fmt.Errorf("failed to add last_login_at column: %w", err)
 	}
 
+	// Migration: Add tactics and references columns to techniques table
+	if err := addColumnIfNotExists(db, "techniques", "tactics", "TEXT"); err != nil {
+		return fmt.Errorf("failed to add tactics column: %w", err)
+	}
+	if err := addColumnIfNotExists(db, "techniques", "references", "TEXT"); err != nil {
+		return fmt.Errorf("failed to add references column: %w", err)
+	}
+
+	// Migration: Add executor_name and command columns to execution_results table
+	if err := addColumnIfNotExists(db, "execution_results", "executor_name", "TEXT"); err != nil {
+		return fmt.Errorf("failed to add executor_name column: %w", err)
+	}
+	if err := addColumnIfNotExists(db, "execution_results", "command", "TEXT"); err != nil {
+		return fmt.Errorf("failed to add command column: %w", err)
+	}
+
 	return nil
 }
 
@@ -241,7 +259,7 @@ func addColumnIfNotExists(db *sql.DB, table, column, definition string) error {
 	}
 
 	if !exists {
-		alterQuery := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, definition)
+		alterQuery := fmt.Sprintf("ALTER TABLE %s ADD COLUMN `%s` %s", table, column, definition)
 		_, err := db.Exec(alterQuery)
 		return err
 	}

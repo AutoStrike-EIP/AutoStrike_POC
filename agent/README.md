@@ -7,11 +7,12 @@ Agent Rust déployé sur les machines cibles pour exécuter les techniques MITRE
 ```
 agent/
 ├── src/
-│   ├── main.rs          # Point d'entrée, CLI parsing (clap)
-│   ├── config.rs        # Gestion configuration YAML
-│   ├── client.rs        # Client WebSocket, communication serveur
-│   ├── executor.rs      # Exécution des commandes avec timeout
-│   └── system.rs        # Détection système (OS, executors)
+│   ├── main.rs              # Point d'entrée, CLI parsing (clap)
+│   ├── config.rs            # Gestion configuration YAML
+│   ├── client.rs            # Client WebSocket, communication serveur
+│   ├── executor.rs          # Exécution des commandes avec timeout
+│   ├── output_capture.rs    # Capture sortie fichiers (redirections /tmp/)
+│   └── system.rs            # Détection système (OS, executors)
 ├── Cargo.toml
 └── Dockerfile
 ```
@@ -24,6 +25,7 @@ agent/
 - **Heartbeat** périodique pour maintenir la connexion (30 secondes)
 - **Authentication agent** via header `X-Agent-Key`
 - **Troncature de sortie** à 1 MB max (limite UTF-8 safe)
+- **Capture de sortie fichiers** — lecture automatique des fichiers redirigés (`/tmp/`, `%TEMP%`) quand stdout est vide (<50 bytes)
 - **Cross-compilation** pour Windows, Linux, macOS (x64/ARM64)
 
 ## Prérequis
@@ -125,6 +127,13 @@ L'agent détecte automatiquement :
 - stdout et stderr capturés séparément puis combinés
 - Décodage UTF-8 avec conversion lossy
 - Whitespace en début/fin supprimé
+
+### Capture de Sortie Fichiers
+Quand stdout est quasi-vide (<50 bytes), l'agent tente de lire les fichiers de sortie redirigés :
+- Parse la commande avec regex pour extraire les chemins (redirections `>` / `>>`)
+- Scope limité à `/tmp/` (Unix) et `%TEMP%`/`$env:TEMP` (Windows)
+- Lit les fichiers et retourne leur contenu comme output
+- Budget partagé avec la troncature (1 MB max)
 
 ## Protocole WebSocket
 

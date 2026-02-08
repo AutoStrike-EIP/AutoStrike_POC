@@ -26,8 +26,8 @@ func getAllowedOrigins() []string {
 }
 
 var upgrader = gorillaws.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
+	ReadBufferSize:  4096,
+	WriteBufferSize: 4096,
 	CheckOrigin: func(r *http.Request) bool {
 		origin := r.Header.Get("Origin")
 		if origin == "" {
@@ -203,6 +203,92 @@ type TaskResultPayload struct {
 	Error       string `json:"error,omitempty"`
 }
 
+// failurePatterns are output substrings that indicate the command did not
+// achieve its goal even though it may have exited with code 0.
+// Only specific patterns are kept — overly broad ones like "not permitted"
+// and "no such file or directory" were removed because they commonly appear
+// in legitimate enumeration output.
+var failurePatterns = []string{
+	"permission denied",
+	"access denied",
+	"operation not permitted",
+	"is required to read the password",
+	"askpass helper",
+	"authentication failure",
+	"command not found",
+	"command timed out",
+	"unable to open",
+	"cannot open",
+	"is not recognized",
+	"password is required",
+}
+
+// maxFailureCheckLen is the maximum output length (in bytes) for which we
+// check failure patterns. Longer outputs are likely legitimate attack results
+// that may incidentally contain error strings (e.g. a credential dump that
+// includes "access denied" log entries from other users).
+const maxFailureCheckLen = 200
+
+// lineMatchesFailure checks if a single line contains any failure pattern.
+func lineMatchesFailure(line string) bool {
+	lower := strings.ToLower(strings.TrimSpace(line))
+	if lower == "" {
+		return false
+	}
+	for _, pattern := range failurePatterns {
+		if strings.Contains(lower, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+// classifyTaskResult determines the actual execution status by looking at
+// the exit code AND the command output. A command that exits 0 but prints
+// "permission denied" is not a successful attack. Empty output with exit 0
+// is considered success since many commands produce no stdout (e.g. file
+// redirections, write operations, cleanup commands) and the agent already
+// handles file output capture.
+func classifyTaskResult(agentSuccess bool, exitCode int, output string) entity.ResultStatus {
+	if !agentSuccess {
+		return entity.StatusFailed
+	}
+
+	trimmed := strings.TrimSpace(output)
+	if trimmed == "" {
+		// Agent reported success with exit 0 — trust the agent's verdict.
+		return entity.StatusSuccess
+	}
+
+	// Skip pattern checking on long outputs — they likely contain real
+	// attack results mixed with incidental error strings.
+	if len(trimmed) > maxFailureCheckLen {
+		return entity.StatusSuccess
+	}
+
+	// Check line-by-line: only classify as failed if EVERY non-empty line
+	// matches a failure pattern. If any line contains real results, the
+	// attack at least partially succeeded.
+	lines := strings.Split(trimmed, "\n")
+	failedLines := 0
+	totalLines := 0
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		totalLines++
+		if lineMatchesFailure(line) {
+			failedLines++
+		}
+	}
+
+	if totalLines > 0 && failedLines == totalLines {
+		return entity.StatusFailed
+	}
+
+	return entity.StatusSuccess
+}
+
 func (h *WebSocketHandler) handleTaskResult(client *websocket.Client, payload json.RawMessage) {
 	var result TaskResultPayload
 	if err := json.Unmarshal(payload, &result); err != nil {
@@ -220,15 +306,13 @@ func (h *WebSocketHandler) handleTaskResult(client *websocket.Client, payload js
 	// Update result in database
 	if h.executionService != nil {
 		ctx := client.Context()
-		status := entity.StatusSuccess
-		if !result.Success {
-			status = entity.StatusFailed
-		}
 
 		output := result.Output
 		if result.Error != "" {
 			output = result.Error + "\n" + output
 		}
+
+		status := classifyTaskResult(result.Success, result.ExitCode, output)
 
 		h.logger.Info("Updating result in database",
 			zap.String("task_id", result.TaskID),

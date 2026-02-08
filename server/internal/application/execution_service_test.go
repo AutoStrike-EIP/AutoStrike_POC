@@ -364,7 +364,7 @@ func TestStartExecutionSuccess(t *testing.T) {
 		ID:   "s1",
 		Name: "Test",
 		Phases: []entity.Phase{
-			{Name: "Phase1", Techniques: []string{"T1059"}},
+			{Name: "Phase1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}},
 		},
 	}
 	techRepo := newMockTechniqueRepo()
@@ -435,7 +435,7 @@ func TestStartExecutionPlanError(t *testing.T) {
 		ID:   "s1",
 		Name: "Test",
 		Phases: []entity.Phase{
-			{Name: "Phase1", Techniques: []string{"T1059"}},
+			{Name: "Phase1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}},
 		},
 	}
 	techRepo := newMockTechniqueRepo()
@@ -467,7 +467,7 @@ func TestStartExecutionCreateError(t *testing.T) {
 		ID:   "s1",
 		Name: "Test",
 		Phases: []entity.Phase{
-			{Name: "Phase1", Techniques: []string{"T1059"}},
+			{Name: "Phase1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}},
 		},
 	}
 	techRepo := newMockTechniqueRepo()
@@ -504,7 +504,7 @@ func TestStartExecutionCreateResultError(t *testing.T) {
 		ID:   "s1",
 		Name: "Test",
 		Phases: []entity.Phase{
-			{Name: "Phase1", Techniques: []string{"T1059"}},
+			{Name: "Phase1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1059"}}},
 		},
 	}
 	techRepo := newMockTechniqueRepo()

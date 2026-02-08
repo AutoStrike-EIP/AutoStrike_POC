@@ -70,9 +70,9 @@ describe('Techniques Page', () => {
     expect(screen.getByText('PowerShell')).toBeInTheDocument();
     expect(screen.getByText('execution')).toBeInTheDocument();
     expect(screen.getByText('windows')).toBeInTheDocument();
-    // "Safe" appears both as column header and as badge - check we have both
-    const safeElements = screen.getAllByText('Safe');
-    expect(safeElements.length).toBeGreaterThanOrEqual(2);
+    // "Safety" column header and "Safe" badge
+    expect(screen.getByText('Safety')).toBeInTheDocument();
+    expect(screen.getByText('Safe')).toBeInTheDocument();
   });
 
   it('renders unsafe technique badge', async () => {
@@ -168,6 +168,165 @@ describe('Techniques Page', () => {
 
     const tacticBadge = await screen.findByText('unknown tactic');
     expect(tacticBadge).toHaveClass('bg-gray-100');
+  });
+});
+
+describe('Techniques Executor Expand', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const mockTechWithExecutors = [
+    {
+      id: 'T1059.001',
+      name: 'PowerShell',
+      description: 'Adversaries may use PowerShell',
+      tactic: 'execution',
+      platforms: ['windows'],
+      is_safe: false,
+      executors: [
+        { name: 'Mimikatz', type: 'psh', platform: 'windows', command: 'Invoke-Mimikatz', timeout: 120, elevation_required: true, is_safe: false },
+        { name: 'Encoded', type: 'psh', platform: 'windows', command: 'powershell -enc base64', cleanup: 'Remove-Item $env:TEMP\\test.ps1', timeout: 60, is_safe: true },
+      ],
+    },
+  ];
+
+  it('expands technique row to show executors on click', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: mockTechWithExecutors } as never);
+
+    renderWithClient(<Techniques />);
+
+    const idButton = await screen.findByText('T1059.001');
+    fireEvent.click(idButton);
+
+    expect(screen.getByText('Executors (2)')).toBeInTheDocument();
+    expect(screen.getByText('Mimikatz')).toBeInTheDocument();
+    expect(screen.getByText('Encoded')).toBeInTheDocument();
+  });
+
+  it('collapses technique row on second click', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: mockTechWithExecutors } as never);
+
+    renderWithClient(<Techniques />);
+
+    const idButton = await screen.findByText('T1059.001');
+    fireEvent.click(idButton);
+    expect(screen.getByText('Executors (2)')).toBeInTheDocument();
+
+    fireEvent.click(idButton);
+    expect(screen.queryByText('Executors (2)')).not.toBeInTheDocument();
+  });
+
+  it('expands executor to show command details', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: mockTechWithExecutors } as never);
+
+    renderWithClient(<Techniques />);
+
+    const idButton = await screen.findByText('T1059.001');
+    fireEvent.click(idButton);
+
+    // Command should not be visible yet
+    expect(screen.queryByText('Invoke-Mimikatz')).not.toBeInTheDocument();
+
+    // Click on Mimikatz executor
+    const mimikatzButton = screen.getByText('Mimikatz').closest('button');
+    fireEvent.click(mimikatzButton!);
+
+    // Command and details should be visible
+    expect(screen.getByText('Invoke-Mimikatz')).toBeInTheDocument();
+    expect(screen.getByText('Command')).toBeInTheDocument();
+    expect(screen.getByText('Timeout: 120s')).toBeInTheDocument();
+  });
+
+  it('shows elevation badge on executor requiring elevation', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: mockTechWithExecutors } as never);
+
+    renderWithClient(<Techniques />);
+
+    const idButton = await screen.findByText('T1059.001');
+    fireEvent.click(idButton);
+
+    // Mimikatz has elevation_required: true
+    expect(screen.getByText('Elevation')).toBeInTheDocument();
+  });
+
+  it('shows cleanup command in expanded executor', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: mockTechWithExecutors } as never);
+
+    renderWithClient(<Techniques />);
+
+    const idButton = await screen.findByText('T1059.001');
+    fireEvent.click(idButton);
+
+    // Expand Encoded executor (has cleanup)
+    const encodedButton = screen.getByText('Encoded').closest('button');
+    fireEvent.click(encodedButton!);
+
+    expect(screen.getByText('Cleanup')).toBeInTheDocument();
+    expect(screen.getByText('Remove-Item $env:TEMP\\test.ps1')).toBeInTheDocument();
+  });
+
+  it('switches between executors showing only one at a time', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: mockTechWithExecutors } as never);
+
+    renderWithClient(<Techniques />);
+
+    const idButton = await screen.findByText('T1059.001');
+    fireEvent.click(idButton);
+
+    // Expand Mimikatz
+    const mimikatzButton = screen.getByText('Mimikatz').closest('button');
+    fireEvent.click(mimikatzButton!);
+    expect(screen.getByText('Invoke-Mimikatz')).toBeInTheDocument();
+
+    // Expand Encoded - Mimikatz should collapse
+    const encodedButton = screen.getByText('Encoded').closest('button');
+    fireEvent.click(encodedButton!);
+    expect(screen.queryByText('Invoke-Mimikatz')).not.toBeInTheDocument();
+    expect(screen.getByText('powershell -enc base64')).toBeInTheDocument();
+  });
+
+  it('shows "No executors available" for technique without executors', async () => {
+    const techNoExecutors = [
+      {
+        id: 'T1566',
+        name: 'Phishing',
+        description: 'Test',
+        tactic: 'initial_access',
+        platforms: ['windows'],
+        is_safe: true,
+        executors: [],
+      },
+    ];
+    vi.mocked(api.get).mockResolvedValue({ data: techNoExecutors } as never);
+
+    renderWithClient(<Techniques />);
+
+    const idButton = await screen.findByText('T1566');
+    fireEvent.click(idButton);
+
+    expect(screen.getByText('No executors available')).toBeInTheDocument();
+  });
+
+  it('resets expanded executor when collapsing technique row', async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: mockTechWithExecutors } as never);
+
+    renderWithClient(<Techniques />);
+
+    const idButton = await screen.findByText('T1059.001');
+    fireEvent.click(idButton);
+
+    // Expand executor
+    const mimikatzButton = screen.getByText('Mimikatz').closest('button');
+    fireEvent.click(mimikatzButton!);
+    expect(screen.getByText('Invoke-Mimikatz')).toBeInTheDocument();
+
+    // Collapse technique row
+    fireEvent.click(idButton);
+
+    // Re-expand technique row - executor should not be expanded
+    fireEvent.click(idButton);
+    expect(screen.queryByText('Invoke-Mimikatz')).not.toBeInTheDocument();
   });
 });
 

@@ -77,9 +77,8 @@ server/
 ├── cmd/autostrike/
 │   └── main.go                    # Entry point, DI, startup
 ├── configs/
-│   └── techniques/                # YAML technique definitions (13 files)
-│       ├── reconnaissance.yaml
-│       ├── initial-access.yaml
+│   └── techniques/                # YAML technique definitions (auto-loaded via os.ReadDir)
+│       ├── initial-access.yaml    # 12 files imported via make import-mitre
 │       ├── execution.yaml
 │       ├── persistence.yaml
 │       ├── privilege-escalation.yaml
@@ -206,6 +205,7 @@ Base URL: `https://localhost:8443/api/v1`
 | `GET` | `/techniques/tactic/:tactic` | `techniques:view` | By tactic |
 | `GET` | `/techniques/platform/:platform` | `techniques:view` | By platform |
 | `GET` | `/techniques/coverage` | `techniques:view` | Coverage statistics |
+| `GET` | `/techniques/:id/executors` | `techniques:view` | List executors (`?platform=`) |
 | `POST` | `/techniques/import` | `techniques:import` | Import from YAML |
 
 ### Scenarios
@@ -435,11 +435,29 @@ type Technique struct {
     ID          string
     Name        string
     Description string
-    Tactic      TacticType
+    Tactic      TacticType     // Primary tactic (retro-compatible)
+    Tactics     []TacticType   // All tactics (multi-tactic support)
     Platforms   []string
     Executors   []Executor
     Detection   []Detection
+    References  []string       // MITRE ATT&CK URLs
     IsSafe      bool
+}
+
+type Executor struct {
+    Name              string // Executor display name (optional)
+    Type              string // cmd, powershell, bash, sh
+    Platform          string // windows, linux, macos (optional)
+    Command           string
+    Cleanup           string
+    Timeout           int
+    ElevationRequired bool   // Needs admin/root privileges (optional)
+    IsSafe            bool   // Safe = !elevation_required && no dangerous patterns
+}
+
+type TechniqueSelection struct {
+    TechniqueID  string // Technique ID
+    ExecutorName string // Preferred executor (empty = auto-select)
 }
 ```
 
@@ -459,15 +477,17 @@ type Execution struct {
 ### ExecutionResult
 ```go
 type ExecutionResult struct {
-    ID          string
-    ExecutionID string
-    TechniqueID string
-    AgentPaw    string
-    Status      ResultStatus // pending, success, blocked, detected, failed
-    Output      string
-    ExitCode    int
-    StartedAt   time.Time
-    CompletedAt *time.Time
+    ID           string
+    ExecutionID  string
+    TechniqueID  string
+    AgentPaw     string
+    Status       ResultStatus // pending, success, blocked, detected, failed
+    Output       string
+    ExitCode     int
+    ExecutorName string       // Name of the executor used
+    Command      string       // The command that was executed
+    StartedAt    time.Time
+    CompletedAt  *time.Time
 }
 ```
 

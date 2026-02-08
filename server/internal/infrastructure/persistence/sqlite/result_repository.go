@@ -140,9 +140,9 @@ func (r *ResultRepository) FindCompletedExecutionsByDateRange(ctx context.Contex
 // CreateResult creates a new execution result
 func (r *ResultRepository) CreateResult(ctx context.Context, result *entity.ExecutionResult) error {
 	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO execution_results (id, execution_id, technique_id, agent_paw, status, started_at)
-		VALUES (?, ?, ?, ?, ?, ?)
-	`, result.ID, result.ExecutionID, result.TechniqueID, result.AgentPaw, result.Status, result.StartedAt)
+		INSERT INTO execution_results (id, execution_id, technique_id, agent_paw, executor_name, command, status, started_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, result.ID, result.ExecutionID, result.TechniqueID, result.AgentPaw, result.ExecutorName, result.Command, result.Status, result.StartedAt)
 
 	return err
 }
@@ -160,12 +160,12 @@ func (r *ResultRepository) UpdateResult(ctx context.Context, result *entity.Exec
 // FindResultByID finds a result by its ID
 func (r *ResultRepository) FindResultByID(ctx context.Context, id string) (*entity.ExecutionResult, error) {
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, execution_id, technique_id, agent_paw, status, output, exit_code, detected, started_at, completed_at
+		SELECT id, execution_id, technique_id, agent_paw, executor_name, command, status, output, exit_code, detected, started_at, completed_at
 		FROM execution_results WHERE id = ?
 	`, id)
 
 	result := &entity.ExecutionResult{}
-	var output sql.NullString
+	var executorName, command, output sql.NullString
 	var completedAt sql.NullTime
 
 	err := row.Scan(
@@ -173,6 +173,8 @@ func (r *ResultRepository) FindResultByID(ctx context.Context, id string) (*enti
 		&result.ExecutionID,
 		&result.TechniqueID,
 		&result.AgentPaw,
+		&executorName,
+		&command,
 		&result.Status,
 		&output,
 		&result.ExitCode,
@@ -184,6 +186,12 @@ func (r *ResultRepository) FindResultByID(ctx context.Context, id string) (*enti
 		return nil, err
 	}
 
+	if executorName.Valid {
+		result.ExecutorName = executorName.String
+	}
+	if command.Valid {
+		result.Command = command.String
+	}
 	if output.Valid {
 		result.Output = output.String
 	}
@@ -197,7 +205,7 @@ func (r *ResultRepository) FindResultByID(ctx context.Context, id string) (*enti
 // FindResultsByExecution finds results by execution ID
 func (r *ResultRepository) FindResultsByExecution(ctx context.Context, executionID string) ([]*entity.ExecutionResult, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, execution_id, technique_id, agent_paw, status, output, exit_code, detected, started_at, completed_at
+		SELECT id, execution_id, technique_id, agent_paw, executor_name, command, status, output, exit_code, detected, started_at, completed_at
 		FROM execution_results WHERE execution_id = ? ORDER BY started_at
 	`, executionID)
 	if err != nil {
@@ -211,7 +219,7 @@ func (r *ResultRepository) FindResultsByExecution(ctx context.Context, execution
 // FindResultsByTechnique finds results by technique ID
 func (r *ResultRepository) FindResultsByTechnique(ctx context.Context, techniqueID string) ([]*entity.ExecutionResult, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, execution_id, technique_id, agent_paw, status, output, exit_code, detected, started_at, completed_at
+		SELECT id, execution_id, technique_id, agent_paw, executor_name, command, status, output, exit_code, detected, started_at, completed_at
 		FROM execution_results WHERE technique_id = ? ORDER BY started_at DESC
 	`, techniqueID)
 	if err != nil {
@@ -257,15 +265,21 @@ func (r *ResultRepository) scanResults(rows *sql.Rows) ([]*entity.ExecutionResul
 
 	for rows.Next() {
 		result := &entity.ExecutionResult{}
-		var output sql.NullString
+		var executorName, command, output sql.NullString
 		var completedAt sql.NullTime
 
 		err := rows.Scan(&result.ID, &result.ExecutionID, &result.TechniqueID, &result.AgentPaw,
-			&result.Status, &output, &result.ExitCode, &result.Detected, &result.StartedAt, &completedAt)
+			&executorName, &command, &result.Status, &output, &result.ExitCode, &result.Detected, &result.StartedAt, &completedAt)
 		if err != nil {
 			return nil, err
 		}
 
+		if executorName.Valid {
+			result.ExecutorName = executorName.String
+		}
+		if command.Valid {
+			result.Command = command.String
+		}
 		if output.Valid {
 			result.Output = output.String
 		}
