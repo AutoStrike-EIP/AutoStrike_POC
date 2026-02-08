@@ -75,12 +75,19 @@ impl AgentClient {
     }
 
     /// Runs the agent client with automatic reconnection on failure.
+    ///
+    /// The mpsc channel is created here (not inside connect_and_run) so that
+    /// in-flight task results survive WebSocket reconnections. Spawned tasks
+    /// hold a clone of `tx`; if the connection drops while they execute, their
+    /// results are buffered in the channel and delivered on the next connection.
     pub async fn run(&mut self) -> Result<()> {
         let mut retry_delay = Duration::from_secs(1);
         let max_delay = Duration::from_secs(60);
 
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(256);
+
         loop {
-            match self.connect_and_run().await {
+            match self.connect_and_run(&tx, &mut rx).await {
                 Ok(_) => {
                     retry_delay = Duration::from_secs(1);
                     info!("Connection closed, reconnecting...");
@@ -98,7 +105,11 @@ impl AgentClient {
         }
     }
 
-    async fn connect_and_run(&mut self) -> Result<()> {
+    async fn connect_and_run(
+        &mut self,
+        tx: &tokio::sync::mpsc::Sender<String>,
+        rx: &mut tokio::sync::mpsc::Receiver<String>,
+    ) -> Result<()> {
         let ws_url = self
             .config
             .server_url
@@ -143,10 +154,8 @@ impl AgentClient {
         let heartbeat_interval = self.config.heartbeat_interval;
         let paw = self.config.paw.clone();
 
-        let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(32);
-
         let tx_heartbeat = tx.clone();
-        tokio::spawn(async move {
+        let heartbeat_handle = tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(heartbeat_interval));
             loop {
                 interval.tick().await;
@@ -168,10 +177,12 @@ impl AgentClient {
             }
         });
 
-        loop {
+        let result: Result<()> = loop {
             tokio::select! {
                 Some(msg) = rx.recv() => {
-                    write.send(WsMessage::Text(msg)).await?;
+                    if let Err(e) = write.send(WsMessage::Text(msg)).await {
+                        break Err(e.into());
+                    }
                 }
 
                 msg = read.next() => {
@@ -179,7 +190,9 @@ impl AgentClient {
                         Some(Ok(WsMessage::Text(text))) => {
                             match serde_json::from_str::<AgentMessage>(&text) {
                                 Ok(agent_msg) => {
-                                    self.handle_message(agent_msg, &tx).await?;
+                                    if let Err(e) = self.handle_message(agent_msg, tx).await {
+                                        break Err(e);
+                                    }
                                 }
                                 Err(e) => {
                                     warn!("Failed to parse message: {} - content: {}", e, text);
@@ -187,24 +200,29 @@ impl AgentClient {
                             }
                         }
                         Some(Ok(WsMessage::Ping(data))) => {
-                            write.send(WsMessage::Pong(data)).await?;
+                            if let Err(e) = write.send(WsMessage::Pong(data)).await {
+                                break Err(e.into());
+                            }
                         }
                         Some(Ok(WsMessage::Close(_))) => {
                             info!("Server closed connection");
-                            break;
+                            break Ok(());
                         }
                         Some(Err(e)) => {
                             error!("WebSocket error: {}", e);
-                            break;
+                            break Err(e.into());
                         }
-                        None => break,
+                        None => break Ok(()),
                         _ => {}
                     }
                 }
             }
-        }
+        };
 
-        Ok(())
+        // Stop heartbeat to prevent duplicate heartbeats after reconnect
+        heartbeat_handle.abort();
+
+        result
     }
 
     /// Handles incoming messages from the server.

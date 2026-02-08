@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	writeWait      = 10 * time.Second
+	writeWait      = 30 * time.Second
 	pongWait       = 5 * time.Minute // Agents may block on long-running tasks
 	pingPeriod     = (pongWait * 9) / 10
-	maxMessageSize = 512 * 1024 // 512KB
+	maxMessageSize = 2 * 1024 * 1024 // 2MB — must exceed agent's 1MB output limit + JSON overhead
 )
 
 // Client represents a WebSocket client connection
