@@ -90,6 +90,23 @@ fn normalize_path(path: &Path) -> PathBuf {
     components.iter().collect()
 }
 
+/// Resolves a suffix relative to the system temp directory, normalizing to prevent traversal.
+/// Returns `None` if the resolved path escapes the temp directory.
+fn resolve_temp_suffix(suffix: &str) -> Option<PathBuf> {
+    let base = lookup_temp_dir().unwrap_or_else(|| "/tmp".to_string());
+    let resolved = normalize_path(&PathBuf::from(base).join(suffix));
+    let temp = normalize_path(&std::env::temp_dir());
+    if resolved.starts_with(&temp) || resolved.starts_with("/tmp") {
+        return Some(resolved);
+    }
+    None
+}
+
+/// Resolves a suffix relative to the user home directory.
+fn resolve_home_suffix(suffix: &str) -> Option<PathBuf> {
+    lookup_home_dir().map(|home| PathBuf::from(home).join(suffix))
+}
+
 /// Resolves a raw path string (potentially containing environment variables) to an absolute path.
 /// Unix paths are normalized and validated to stay within `/tmp/`.
 /// Environment variable paths are normalized to prevent traversal via `..` in suffixes.
@@ -97,10 +114,11 @@ pub fn resolve_path(raw_path: &str) -> Option<PathBuf> {
     // Unix absolute paths — normalize and verify /tmp/ containment
     if raw_path.starts_with('/') {
         let normalized = normalize_path(&PathBuf::from(raw_path));
-        if normalized.starts_with("/tmp") {
-            return Some(normalized);
-        }
-        return None;
+        return if normalized.starts_with("/tmp") {
+            Some(normalized)
+        } else {
+            None
+        };
     }
 
     // Windows absolute paths (e.g. C:\Users\...)
@@ -113,40 +131,20 @@ pub fn resolve_path(raw_path: &str) -> Option<PathBuf> {
 
     let lower = raw_path.to_lowercase();
 
-    // PowerShell $env:TEMP\...
+    // PowerShell $env:TEMP\... or Windows cmd %temp%\...
     if lower.starts_with("$env:temp\\") || lower.starts_with("$env:temp/") {
-        let suffix = &raw_path[10..];
-        let base = lookup_temp_dir().unwrap_or_else(|| "/tmp".to_string());
-        let resolved = normalize_path(&PathBuf::from(base).join(suffix));
-        let temp = normalize_path(&std::env::temp_dir());
-        if resolved.starts_with(&temp) || resolved.starts_with("/tmp") {
-            return Some(resolved);
-        }
-        return None;
+        return resolve_temp_suffix(&raw_path[10..]);
     }
-
-    // PowerShell $env:USERPROFILE\...
-    if lower.starts_with("$env:userprofile\\") || lower.starts_with("$env:userprofile/") {
-        let suffix = &raw_path[17..];
-        return lookup_home_dir().map(|home| PathBuf::from(home).join(suffix));
-    }
-
-    // Windows cmd %temp%\...
     if lower.starts_with("%temp%\\") || lower.starts_with("%temp%/") {
-        let suffix = &raw_path[7..];
-        let base = lookup_temp_dir().unwrap_or_else(|| "/tmp".to_string());
-        let resolved = normalize_path(&PathBuf::from(base).join(suffix));
-        let temp = normalize_path(&std::env::temp_dir());
-        if resolved.starts_with(&temp) || resolved.starts_with("/tmp") {
-            return Some(resolved);
-        }
-        return None;
+        return resolve_temp_suffix(&raw_path[7..]);
     }
 
-    // Windows cmd %userprofile%\...
+    // PowerShell $env:USERPROFILE\... or Windows cmd %userprofile%\...
+    if lower.starts_with("$env:userprofile\\") || lower.starts_with("$env:userprofile/") {
+        return resolve_home_suffix(&raw_path[17..]);
+    }
     if lower.starts_with("%userprofile%\\") || lower.starts_with("%userprofile%/") {
-        let suffix = &raw_path[14..];
-        return lookup_home_dir().map(|home| PathBuf::from(home).join(suffix));
+        return resolve_home_suffix(&raw_path[14..]);
     }
 
     None
