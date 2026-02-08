@@ -45,13 +45,15 @@ type ExecutionPlan struct {
 
 // PlannedTask represents a single task in the execution plan
 type PlannedTask struct {
-	TechniqueID string
-	AgentPaw    string
-	Phase       string
-	Order       int
-	Command     string
-	Cleanup     string
-	Timeout     int
+	TechniqueID  string
+	AgentPaw     string
+	Phase        string
+	Order        int
+	Command      string
+	Cleanup      string
+	Timeout      int
+	ExecutorName string // Name of the executor (for display/debugging)
+	ExecutorType string // Type of executor (sh, bash, cmd, powershell)
 }
 
 // PlanExecution creates an execution plan for a scenario
@@ -98,11 +100,9 @@ func (o *AttackOrchestrator) planPhase(
 		}
 
 		for _, agent := range targetAgents {
-			task := o.createTaskForAgent(agent, technique, selection.ExecutorName, phase.Name, taskOrder)
-			if task != nil {
-				tasks = append(tasks, *task)
-				taskOrder++
-			}
+			agentTasks := o.createTasksForAgent(agent, technique, selection.ExecutorName, phase.Name, taskOrder)
+			tasks = append(tasks, agentTasks...)
+			taskOrder += len(agentTasks)
 		}
 	}
 
@@ -145,39 +145,64 @@ func (o *AttackOrchestrator) getTechnique(ctx context.Context, techID string, sa
 	return technique
 }
 
-// createTaskForAgent creates a task if the agent is compatible
-func (o *AttackOrchestrator) createTaskForAgent(
+// createTasksForAgent creates tasks for all compatible executors on the agent.
+// If executorName is specified, only that executor is used (single task).
+// If executorName is empty, ALL compatible executors are used (multiple tasks).
+func (o *AttackOrchestrator) createTasksForAgent(
 	agent *entity.Agent,
 	technique *entity.Technique,
 	executorName string,
 	phaseName string,
-	order int,
-) *PlannedTask {
+	startOrder int,
+) []PlannedTask {
 	if !agent.IsCompatible(technique) {
 		return nil
 	}
 
-	var executor *entity.Executor
+	// If a specific executor is requested, use only that one
 	if executorName != "" {
-		executor = technique.GetExecutorByName(executorName, agent.Platform, agent.Executors)
+		executor := technique.GetExecutorByName(executorName, agent.Platform, agent.Executors)
+		if executor == nil {
+			// Fallback to auto-select first compatible executor
+			executor = technique.GetExecutorForPlatform(agent.Platform, agent.Executors)
+		}
+		if executor == nil {
+			return nil
+		}
+		return []PlannedTask{{
+			TechniqueID:  technique.ID,
+			AgentPaw:     agent.Paw,
+			Phase:        phaseName,
+			Order:        startOrder,
+			Command:      executor.Command,
+			Cleanup:      executor.Cleanup,
+			Timeout:      executor.Timeout,
+			ExecutorName: executor.Name,
+			ExecutorType: executor.Type,
+		}}
 	}
-	// Fallback to auto-select if no executor name or not found
-	if executor == nil {
-		executor = technique.GetExecutorForPlatform(agent.Platform, agent.Executors)
-	}
-	if executor == nil {
+
+	// No executor name: run ALL compatible executors
+	executors := technique.GetExecutorsForPlatform(agent.Platform, agent.Executors)
+	if len(executors) == 0 {
 		return nil
 	}
 
-	return &PlannedTask{
-		TechniqueID: technique.ID,
-		AgentPaw:    agent.Paw,
-		Phase:       phaseName,
-		Order:       order,
-		Command:     executor.Command,
-		Cleanup:     executor.Cleanup,
-		Timeout:     executor.Timeout,
+	tasks := make([]PlannedTask, 0, len(executors))
+	for i, exec := range executors {
+		tasks = append(tasks, PlannedTask{
+			TechniqueID:  technique.ID,
+			AgentPaw:     agent.Paw,
+			Phase:        phaseName,
+			Order:        startOrder + i,
+			Command:      exec.Command,
+			Cleanup:      exec.Cleanup,
+			Timeout:      exec.Timeout,
+			ExecutorName: exec.Name,
+			ExecutorType: exec.Type,
+		})
 	}
+	return tasks
 }
 
 // ValidatePlan validates an execution plan

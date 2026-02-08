@@ -21,7 +21,7 @@ import {
   ExclamationTriangleIcon,
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
-import { analyticsApi, ScoreComparison, ScoreTrend, ExecutionSummary } from '../lib/api';
+import { analyticsApi, scenarioApi, ScoreComparison, ScoreTrend, ExecutionSummary, Scenario } from '../lib/api';
 import { LoadingState } from '../components/LoadingState';
 
 ChartJS.register(
@@ -80,6 +80,15 @@ export default function Analytics() {
     queryKey: ['analytics', 'summary', period],
     queryFn: () => analyticsApi.summary(period).then((res) => res.data),
   });
+
+  const { data: scenarios } = useQuery<Scenario[]>({
+    queryKey: ['scenarios'],
+    queryFn: () => scenarioApi.list().then((res) => res.data),
+  });
+
+  const scenarioNames = new Map(
+    (scenarios || []).map((s) => [s.id, s.name])
+  );
 
   const isLoading = comparisonLoading || trendLoading || summaryLoading;
   const hasError = comparisonError || trendError || summaryError;
@@ -359,8 +368,8 @@ export default function Analytics() {
           <div className="space-y-3 max-h-64 overflow-y-auto">
             {Object.entries(summary?.scores_by_scenario || {}).map(([scenarioId, score]) => (
               <div key={scenarioId} className="flex justify-between items-center">
-                <span className="text-gray-700 dark:text-gray-300 truncate max-w-[60%]" title={scenarioId}>
-                  {scenarioId}
+                <span className="text-gray-700 dark:text-gray-300 truncate max-w-[60%]" title={scenarioNames.get(scenarioId) || scenarioId}>
+                  {scenarioNames.get(scenarioId) || scenarioId}
                 </span>
                 <div className="flex items-center gap-2">
                   <div className="w-24 bg-gray-200 dark:bg-gray-700 rounded-full h-2">

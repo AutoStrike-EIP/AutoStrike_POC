@@ -1491,3 +1491,68 @@ func TestWebSocketHandler_HandleTaskResult_FailedResultWithError(t *testing.T) {
 		t.Errorf("Expected status 'failed', got '%s'", result.Status)
 	}
 }
+
+func TestClassifyTaskResult_TrueSuccess(t *testing.T) {
+	status := classifyTaskResult(true, 0, "Linux Epitek2 6.14.0 x86_64")
+	if status != entity.StatusSuccess {
+		t.Errorf("Expected success, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_ExitCodeNonZero(t *testing.T) {
+	status := classifyTaskResult(false, 1, "some error")
+	if status != entity.StatusFailed {
+		t.Errorf("Expected failed, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_PermissionDenied(t *testing.T) {
+	status := classifyTaskResult(true, 0, "cat: /etc/shadow: Permission denied")
+	if status != entity.StatusFailed {
+		t.Errorf("Expected failed for permission denied, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_SudoPasswordRequired(t *testing.T) {
+	output := "sudo: a terminal is required to read the password; either use the -S option"
+	status := classifyTaskResult(true, 0, output)
+	if status != entity.StatusFailed {
+		t.Errorf("Expected failed for sudo password required, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_CommandTimedOut(t *testing.T) {
+	status := classifyTaskResult(true, 0, "Command timed out")
+	if status != entity.StatusFailed {
+		t.Errorf("Expected failed for timeout, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_CommandNotFound(t *testing.T) {
+	status := classifyTaskResult(true, 0, "bash: netstat: command not found")
+	if status != entity.StatusFailed {
+		t.Errorf("Expected failed for command not found, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_EmptyOutputIsFailed(t *testing.T) {
+	// Empty output = attack produced no results (no data exfiltrated)
+	status := classifyTaskResult(true, 0, "")
+	if status != entity.StatusFailed {
+		t.Errorf("Expected failed for empty output, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_WhitespaceOnlyIsFailed(t *testing.T) {
+	status := classifyTaskResult(true, 0, "   \n\t  ")
+	if status != entity.StatusFailed {
+		t.Errorf("Expected failed for whitespace-only output, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_CaseInsensitive(t *testing.T) {
+	status := classifyTaskResult(true, 0, "ACCESS DENIED by security policy")
+	if status != entity.StatusFailed {
+		t.Errorf("Expected failed for ACCESS DENIED, got %s", status)
+	}
+}

@@ -196,6 +196,10 @@ export interface ExecutionResult {
   technique_id: string;
   /** Agent that executed the technique */
   agent_paw: string;
+  /** Name of the executor that was used */
+  executor_name?: string;
+  /** The command that was executed */
+  command?: string;
   /** Result status */
   status: 'blocked' | 'detected' | 'successful' | 'failed' | 'skipped';
   /** Command output */

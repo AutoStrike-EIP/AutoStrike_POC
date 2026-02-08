@@ -70,8 +70,15 @@ func (h *Hub) handleUnregister(client *Client) {
 		delete(h.clients, client)
 		paw = client.GetAgentPaw()
 		if paw != "" {
-			delete(h.agents, paw)
-			h.logger.Info("Agent disconnected", zap.String("paw", paw))
+			// Only remove from agents map if THIS client is the one registered.
+			// A newer connection with the same paw may have replaced it.
+			if h.agents[paw] == client {
+				delete(h.agents, paw)
+				h.logger.Info("Agent disconnected", zap.String("paw", paw))
+			} else {
+				h.logger.Info("Stale agent connection closed", zap.String("paw", paw))
+				paw = "" // Don't fire disconnect callback for stale connection
+			}
 		}
 		close(client.send)
 	}
@@ -85,30 +92,19 @@ func (h *Hub) handleUnregister(client *Client) {
 
 // handleBroadcast handles message broadcasting with proper mutex handling
 func (h *Hub) handleBroadcast(message []byte) {
-	var disconnectedPaws []string
-
 	h.mu.Lock()
 	for client := range h.clients {
 		select {
 		case client.send <- message:
 		default:
-			close(client.send)
-			delete(h.clients, client)
-			paw := client.GetAgentPaw()
-			if paw != "" {
-				delete(h.agents, paw)
-				disconnectedPaws = append(disconnectedPaws, paw)
-			}
+			// Channel full — skip this client instead of disconnecting it.
+			// A temporarily full buffer is not a fatal condition.
+			h.logger.Warn("Broadcast: send channel full, skipping client",
+				zap.String("paw", client.GetAgentPaw()),
+			)
 		}
 	}
 	h.mu.Unlock()
-
-	// Call disconnect callbacks outside of lock to avoid deadlock
-	if h.onAgentDisconnect != nil {
-		for _, paw := range disconnectedPaws {
-			h.onAgentDisconnect(paw)
-		}
-	}
 }
 
 // SendToAgent sends a message to a specific agent

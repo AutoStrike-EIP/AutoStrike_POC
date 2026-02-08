@@ -36,6 +36,9 @@ clap = { version = "4.4", features = ["derive"] }
 # Error handling
 anyhow = "1.0"
 
+# Regex for output file path extraction
+regex = "1.10"
+
 # Pin home to avoid edition2024 requirement
 home = "=0.5.9"
 

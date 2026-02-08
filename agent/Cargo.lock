@@ -89,6 +89,7 @@ dependencies = [
  "futures-util",
  "home",
  "nix",
+ "regex",
  "serde 1.0.228",
  "serde_json",
  "sysinfo",

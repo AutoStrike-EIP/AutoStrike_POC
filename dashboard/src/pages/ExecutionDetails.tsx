@@ -1,8 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeftIcon, CheckCircleIcon, XCircleIcon, ExclamationTriangleIcon, ClockIcon } from '@heroicons/react/24/outline';
-import { executionApi } from '../lib/api';
-import { Execution, ExecutionResult } from '../types';
+import { executionApi, scenarioApi } from '../lib/api';
+import { Execution, ExecutionResult, Scenario } from '../types';
 import { LoadingState } from '../components/LoadingState';
 import { formatDistanceToNow, format } from 'date-fns';
 
@@ -91,6 +91,12 @@ export default function ExecutionDetails() {
     },
   });
 
+  const { data: scenario } = useQuery<Scenario>({
+    queryKey: ['scenario', execution?.scenario_id],
+    queryFn: () => scenarioApi.get(execution!.scenario_id).then(res => res.data),
+    enabled: !!execution?.scenario_id,
+  });
+
   if (loadingExecution || loadingResults) {
     return <LoadingState message="Loading execution details..." />;
   }
@@ -149,7 +155,7 @@ export default function ExecutionDetails() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400">Scenario</p>
-            <p className="font-semibold text-gray-900 dark:text-gray-100">{execution.scenario_id}</p>
+            <p className="font-semibold text-gray-900 dark:text-gray-100">{scenario?.name || execution.scenario_id}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500 dark:text-gray-400">Mode</p>
@@ -178,7 +184,7 @@ export default function ExecutionDetails() {
         {execution.score && (
           <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">Security Score Breakdown</h3>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-5 gap-4">
               <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
                 <p className="text-2xl font-bold text-green-700 dark:text-green-400">{execution.score.blocked}</p>
                 <p className="text-sm text-green-600 dark:text-green-500">Blocked</p>
@@ -190,6 +196,12 @@ export default function ExecutionDetails() {
               <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
                 <p className="text-2xl font-bold text-red-700 dark:text-red-400">{execution.score.successful}</p>
                 <p className="text-sm text-red-600 dark:text-red-500">Successful Attacks</p>
+              </div>
+              <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                <p className="text-2xl font-bold text-orange-700 dark:text-orange-400">
+                  {execution.score.total - (execution.score.blocked || 0) - (execution.score.detected || 0) - (execution.score.successful || 0)}
+                </p>
+                <p className="text-sm text-orange-600 dark:text-orange-500">Failed</p>
               </div>
               <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                 <p className="text-2xl font-bold text-gray-700 dark:text-gray-200">{execution.score.total}</p>
@@ -213,6 +225,9 @@ export default function ExecutionDetails() {
                     Technique
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Executor
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Agent
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -230,6 +245,19 @@ export default function ExecutionDetails() {
                     <tr key={result.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <p className="font-medium font-mono text-gray-900 dark:text-gray-100">{result.technique_id}</p>
+                      </td>
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-gray-900 dark:text-gray-100">{result.executor_name || '-'}</p>
+                        {result.command && (
+                          <details className="cursor-pointer mt-1">
+                            <summary className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                              View input
+                            </summary>
+                            <pre className="mt-1 p-2 bg-gray-900 text-gray-100 rounded text-xs overflow-x-auto max-h-32 overflow-y-auto">
+                              {result.command}
+                            </pre>
+                          </details>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <p className="text-sm text-gray-600 dark:text-gray-400">{result.agent_paw}</p>

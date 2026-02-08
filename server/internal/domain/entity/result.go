@@ -20,19 +20,21 @@ const (
 
 // ExecutionResult represents the result of a single technique execution
 type ExecutionResult struct {
-	ID          string        `json:"id"`
-	ExecutionID string        `json:"execution_id"`
-	TechniqueID string        `json:"technique_id"`
-	AgentPaw    string        `json:"agent_paw"`
-	Status      ResultStatus  `json:"status"`
-	Output      string        `json:"output,omitempty"` // Base64 encoded
-	Stderr      string        `json:"stderr,omitempty"` // Base64 encoded
-	ExitCode    int           `json:"exit_code"`
-	Detected    bool          `json:"detected"`              // Was the technique detected?
-	DetectedBy  string        `json:"detected_by,omitempty"` // "Windows Defender", "CrowdStrike"
-	StartedAt   time.Time     `json:"started_at"`
-	CompletedAt *time.Time    `json:"completed_at,omitempty"`
-	Duration    time.Duration `json:"duration_ms"`
+	ID           string        `json:"id"`
+	ExecutionID  string        `json:"execution_id"`
+	TechniqueID  string        `json:"technique_id"`
+	AgentPaw     string        `json:"agent_paw"`
+	ExecutorName string        `json:"executor_name,omitempty"` // Which executor was used
+	Command      string        `json:"command,omitempty"`       // The command that was executed
+	Status       ResultStatus  `json:"status"`
+	Output       string        `json:"output"`                  // Command output (always present)
+	Stderr       string        `json:"stderr,omitempty"`        // Base64 encoded
+	ExitCode     int           `json:"exit_code"`
+	Detected     bool          `json:"detected"`                // Was the technique detected?
+	DetectedBy   string        `json:"detected_by,omitempty"`   // "Windows Defender", "CrowdStrike"
+	StartedAt    time.Time     `json:"started_at"`
+	CompletedAt  *time.Time    `json:"completed_at,omitempty"`
+	Duration     time.Duration `json:"duration_ms"`
 }
 
 // Execution represents a scenario execution session

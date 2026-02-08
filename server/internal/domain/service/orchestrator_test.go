@@ -609,6 +609,123 @@ func TestExecutionPlan_Struct(t *testing.T) {
 	}
 }
 
+func TestAttackOrchestrator_PlanExecution_AllExecutors(t *testing.T) {
+	// Technique with 3 linux executors — all should produce tasks when no executor name is specified
+	technique := &entity.Technique{
+		ID:        "T1552.001",
+		Name:      "Credentials In Files",
+		Platforms: []string{"linux"},
+		Executors: []entity.Executor{
+			{Name: "Find AWS credentials", Type: "sh", Platform: "linux", Command: "find //.aws -name credentials 2>/dev/null", Timeout: 60, IsSafe: true},
+			{Name: "Find Github Credentials", Type: "bash", Platform: "linux", Command: "find /home -name .netrc 2>/dev/null", Timeout: 60, IsSafe: true},
+			{Name: "Find Azure credentials", Type: "sh", Platform: "linux", Command: "find //.azure -name msal_token_cache.json 2>/dev/null", Timeout: 60, IsSafe: true},
+		},
+		IsSafe: true,
+	}
+
+	techRepo := &mockTechniqueRepo{
+		techniques: map[string]*entity.Technique{"T1552.001": technique},
+	}
+	agentRepo := &mockAgentRepo{}
+	validator := NewTechniqueValidator()
+	orchestrator := NewAttackOrchestrator(agentRepo, techRepo, validator, nil)
+
+	agent := &entity.Agent{
+		Paw:       "linux-agent",
+		Platform:  "linux",
+		Executors: []string{"sh", "bash"},
+		Status:    entity.AgentOnline,
+	}
+
+	scenario := &entity.Scenario{
+		ID:   "test-scenario",
+		Name: "Credential Test",
+		Phases: []entity.Phase{
+			{Name: "Credentials", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1552.001"}}},
+		},
+	}
+
+	plan, err := orchestrator.PlanExecution(context.Background(), scenario, []*entity.Agent{agent}, false)
+	if err != nil {
+		t.Fatalf("PlanExecution returned error: %v", err)
+	}
+
+	// All 3 executors should produce tasks
+	if len(plan.Tasks) != 3 {
+		t.Fatalf("Expected 3 tasks (one per executor), got %d", len(plan.Tasks))
+	}
+
+	// Verify each task has different executor names
+	names := map[string]bool{}
+	for _, task := range plan.Tasks {
+		names[task.ExecutorName] = true
+		if task.TechniqueID != "T1552.001" {
+			t.Errorf("Expected technique T1552.001, got %s", task.TechniqueID)
+		}
+		if task.ExecutorType == "" {
+			t.Error("ExecutorType should not be empty")
+		}
+	}
+	if len(names) != 3 {
+		t.Errorf("Expected 3 unique executor names, got %d", len(names))
+	}
+}
+
+func TestAttackOrchestrator_PlanExecution_NamedExecutorStillSingle(t *testing.T) {
+	// When executor_name is specified, only that executor should run (even with multiple available)
+	technique := &entity.Technique{
+		ID:        "T1552.001",
+		Name:      "Credentials In Files",
+		Platforms: []string{"linux"},
+		Executors: []entity.Executor{
+			{Name: "Find AWS credentials", Type: "sh", Platform: "linux", Command: "find //.aws", Timeout: 60, IsSafe: true},
+			{Name: "Find Github Credentials", Type: "bash", Platform: "linux", Command: "find /home -name .netrc", Timeout: 60, IsSafe: true},
+			{Name: "Find Azure credentials", Type: "sh", Platform: "linux", Command: "find //.azure", Timeout: 60, IsSafe: true},
+		},
+		IsSafe: true,
+	}
+
+	techRepo := &mockTechniqueRepo{
+		techniques: map[string]*entity.Technique{"T1552.001": technique},
+	}
+	agentRepo := &mockAgentRepo{}
+	validator := NewTechniqueValidator()
+	orchestrator := NewAttackOrchestrator(agentRepo, techRepo, validator, nil)
+
+	agent := &entity.Agent{
+		Paw:       "linux-agent",
+		Platform:  "linux",
+		Executors: []string{"sh", "bash"},
+		Status:    entity.AgentOnline,
+	}
+
+	scenario := &entity.Scenario{
+		ID:   "test-scenario",
+		Name: "Credential Test",
+		Phases: []entity.Phase{
+			{Name: "Credentials", Techniques: []entity.TechniqueSelection{
+				{TechniqueID: "T1552.001", ExecutorName: "Find Github Credentials"},
+			}},
+		},
+	}
+
+	plan, err := orchestrator.PlanExecution(context.Background(), scenario, []*entity.Agent{agent}, false)
+	if err != nil {
+		t.Fatalf("PlanExecution returned error: %v", err)
+	}
+
+	// Only 1 task — the named executor
+	if len(plan.Tasks) != 1 {
+		t.Fatalf("Expected 1 task (named executor only), got %d", len(plan.Tasks))
+	}
+	if plan.Tasks[0].Command != "find /home -name .netrc" {
+		t.Errorf("Expected Github credentials command, got '%s'", plan.Tasks[0].Command)
+	}
+	if plan.Tasks[0].ExecutorName != "Find Github Credentials" {
+		t.Errorf("Expected executor name 'Find Github Credentials', got '%s'", plan.Tasks[0].ExecutorName)
+	}
+}
+
 func TestAttackOrchestrator_PlanExecution_SafeMode_BackwardCompat(t *testing.T) {
 	// Technique is marked safe but ALL executors have IsSafe: false (legacy format).
 	// This triggers the backward compatibility path at lines 133-137 where

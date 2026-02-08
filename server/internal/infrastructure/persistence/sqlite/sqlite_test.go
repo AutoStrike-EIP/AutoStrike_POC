@@ -3626,17 +3626,41 @@ func TestMigrate_AddColumnsToExistingTable(t *testing.T) {
 		t.Fatalf("Failed to create techniques table: %v", err)
 	}
 
+	// Create a minimal execution_results table WITHOUT executor_name and command
+	_, err = db.Exec(`CREATE TABLE execution_results (
+		id TEXT PRIMARY KEY,
+		execution_id TEXT NOT NULL,
+		technique_id TEXT NOT NULL,
+		agent_paw TEXT NOT NULL,
+		status TEXT NOT NULL,
+		output TEXT,
+		exit_code INTEGER DEFAULT 0,
+		detected BOOLEAN DEFAULT 0,
+		started_at DATETIME NOT NULL,
+		completed_at DATETIME
+	)`)
+	if err != nil {
+		t.Fatalf("Failed to create execution_results table: %v", err)
+	}
+
 	// Migrate should add the missing columns via ALTER TABLE
 	err = Migrate(db)
 	if err != nil {
 		t.Fatalf("Migrate failed: %v", err)
 	}
 
-	// Verify columns were added
+	// Verify columns were added to users
 	_, err = db.Exec(`INSERT INTO users (id, username, email, password_hash, role, is_active, last_login_at, created_at, updated_at)
 		VALUES ('u1', 'testuser', 'test@test.com', 'hash', 'admin', 1, datetime('now'), datetime('now'), datetime('now'))`)
 	if err != nil {
-		t.Fatalf("Failed to insert with new columns: %v", err)
+		t.Fatalf("Failed to insert with new user columns: %v", err)
+	}
+
+	// Verify executor_name and command columns were added to execution_results
+	_, err = db.Exec(`INSERT INTO execution_results (id, execution_id, technique_id, agent_paw, status, executor_name, command, started_at)
+		VALUES ('r1', 'e1', 't1', 'a1', 'completed', 'Find AWS Creds', 'find / -name credentials', datetime('now'))`)
+	if err != nil {
+		t.Fatalf("Failed to insert with new execution_results columns: %v", err)
 	}
 }
 

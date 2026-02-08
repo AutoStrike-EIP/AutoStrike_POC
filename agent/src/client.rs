@@ -66,20 +66,12 @@ pub struct AgentClient {
     pub config: AgentConfig,
     /// System information.
     pub sys_info: SystemInfo,
-    /// Command executor instance.
-    pub executor: CommandExecutor,
 }
 
 impl AgentClient {
     /// Creates a new agent client with the given configuration and system info.
     pub fn new(config: AgentConfig, sys_info: SystemInfo) -> Result<Self> {
-        let executor = CommandExecutor::new();
-
-        Ok(Self {
-            config,
-            sys_info,
-            executor,
-        })
+        Ok(Self { config, sys_info })
     }
 
     /// Runs the agent client with automatic reconnection on failure.
@@ -216,6 +208,9 @@ impl AgentClient {
     }
 
     /// Handles incoming messages from the server.
+    ///
+    /// Task execution is spawned as a separate tokio task so it doesn't block
+    /// the WebSocket read loop (which must stay responsive for pings/pongs).
     pub async fn handle_message(
         &self,
         msg: AgentMessage,
@@ -226,7 +221,12 @@ impl AgentClient {
         match msg.msg_type.as_str() {
             "task" => {
                 let task: TaskPayload = serde_json::from_value(msg.payload)?;
-                self.execute_task(task, tx).await?;
+                let tx = tx.clone();
+                tokio::spawn(async move {
+                    if let Err(e) = Self::execute_task_static(task, &tx).await {
+                        error!("Task execution failed: {}", e);
+                    }
+                });
             }
             "ping" => {
                 let pong = AgentMessage {
@@ -243,9 +243,18 @@ impl AgentClient {
         Ok(())
     }
 
-    /// Executes a task and sends the result back to the server.
+    /// Executes a task and sends the result back to the server (test helper).
+    #[cfg(test)]
     pub async fn execute_task(
         &self,
+        task: TaskPayload,
+        tx: &tokio::sync::mpsc::Sender<String>,
+    ) -> Result<()> {
+        Self::execute_task_static(task, tx).await
+    }
+
+    /// Static task execution that doesn't require &self, so it can be spawned.
+    async fn execute_task_static(
         task: TaskPayload,
         tx: &tokio::sync::mpsc::Sender<String>,
     ) -> Result<()> {
@@ -254,11 +263,16 @@ impl AgentClient {
             task.id, task.technique_id
         );
 
+        let executor = CommandExecutor::new();
         let timeout = task.timeout.unwrap_or(300);
-        let result = self
-            .executor
+        let result = executor
             .execute(&task.executor, &task.command, Duration::from_secs(timeout))
             .await;
+
+        // Enrich output by reading redirected files when stdout is nearly empty
+        let output =
+            crate::output_capture::enrich_output(&task.command, &task.executor, &result.output)
+                .await;
 
         let response = AgentMessage {
             msg_type: "task_result".to_string(),
@@ -266,7 +280,7 @@ impl AgentClient {
                 "task_id": task.id,
                 "technique_id": task.technique_id,
                 "success": result.success,
-                "output": result.output,
+                "output": output,
                 "exit_code": result.exit_code,
             }),
         };
@@ -275,8 +289,7 @@ impl AgentClient {
 
         if let Some(cleanup) = task.cleanup {
             debug!("Executing cleanup command");
-            let _ = self
-                .executor
+            let _ = executor
                 .execute(&task.executor, &cleanup, Duration::from_secs(30))
                 .await;
         }

@@ -72,6 +72,8 @@ func InitSchema(db *sql.DB) error {
 		execution_id TEXT NOT NULL,
 		technique_id TEXT NOT NULL,
 		agent_paw TEXT NOT NULL,
+		executor_name TEXT,
+		command TEXT,
 		status TEXT NOT NULL,
 		output TEXT,
 		exit_code INTEGER DEFAULT 0,
@@ -215,6 +217,14 @@ func Migrate(db *sql.DB) error {
 	}
 	if err := addColumnIfNotExists(db, "techniques", "references", "TEXT"); err != nil {
 		return fmt.Errorf("failed to add references column: %w", err)
+	}
+
+	// Migration: Add executor_name and command columns to execution_results table
+	if err := addColumnIfNotExists(db, "execution_results", "executor_name", "TEXT"); err != nil {
+		return fmt.Errorf("failed to add executor_name column: %w", err)
+	}
+	if err := addColumnIfNotExists(db, "execution_results", "command", "TEXT"); err != nil {
+		return fmt.Errorf("failed to add command column: %w", err)
 	}
 
 	return nil

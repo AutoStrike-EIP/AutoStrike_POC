@@ -26,8 +26,8 @@ func getAllowedOrigins() []string {
 }
 
 var upgrader = gorillaws.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
+	ReadBufferSize:  4096,
+	WriteBufferSize: 4096,
 	CheckOrigin: func(r *http.Request) bool {
 		origin := r.Header.Get("Origin")
 		if origin == "" {
@@ -203,6 +203,53 @@ type TaskResultPayload struct {
 	Error       string `json:"error,omitempty"`
 }
 
+// failurePatterns are output substrings that indicate the command did not
+// achieve its goal even though it may have exited with code 0.
+var failurePatterns = []string{
+	"permission denied",
+	"access denied",
+	"operation not permitted",
+	"not permitted",
+	"is required to read the password",
+	"askpass helper",
+	"authentication failure",
+	"command not found",
+	"no such file or directory",
+	"command timed out",
+	"unable to open",
+	"cannot open",
+	"is not recognized",
+	"password is required",
+}
+
+// classifyTaskResult determines the actual execution status by looking at
+// the exit code AND the command output. A command that exits 0 but prints
+// "permission denied" is not a successful attack. Similarly, an attack
+// technique that produces no output did not achieve its goal.
+func classifyTaskResult(agentSuccess bool, exitCode int, output string) entity.ResultStatus {
+	if !agentSuccess {
+		return entity.StatusFailed
+	}
+
+	// No output means the attack did not produce results (no data exfiltrated,
+	// no credentials found, no information discovered).
+	trimmed := strings.TrimSpace(output)
+	if trimmed == "" {
+		return entity.StatusFailed
+	}
+
+	// Agent reported success (exit 0), but verify the output
+	lower := strings.ToLower(trimmed)
+
+	for _, pattern := range failurePatterns {
+		if strings.Contains(lower, pattern) {
+			return entity.StatusFailed
+		}
+	}
+
+	return entity.StatusSuccess
+}
+
 func (h *WebSocketHandler) handleTaskResult(client *websocket.Client, payload json.RawMessage) {
 	var result TaskResultPayload
 	if err := json.Unmarshal(payload, &result); err != nil {
@@ -220,15 +267,13 @@ func (h *WebSocketHandler) handleTaskResult(client *websocket.Client, payload js
 	// Update result in database
 	if h.executionService != nil {
 		ctx := client.Context()
-		status := entity.StatusSuccess
-		if !result.Success {
-			status = entity.StatusFailed
-		}
 
 		output := result.Output
 		if result.Error != "" {
 			output = result.Error + "\n" + output
 		}
+
+		status := classifyTaskResult(result.Success, result.ExitCode, output)
 
 		h.logger.Info("Updating result in database",
 			zap.String("task_id", result.TaskID),

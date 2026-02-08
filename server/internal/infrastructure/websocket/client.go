@@ -3,6 +3,7 @@ package websocket
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 
 const (
 	writeWait      = 10 * time.Second
-	pongWait       = 60 * time.Second
+	pongWait       = 5 * time.Minute // Agents may block on long-running tasks
 	pingPeriod     = (pongWait * 9) / 10
 	maxMessageSize = 512 * 1024 // 512KB
 )
@@ -88,6 +89,7 @@ func (c *Client) WritePump() {
 	defer func() {
 		ticker.Stop()
 		c.conn.Close()
+		c.logger.Debug("WritePump exiting", zap.String("paw", c.GetAgentPaw()))
 	}()
 
 	for {
@@ -128,6 +130,10 @@ func (c *Client) writeMessageWithQueue(message []byte) bool {
 	// Write any queued messages as separate frames
 	n := len(c.send)
 	for i := 0; i < n; i++ {
+		// Reset write deadline for each queued message to avoid timeout during batch writes
+		if c.conn.SetWriteDeadline(time.Now().Add(writeWait)) != nil {
+			return false
+		}
 		if c.conn.WriteMessage(websocket.TextMessage, <-c.send) != nil {
 			return false
 		}
@@ -144,7 +150,7 @@ func (c *Client) sendPing() bool {
 	return c.conn.WriteMessage(websocket.PingMessage, nil) == nil
 }
 
-// Send sends a message to the client
+// Send sends a message to the client (non-blocking)
 func (c *Client) Send(msgType string, payload interface{}) error {
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -161,8 +167,16 @@ func (c *Client) Send(msgType string, payload interface{}) error {
 		return err
 	}
 
-	c.send <- msgBytes
-	return nil
+	select {
+	case c.send <- msgBytes:
+		return nil
+	default:
+		c.logger.Warn("Send channel full, dropping message",
+			zap.String("type", msgType),
+			zap.String("paw", c.GetAgentPaw()),
+		)
+		return fmt.Errorf("send channel full")
+	}
 }
 
 // GetAgentPaw returns the agent paw if this is an agent connection

@@ -43,13 +43,14 @@ func NewExecutionService(
 
 // TaskDispatchInfo contains information needed to dispatch a task to an agent
 type TaskDispatchInfo struct {
-	ResultID    string
-	AgentPaw    string
-	TechniqueID string
-	Command     string
-	Executor    string
-	Timeout     int
-	Cleanup     string
+	ResultID     string
+	AgentPaw     string
+	TechniqueID  string
+	Command      string
+	Executor     string
+	ExecutorName string
+	Timeout      int
+	Cleanup      string
 }
 
 // ExecutionWithTasks contains the execution and tasks to dispatch
@@ -143,28 +144,35 @@ func (s *ExecutionService) createTasksForExecution(
 
 	for _, task := range planTasks {
 		result := &entity.ExecutionResult{
-			ID:          uuid.New().String(),
-			ExecutionID: executionID,
-			TechniqueID: task.TechniqueID,
-			AgentPaw:    task.AgentPaw,
-			Status:      entity.StatusPending,
-			StartedAt:   time.Now(),
+			ID:           uuid.New().String(),
+			ExecutionID:  executionID,
+			TechniqueID:  task.TechniqueID,
+			AgentPaw:     task.AgentPaw,
+			ExecutorName: task.ExecutorName,
+			Command:      task.Command,
+			Status:       entity.StatusPending,
+			StartedAt:    time.Now(),
 		}
 
 		if err := s.resultRepo.CreateResult(ctx, result); err != nil {
 			return nil, fmt.Errorf("failed to create result: %w", err)
 		}
 
-		executor := s.determineExecutor(ctx, task.TechniqueID, agentMap[task.AgentPaw])
+		// Use executor type from planning phase; fallback to determineExecutor
+		executor := task.ExecutorType
+		if executor == "" {
+			executor = s.determineExecutor(ctx, task.TechniqueID, agentMap[task.AgentPaw])
+		}
 
 		tasks = append(tasks, TaskDispatchInfo{
-			ResultID:    result.ID,
-			AgentPaw:    task.AgentPaw,
-			TechniqueID: task.TechniqueID,
-			Command:     task.Command,
-			Executor:    executor,
-			Timeout:     task.Timeout,
-			Cleanup:     task.Cleanup,
+			ResultID:     result.ID,
+			AgentPaw:     task.AgentPaw,
+			TechniqueID:  task.TechniqueID,
+			Command:      task.Command,
+			Executor:     executor,
+			ExecutorName: task.ExecutorName,
+			Timeout:      task.Timeout,
+			Cleanup:      task.Cleanup,
 		})
 	}
 
