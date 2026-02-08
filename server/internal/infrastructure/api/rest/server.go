@@ -287,6 +287,7 @@ func registerRoutesWithPermissions(api *gin.RouterGroup, services *Services, hub
 		techniques.GET("/:id", perm(entity.PermissionTechniquesView), techniqueHandler.GetTechnique)
 		techniques.GET("/:id/executors", perm(entity.PermissionTechniquesView), techniqueHandler.GetExecutors)
 		techniques.POST("/import", perm(entity.PermissionTechniquesImport), techniqueHandler.ImportTechniques)
+		techniques.POST("/import/json", perm(entity.PermissionTechniquesImport), techniqueHandler.ImportTechniquesJSON)
 	}
 
 	// Executions - view for all, start/stop requires permission

@@ -38,16 +38,13 @@ fn collect_matches(command: &str, patterns: &[&str]) -> Vec<String> {
 pub fn extract_output_paths(command: &str, executor_type: &str) -> Vec<String> {
     match executor_type {
         "sh" | "bash" | "zsh" => collect_matches(command, &[r#">{1,2}\s*(/tmp/[^\s;|&"']+)"#]),
-        "cmd" => collect_matches(
-            command,
-            &[r#"(?i)>{1,2}\s*(%temp%\\[^\s;|&"']+|%userprofile%\\[^\s;|&"']+)"#],
-        ),
+        "cmd" => collect_matches(command, &[r#"(?i)>{1,2}\s*(%temp%\\[^\s;|&"']+)"#]),
         "powershell" | "ps" | "pwsh" | "powershell7" => collect_matches(
             command,
             &[
-                r#"(?i)>{1,2}\s*(\$env:TEMP\\[^\s;|&"']+|\$env:USERPROFILE\\[^\s;|&"']+)"#,
-                r#"(?i)Out-File\s+(?:-FilePath\s+)?(\$env:TEMP\\[^\s;|&"']+|\$env:USERPROFILE\\[^\s;|&"']+)"#,
-                r#"(?i)Set-Content\s+(?:-Path\s+)?(\$env:TEMP\\[^\s;|&"']+|\$env:USERPROFILE\\[^\s;|&"']+)"#,
+                r#"(?i)>{1,2}\s*(\$env:TEMP\\[^\s;|&"']+)"#,
+                r#"(?i)Out-File\s+(?:-FilePath\s+)?(\$env:TEMP\\[^\s;|&"']+)"#,
+                r#"(?i)Set-Content\s+(?:-Path\s+)?(\$env:TEMP\\[^\s;|&"']+)"#,
                 r#">{1,2}\s*(/tmp/[^\s;|&"']+)"#,
             ],
         ),
@@ -261,7 +258,14 @@ pub async fn enrich_output(command: &str, executor_type: &str, original_output: 
     );
 
     match read_output_files(&paths).await {
-        Some(file_content) => file_content,
+        Some(file_content) => {
+            let trimmed = original_output.trim();
+            if trimmed.is_empty() {
+                file_content
+            } else {
+                format!("{}\n{}", trimmed, file_content)
+            }
+        }
         None => original_output.to_string(),
     }
 }
@@ -331,9 +335,10 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_cmd_userprofile() {
+    fn test_extract_cmd_userprofile_ignored() {
+        // %userprofile% paths are not captured — is_safe_path blocks them (not in temp dir)
         let paths = extract_output_paths("dir >> %userprofile%\\data.txt", "cmd");
-        assert_eq!(paths, vec!["%userprofile%\\data.txt"]);
+        assert!(paths.is_empty());
     }
 
     #[test]

@@ -276,6 +276,7 @@ export interface TechniqueExecutor {
   cleanup?: string;
   timeout: number;
   elevation_required?: boolean;
+  is_safe?: boolean;
 }
 
 export interface TechniqueSelection {

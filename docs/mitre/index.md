@@ -69,7 +69,7 @@ AutoStrike inclut un outil d'import qui fusionne les donnees de **MITRE ATT&CK S
 # Import complet (telecharge STIX + clone Atomic Red Team)
 make import-mitre
 
-# Import seulement les techniques safe (discovery, reconnaissance)
+# Import seulement les techniques safe (toutes tactiques, filtre par executor)
 make import-mitre-safe
 
 # Dry run : affiche les stats sans ecrire de fichiers

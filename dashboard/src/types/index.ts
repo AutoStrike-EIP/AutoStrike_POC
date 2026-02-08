@@ -201,7 +201,7 @@ export interface ExecutionResult {
   /** The command that was executed */
   command?: string;
   /** Result status */
-  status: 'blocked' | 'detected' | 'successful' | 'failed' | 'skipped';
+  status: 'blocked' | 'detected' | 'success' | 'successful' | 'failed' | 'skipped' | 'pending' | 'running';
   /** Command output */
   output: string;
   /** Whether the technique was detected */
