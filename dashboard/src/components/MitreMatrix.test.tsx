@@ -155,9 +155,9 @@ describe('MitreMatrix', () => {
     // Modal should appear with technique details
     expect(screen.getByRole('heading', { name: 'System Information Discovery' })).toBeInTheDocument();
     expect(screen.getByText('Adversaries may attempt to get detailed information about the operating system.')).toBeInTheDocument();
-    // Technique badge + executor badges all say "No Elevation"
-    const noElevElements = screen.getAllByText('No Elevation');
-    expect(noElevElements.length).toBeGreaterThanOrEqual(1);
+    // Technique badge + executor badges all say "Safe"
+    const safeElements = screen.getAllByText('Safe');
+    expect(safeElements.length).toBeGreaterThanOrEqual(1);
   });
 
   it('closes technique detail panel when close button clicked', () => {
@@ -226,21 +226,25 @@ describe('MitreMatrix', () => {
     const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
     fireEvent.click(techniqueButton);
 
-    expect(screen.getByText('Elevation Required')).toBeInTheDocument();
+    const unsafeBadges = screen.getAllByText('Unsafe');
+    expect(unsafeBadges.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows executor details with elevation status in detail panel', () => {
+  it('shows executor details with safety status in detail panel', () => {
     render(<MitreMatrix techniques={mockTechniques} />);
 
-    // T1059.001 has 2 executors: one with elevation, one without
+    // T1059.001 has 2 executors: one unsafe (Mimikatz), one safe (Encoded Command)
     const techniqueButton = screen.getByTitle('T1059.001: PowerShell');
     fireEvent.click(techniqueButton);
 
     expect(screen.getByText('Executors (2)')).toBeInTheDocument();
     expect(screen.getByText('Mimikatz')).toBeInTheDocument();
     expect(screen.getByText('Encoded Command')).toBeInTheDocument();
-    expect(screen.getByText('Elevation')).toBeInTheDocument();
-    expect(screen.getByText('No Elevation')).toBeInTheDocument();
+    // Multiple "Unsafe" (technique badge + Mimikatz executor) and "Safe" (Encoded Command executor + legend)
+    const unsafeBadges = screen.getAllByText('Unsafe');
+    expect(unsafeBadges.length).toBeGreaterThanOrEqual(2);
+    const safeBadges = screen.getAllByText('Safe');
+    expect(safeBadges.length).toBeGreaterThanOrEqual(1);
   });
 
   it('shows executor types and platforms', () => {
@@ -355,8 +359,8 @@ describe('MitreMatrix', () => {
   it('renders legend', () => {
     render(<MitreMatrix techniques={mockTechniques} />);
 
-    expect(screen.getByText('No elevation required')).toBeInTheDocument();
-    expect(screen.getByText('Elevation required')).toBeInTheDocument();
+    expect(screen.getByText('Safe')).toBeInTheDocument();
+    expect(screen.getByText('Unsafe')).toBeInTheDocument();
   });
 
   it('handles techniques with hyphenated tactics', () => {

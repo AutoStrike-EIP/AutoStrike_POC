@@ -70,9 +70,9 @@ describe('Techniques Page', () => {
     expect(screen.getByText('PowerShell')).toBeInTheDocument();
     expect(screen.getByText('execution')).toBeInTheDocument();
     expect(screen.getByText('windows')).toBeInTheDocument();
-    // "Elevation" column header and "No Elevation" badge
-    expect(screen.getByText('Elevation')).toBeInTheDocument();
-    expect(screen.getByText('No Elevation')).toBeInTheDocument();
+    // "Safety" column header and "Safe" badge
+    expect(screen.getByText('Safety')).toBeInTheDocument();
+    expect(screen.getByText('Safe')).toBeInTheDocument();
   });
 
   it('renders unsafe technique badge', async () => {
@@ -90,7 +90,7 @@ describe('Techniques Page', () => {
 
     renderWithClient(<Techniques />);
 
-    expect(await screen.findByText('Elevation Required')).toBeInTheDocument();
+    expect(await screen.findByText('Unsafe')).toBeInTheDocument();
     expect(screen.getByText('defense evasion')).toBeInTheDocument();
   });
 

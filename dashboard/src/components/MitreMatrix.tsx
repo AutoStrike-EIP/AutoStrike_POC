@@ -43,8 +43,8 @@ function DescriptionText({ text }: Readonly<{ text: string }>) {
 
   return (
     <span>
-      {parts.map((part) => {
-        const key = `${part.type}-${part.value.slice(0, 30)}-${part.href?.slice(-20) ?? ''}`;
+      {parts.map((part, idx) => {
+        const key = `${part.type}-${idx}`;
         if (part.type === 'citation') {
           return (
             <a
@@ -259,9 +259,9 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
                   <div className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">{technique.name}</div>
                   <div className="flex gap-1 mt-1">
                     {technique.is_safe ? (
-                      <span className="w-2 h-2 rounded-full bg-green-500" title="No elevation required" />
+                      <span className="w-2 h-2 rounded-full bg-green-500" title="Safe" />
                     ) : (
-                      <span className="w-2 h-2 rounded-full bg-red-500" title="Elevation required" />
+                      <span className="w-2 h-2 rounded-full bg-red-500" title="Unsafe" />
                     )}
                   </div>
                 </button>
@@ -311,7 +311,7 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <span className={`badge ${selectedTechnique.is_safe ? 'badge-success' : 'badge-danger'}`}>
-                  {selectedTechnique.is_safe ? 'No Elevation' : 'Elevation Required'}
+                  {selectedTechnique.is_safe ? 'Safe' : 'Unsafe'}
                 </span>
                 {selectedTechnique.platforms.map(p => (
                   <span key={p} className="badge bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300">{p}</span>
@@ -337,7 +337,7 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
                             <span className="text-xs text-gray-500 dark:text-gray-400">{exec.platform}</span>
                           )}
                           {exec.name && (
-                            <span className="text-xs text-gray-600 dark:text-gray-300 truncate">{exec.name}</span>
+                            <span className="text-xs text-gray-600 dark:text-gray-300">{exec.name}</span>
                           )}
                         </div>
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
@@ -345,7 +345,7 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
                             ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400'
                             : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400'
                         }`}>
-                          {exec.is_safe ? 'No Elevation' : 'Elevation'}
+                          {exec.is_safe ? 'Safe' : 'Unsafe'}
                         </span>
                       </div>
                     ))}
@@ -393,11 +393,11 @@ export function MitreMatrix({ techniques, onTechniqueClick }: Readonly<MitreMatr
       <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
         <div className="flex items-center gap-1">
           <span className="w-3 h-3 rounded-full bg-green-500"></span>
-          <span>No elevation required</span>
+          <span>Safe</span>
         </div>
         <div className="flex items-center gap-1">
           <span className="w-3 h-3 rounded-full bg-red-500"></span>
-          <span>Elevation required</span>
+          <span>Unsafe</span>
         </div>
       </div>
     </div>

@@ -444,7 +444,7 @@ export default function Settings() {
               <div>
                 <p className="font-medium">Safe Mode by Default</p>
                 <p className="text-sm text-gray-500">
-                  Only run techniques that don't require elevation (admin/root)
+                  Only run safe techniques (no elevation, no dangerous commands)
                 </p>
               </div>
               <Toggle
