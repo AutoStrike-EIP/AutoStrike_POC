@@ -43,6 +43,16 @@ yarn-error.log*
 agent/target/
 agent/**/*.rs.bk
 
+# ===== Execution artifacts (Atomic Red Team) =====
+agent/*.py
+agent/*.pyc
+agent/*.sh
+agent/*.gz
+agent/*.tar.gz
+agent/*.txt
+agent/nul
+agent/T1*
+
 # ===== Build =====
 build/
 dist/
@@ -96,6 +106,12 @@ temp/
 # ===== CSV Import =====
 *.csv
 !planning/jira-import-detailed.csv
+
+# ===== Compiled binaries =====
+scripts/mitre-import/autostrike-mitre-import
+
+# ===== Plan files =====
+PLAN-*.md
 
 # ======== Local ========
 local/
