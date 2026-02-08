@@ -116,6 +116,25 @@ pub fn resolve_path(raw_path: &str) -> Option<PathBuf> {
     None
 }
 
+/// Checks that a resolved path is inside a safe directory (temp dir) after
+/// canonicalization, preventing path traversal attacks (e.g. `/tmp/../../etc/passwd`).
+fn is_safe_path(resolved: &PathBuf) -> bool {
+    let canonical = match std::fs::canonicalize(resolved) {
+        Ok(p) => p,
+        Err(_) => return false, // file doesn't exist or can't be resolved
+    };
+
+    let safe_dirs = [std::env::temp_dir(), PathBuf::from("/tmp")];
+
+    safe_dirs.iter().any(|dir| {
+        if let Ok(canon_dir) = std::fs::canonicalize(dir) {
+            canonical.starts_with(&canon_dir)
+        } else {
+            false
+        }
+    })
+}
+
 /// Reads a single file up to `budget` bytes, returning its content and bytes consumed.
 /// Only reads the needed amount from disk to avoid OOM on large files.
 async fn read_single_file(resolved: &PathBuf, budget: u64) -> Option<(String, u64)> {
@@ -154,6 +173,11 @@ pub async fn read_output_files(paths: &[String]) -> Option<String> {
                 continue;
             }
         };
+
+        if !is_safe_path(&resolved) {
+            debug!("Path traversal blocked: {}", resolved.display());
+            continue;
+        }
 
         match read_single_file(&resolved, budget_remaining).await {
             Some((content, bytes_read)) => {
@@ -365,6 +389,40 @@ mod tests {
     fn test_resolve_empty() {
         let p = resolve_path("");
         assert!(p.is_none());
+    }
+
+    // --- is_safe_path tests ---
+
+    #[test]
+    fn test_safe_path_in_tmp() {
+        let tmp = std::env::temp_dir();
+        let test_file = tmp.join("autostrike_safe_test.txt");
+        std::fs::write(&test_file, "test").unwrap();
+        assert!(is_safe_path(&test_file));
+        std::fs::remove_file(&test_file).unwrap();
+    }
+
+    #[test]
+    fn test_unsafe_path_traversal() {
+        // /tmp/../../etc/passwd resolves to /etc/passwd — outside /tmp/
+        assert!(!is_safe_path(&PathBuf::from("/tmp/../../etc/passwd")));
+    }
+
+    #[test]
+    fn test_unsafe_path_outside_tmp() {
+        assert!(!is_safe_path(&PathBuf::from("/etc/hostname")));
+    }
+
+    #[test]
+    fn test_safe_path_nonexistent() {
+        assert!(!is_safe_path(&PathBuf::from("/tmp/nonexistent_99999.txt")));
+    }
+
+    #[tokio::test]
+    async fn test_read_blocks_path_traversal() {
+        // Even though resolve_path returns a path, read_output_files should block traversal
+        let result = read_output_files(&["/tmp/../../etc/passwd".to_string()]).await;
+        assert!(result.is_none());
     }
 
     // --- read_output_files tests ---
