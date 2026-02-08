@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -4869,3 +4870,191 @@ func TestScenarioRepository_ImportFromYAML_ValidFile(t *testing.T) {
 		t.Fatalf("ImportFromYAML upsert failed: %v", err)
 	}
 }
+
+// --- schema.go migration error path tests ---
+
+func TestMigrate_NoTechniquesTable(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+	defer db.Close()
+
+	// Create only the users table with is_active and last_login_at columns
+	// so the users migration passes, but do NOT create the techniques table
+	_, err = db.Exec(`CREATE TABLE users (
+		id TEXT PRIMARY KEY,
+		username TEXT UNIQUE NOT NULL,
+		email TEXT UNIQUE NOT NULL,
+		password_hash TEXT NOT NULL,
+		role TEXT NOT NULL DEFAULT 'viewer',
+		is_active BOOLEAN NOT NULL DEFAULT 1,
+		last_login_at DATETIME,
+		created_at DATETIME NOT NULL,
+		updated_at DATETIME NOT NULL
+	)`)
+	if err != nil {
+		t.Fatalf("Failed to create users table: %v", err)
+	}
+
+	// Migrate should fail when trying to add tactics column to non-existent techniques table
+	err = Migrate(db)
+	if err == nil {
+		t.Fatal("Expected error from Migrate when techniques table does not exist")
+	}
+	if !strings.Contains(err.Error(), "tactics") {
+		t.Errorf("Expected error to mention 'tactics', got: %s", err.Error())
+	}
+}
+
+// --- technique_repository.go additional coverage tests ---
+
+func TestTechniqueRepository_ImportFromYAML_ClosedDB(t *testing.T) {
+	db := setupTestDB(t)
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	yamlContent := `
+- id: "T-CLOSED"
+  name: "Closed DB Technique"
+  tactic: "discovery"
+  description: "Test technique"
+  platforms: ["linux"]
+  executors:
+    - type: "sh"
+      command: "echo test"
+      timeout: 30
+  is_safe: true
+`
+	tmpFile := filepath.Join(t.TempDir(), "techniques.yaml")
+	if err := os.WriteFile(tmpFile, []byte(yamlContent), 0644); err != nil {
+		t.Fatalf("Failed to write YAML: %v", err)
+	}
+
+	// Close DB before importing to trigger upsert error at line 170
+	db.Close()
+
+	err := repo.ImportFromYAML(ctx, tmpFile)
+	if err == nil {
+		t.Fatal("Expected error from ImportFromYAML on closed DB")
+	}
+}
+
+func TestTechniqueRepository_FindByID_CorruptTacticsJSON(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+
+	// Insert technique with valid base fields but corrupt tactics JSON
+	_, err := db.Exec(`INSERT INTO techniques (id, name, description, tactic, platforms, executors, detection, is_safe, tactics, `+"`references`"+`, created_at)
+		VALUES ('T-BAD-TACTICS', 'Bad Tactics', 'Test', 'discovery', '["linux"]', '[]', '[]', 1, 'NOT VALID JSON', NULL, datetime('now'))`)
+	if err != nil {
+		t.Fatalf("Failed to insert technique with corrupt tactics: %v", err)
+	}
+
+	repo := NewTechniqueRepository(db)
+	tech, err := repo.FindByID(ctx, "T-BAD-TACTICS")
+	if err != nil {
+		t.Fatalf("FindByID should succeed with tactics fallback: %v", err)
+	}
+	// Corrupt tactics should result in nil (fallback at lines 203-205)
+	if tech.Tactics != nil {
+		t.Errorf("Expected nil tactics for corrupt JSON, got %v", tech.Tactics)
+	}
+}
+
+func TestTechniqueRepository_FindByID_CorruptReferencesJSON(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	ctx := context.Background()
+
+	// Insert technique with valid base fields but corrupt references JSON
+	_, err := db.Exec(`INSERT INTO techniques (id, name, description, tactic, platforms, executors, detection, is_safe, tactics, `+"`references`"+`, created_at)
+		VALUES ('T-BAD-REFS', 'Bad References', 'Test', 'discovery', '["linux"]', '[]', '[]', 1, '["discovery"]', 'NOT VALID JSON', datetime('now'))`)
+	if err != nil {
+		t.Fatalf("Failed to insert technique with corrupt references: %v", err)
+	}
+
+	repo := NewTechniqueRepository(db)
+	tech, err := repo.FindByID(ctx, "T-BAD-REFS")
+	if err != nil {
+		t.Fatalf("FindByID should succeed with references fallback: %v", err)
+	}
+	// Valid tactics should still parse
+	if len(tech.Tactics) != 1 || string(tech.Tactics[0]) != "discovery" {
+		t.Errorf("Expected tactics [discovery], got %v", tech.Tactics)
+	}
+	// Corrupt references should result in nil (fallback at lines 208-210)
+	if tech.References != nil {
+		t.Errorf("Expected nil references for corrupt JSON, got %v", tech.References)
+	}
+}
+
+func TestTechniqueRepository_Upsert_ViaImportTwice(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewTechniqueRepository(db)
+	ctx := context.Background()
+
+	yamlContent := `
+- id: "T-UPSERT2"
+  name: "First Import"
+  description: "First version"
+  tactic: "execution"
+  platforms:
+    - "linux"
+  executors:
+    - type: "sh"
+      command: "echo first"
+      timeout: 30
+  is_safe: true
+`
+	tmpFile := filepath.Join(t.TempDir(), "upsert_test.yaml")
+	if err := os.WriteFile(tmpFile, []byte(yamlContent), 0644); err != nil {
+		t.Fatalf("Failed to write YAML: %v", err)
+	}
+
+	// First import
+	if err := repo.ImportFromYAML(ctx, tmpFile); err != nil {
+		t.Fatalf("First ImportFromYAML failed: %v", err)
+	}
+
+	tech, err := repo.FindByID(ctx, "T-UPSERT2")
+	if err != nil {
+		t.Fatalf("FindByID after first import failed: %v", err)
+	}
+	if tech.Name != "First Import" {
+		t.Errorf("Expected 'First Import', got '%s'", tech.Name)
+	}
+
+	// Second import with same ID but updated name (covers upsert ON CONFLICT path at lines 184-188)
+	yamlContent2 := `
+- id: "T-UPSERT2"
+  name: "Second Import"
+  description: "Updated version"
+  tactic: "execution"
+  platforms:
+    - "linux"
+  executors:
+    - type: "sh"
+      command: "echo second"
+      timeout: 30
+  is_safe: true
+`
+	if err := os.WriteFile(tmpFile, []byte(yamlContent2), 0644); err != nil {
+		t.Fatalf("Failed to write updated YAML: %v", err)
+	}
+
+	if err := repo.ImportFromYAML(ctx, tmpFile); err != nil {
+		t.Fatalf("Second ImportFromYAML (upsert) failed: %v", err)
+	}
+
+	tech2, err := repo.FindByID(ctx, "T-UPSERT2")
+	if err != nil {
+		t.Fatalf("FindByID after upsert failed: %v", err)
+	}
+	if tech2.Name != "Second Import" {
+		t.Errorf("Expected 'Second Import' after upsert, got '%s'", tech2.Name)
+	}
+}
+

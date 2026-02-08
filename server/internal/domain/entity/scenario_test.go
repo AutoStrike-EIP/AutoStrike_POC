@@ -358,3 +358,30 @@ func TestPhase_UnmarshalJSON_FallbackWhenTechniqueIDEmpty(t *testing.T) {
 		t.Errorf("TechniqueID = %s, want T1059", phase.Techniques[0].TechniqueID)
 	}
 }
+
+func TestPhase_UnmarshalJSON_ObjectsWithEmptyTechniqueID(t *testing.T) {
+	// Techniques array contains objects but with empty technique_id.
+	// Line 81: len(selections) == 0 || selections[0].TechniqueID != ""
+	// selections has 1 element with TechniqueID == "", so condition is false.
+	// Falls through to old format: json.Unmarshal into []string, which fails
+	// because [{"technique_id":""}] is not a string array.
+	data := `{"name":"Phase1","techniques":[{"technique_id":"","executor_name":"test"}],"order":1}`
+	var phase Phase
+	err := json.Unmarshal([]byte(data), &phase)
+	if err == nil {
+		t.Error("Expected error for objects with empty technique_id that fail string array fallback")
+	}
+}
+
+func TestPhase_UnmarshalJSON_MixedEmptyAndValidSelections(t *testing.T) {
+	// First element has empty TechniqueID, second has valid one.
+	// Line 81 checks selections[0].TechniqueID != "".
+	// Since first element TechniqueID is "", condition is false.
+	// Falls through to old format ([]string) which fails because it's object array.
+	data := `{"name":"Phase1","techniques":[{"technique_id":"","executor_name":"exec1"},{"technique_id":"T1059","executor_name":"exec2"}],"order":1}`
+	var phase Phase
+	err := json.Unmarshal([]byte(data), &phase)
+	if err == nil {
+		t.Error("Expected error for mixed empty/valid selections that fail string array fallback")
+	}
+}

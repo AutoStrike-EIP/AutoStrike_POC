@@ -608,3 +608,58 @@ func TestExecutionPlan_Struct(t *testing.T) {
 		t.Errorf("Timeout = %d, want 30", plan.Tasks[0].Timeout)
 	}
 }
+
+func TestAttackOrchestrator_PlanExecution_SafeMode_BackwardCompat(t *testing.T) {
+	// Technique is marked safe but ALL executors have IsSafe: false (legacy format).
+	// This triggers the backward compatibility path at lines 133-137 where
+	// len(safeExecutors) == 0 but technique.IsSafe is true, so it returns
+	// the technique with ALL executors.
+	technique := &entity.Technique{
+		ID:        "T1082",
+		Name:      "System Info",
+		Platforms: []string{"windows"},
+		Executors: []entity.Executor{
+			{Type: "psh", Command: "systeminfo", Timeout: 30, IsSafe: false},
+		},
+		IsSafe: true, // Technique is safe, but no executor has is_safe=true
+	}
+
+	techRepo := &mockTechniqueRepo{
+		techniques: map[string]*entity.Technique{"T1082": technique},
+	}
+
+	agentRepo := &mockAgentRepo{}
+	validator := NewTechniqueValidator()
+	orchestrator := NewAttackOrchestrator(agentRepo, techRepo, validator, nil)
+
+	agent := &entity.Agent{
+		Paw:       "test-agent",
+		Platform:  "windows",
+		Executors: []string{"psh"},
+		Status:    entity.AgentOnline,
+	}
+
+	scenario := &entity.Scenario{
+		ID:   "test-scenario",
+		Name: "Test Scenario",
+		Phases: []entity.Phase{
+			{Name: "Phase1", Techniques: []entity.TechniqueSelection{{TechniqueID: "T1082"}}},
+		},
+	}
+
+	// Safe mode with backward compat: technique is safe but no executor has is_safe=true
+	plan, err := orchestrator.PlanExecution(context.Background(), scenario, []*entity.Agent{agent}, true)
+
+	if err != nil {
+		t.Fatalf("PlanExecution returned error: %v", err)
+	}
+	if plan == nil {
+		t.Fatal("PlanExecution returned nil plan")
+	}
+	if len(plan.Tasks) != 1 {
+		t.Errorf("Expected 1 task (backward compat returns all executors), got %d", len(plan.Tasks))
+	}
+	if plan.Tasks[0].Command != "systeminfo" {
+		t.Errorf("Expected command 'systeminfo', got '%s'", plan.Tasks[0].Command)
+	}
+}

@@ -2068,3 +2068,32 @@ func TestTechniqueHandler_GetExecutors_NotFound(t *testing.T) {
 		t.Errorf("Expected status 404, got %d", w.Code)
 	}
 }
+
+func TestTechniqueHandler_GetExecutors_NilExecutors(t *testing.T) {
+	repo := newMockTechniqueRepo()
+	// Create technique with nil Executors field
+	repo.techniques["T-NIL-EXEC"] = &entity.Technique{
+		ID:        "T-NIL-EXEC",
+		Name:      "Nil Executors",
+		Platforms: []string{"linux"},
+		Executors: nil, // nil executors, not empty slice
+	}
+	svc := application.NewTechniqueService(repo)
+	handler := NewTechniqueHandler(svc)
+
+	router := gin.New()
+	router.GET("/techniques/:id/executors", handler.GetExecutors)
+
+	// No platform filter: executors is nil, should return [] not null
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/techniques/T-NIL-EXEC/executors", nil)
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+	body := w.Body.String()
+	if body != "[]" {
+		t.Errorf("Expected empty array '[]', got '%s'", body)
+	}
+}

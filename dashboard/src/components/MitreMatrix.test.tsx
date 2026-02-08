@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MitreMatrix } from './MitreMatrix';
-import { Technique } from '../types';
+import { Technique, TacticType } from '../types';
 
 const mockTechniques: Technique[] = [
   {
@@ -652,5 +652,63 @@ describe('MitreMatrix Multi-Tactic Support', () => {
     // Execution should have 1 (T1053.005)
     const executionCount = screen.getByText('Execution').parentElement?.querySelector('.text-white\\/70');
     expect(executionCount?.textContent).toBe('1');
+  });
+
+  it('normalizes hyphenated tactic names in tactics array to underscored form', () => {
+    const techniquesWithHyphenatedTactics: Technique[] = [
+      {
+        id: 'T1053.005',
+        name: 'Scheduled Task',
+        description: 'Adversaries may abuse task scheduling.',
+        tactic: 'execution',
+        tactics: ['execution', 'persistence', 'privilege-escalation' as TacticType],
+        platforms: ['windows'],
+        is_safe: true,
+        executors: [{ type: 'cmd', platform: 'windows', command: 'schtasks', timeout: 60, is_safe: true }],
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={techniquesWithHyphenatedTactics} />);
+
+    // T1053.005 should appear in all 3 tactic columns (execution, persistence, privilege_escalation)
+    const techniqueButtons = screen.getAllByTitle('T1053.005: Scheduled Task');
+    expect(techniqueButtons.length).toBe(3);
+
+    // Open detail modal and check subtitle shows all tactics
+    fireEvent.click(techniqueButtons[0]);
+    expect(screen.getByText('execution, persistence, privilege escalation')).toBeInTheDocument();
+  });
+
+  it('uses fallback grey color for unknown tactic in detail modal', () => {
+    // Technique has an unknown primary tactic but uses tactics array with a known tactic
+    // so it appears in the grid. The detail modal badge uses tactic (unknown) for color.
+    const techniqueWithUnknownTactic: Technique[] = [
+      {
+        id: 'T9999',
+        name: 'Mixed Tactic Technique',
+        description: 'Has unknown primary tactic but known tactics array.',
+        tactic: 'unknown_tactic' as TacticType,
+        tactics: ['discovery'],
+        platforms: ['windows'],
+        is_safe: true,
+        detection: [],
+      },
+    ];
+
+    render(<MitreMatrix techniques={techniqueWithUnknownTactic} />);
+
+    // Technique appears in discovery column via tactics array
+    const techniqueButton = screen.getByTitle('T9999: Mixed Tactic Technique');
+    fireEvent.click(techniqueButton);
+
+    // The detail modal badge uses selectedTechnique.tactic (which is 'unknown_tactic')
+    // and the fallback ?? 'bg-gray-600' should be applied
+    // There are two 'T9999' elements: one in the grid cell and one in the modal badge
+    const allT9999 = screen.getAllByText('T9999');
+    const badgeElement = allT9999.find(el => el.className.includes('bg-gray-600'));
+    expect(badgeElement).toBeDefined();
+    expect(badgeElement!.className).toContain('bg-gray-600');
+    expect(badgeElement!.className).toContain('text-white');
   });
 });
