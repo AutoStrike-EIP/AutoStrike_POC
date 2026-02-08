@@ -31,13 +31,13 @@
       platform: linux
       command: dd of=/var/log/syslog if=/dev/zero count=$(ls -l /var/log/syslog | awk '{print $5}') iflag=count_bytes
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: FreeBSD/macOS/Linux - Overwrite file with DD
       type: sh
       platform: macos
       command: dd of=/var/log/syslog if=/dev/zero count=$(ls -l /var/log/syslog | awk '{print $5}') iflag=count_bytes
       timeout: 60
-      is_safe: true
+      is_safe: false
     - name: Overwrite deleted data on C drive
       type: cmd
       platform: windows

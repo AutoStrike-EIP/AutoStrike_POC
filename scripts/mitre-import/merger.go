@@ -185,6 +185,7 @@ var dangerousPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)\brd\s+/s`),                    // rd /s (Windows recursive delete)
 	regexp.MustCompile(`(?i)\brmdir\s+/s`),                 // rmdir /s (Windows)
 	regexp.MustCompile(`(?i)\bdd\s+.*\bof=/dev/`),          // dd of=/dev/sda etc.
+	regexp.MustCompile(`(?i)\bdd\s+.*\bof=/(?:var|etc|usr|boot|sys|proc)/`), // dd overwrite system paths
 	regexp.MustCompile(`(?i)\bmkfs\b`),                     // mkfs (format filesystem)
 	regexp.MustCompile(`(?i)\bfdisk\b`),                    // fdisk (partition table)
 	regexp.MustCompile(`(?i)\bformat\s+[a-z]:`),            // format C: (Windows)

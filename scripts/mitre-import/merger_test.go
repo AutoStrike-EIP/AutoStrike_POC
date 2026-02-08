@@ -331,6 +331,8 @@ func TestHasDangerousPattern(t *testing.T) {
 		{"rd /s", "rd /s /q C:\\temp"},
 		{"rmdir /s", "rmdir /s C:\\temp"},
 		{"dd to device", "dd if=/dev/zero of=/dev/sda bs=1M"},
+		{"dd to syslog", "dd of=/var/log/syslog if=/dev/zero count=100"},
+		{"dd to etc", "dd if=/dev/zero of=/etc/shadow bs=1"},
 		{"mkfs", "mkfs.ext4 /dev/sda1"},
 		{"fdisk", "echo 'n\\np\\n\\n\\n\\nw' | fdisk /dev/sda"},
 		{"format drive", "format C: /fs:NTFS"},
