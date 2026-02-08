@@ -1535,18 +1535,19 @@ func TestClassifyTaskResult_CommandNotFound(t *testing.T) {
 	}
 }
 
-func TestClassifyTaskResult_EmptyOutputIsFailed(t *testing.T) {
-	// Empty output = attack produced no results (no data exfiltrated)
+func TestClassifyTaskResult_EmptyOutputIsSuccess(t *testing.T) {
+	// Empty output with exit 0 = success (agent handles file output capture,
+	// and many commands legitimately produce no stdout)
 	status := classifyTaskResult(true, 0, "")
-	if status != entity.StatusFailed {
-		t.Errorf("Expected failed for empty output, got %s", status)
+	if status != entity.StatusSuccess {
+		t.Errorf("Expected success for empty output with exit 0, got %s", status)
 	}
 }
 
-func TestClassifyTaskResult_WhitespaceOnlyIsFailed(t *testing.T) {
+func TestClassifyTaskResult_WhitespaceOnlyIsSuccess(t *testing.T) {
 	status := classifyTaskResult(true, 0, "   \n\t  ")
-	if status != entity.StatusFailed {
-		t.Errorf("Expected failed for whitespace-only output, got %s", status)
+	if status != entity.StatusSuccess {
+		t.Errorf("Expected success for whitespace-only output with exit 0, got %s", status)
 	}
 }
 

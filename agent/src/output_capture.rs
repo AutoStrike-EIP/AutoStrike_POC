@@ -417,33 +417,39 @@ mod tests {
 
     #[tokio::test]
     async fn test_read_existing_file() {
-        let test_path = "/tmp/autostrike_output_test.txt";
-        tokio::fs::write(test_path, "test output content")
+        let tmp = std::env::temp_dir();
+        let test_path = tmp.join("autostrike_output_test.txt");
+        tokio::fs::write(&test_path, "test output content")
             .await
             .unwrap();
 
-        let result = read_output_files(&[test_path.to_string()]).await;
+        let result = read_output_files(&[test_path.to_string_lossy().to_string()]).await;
         assert!(result.is_some());
         assert_eq!(result.unwrap(), "test output content");
 
-        tokio::fs::remove_file(test_path).await.unwrap();
+        tokio::fs::remove_file(&test_path).await.unwrap();
     }
 
     #[tokio::test]
     async fn test_read_multiple_files() {
-        let path1 = "/tmp/autostrike_test1.txt";
-        let path2 = "/tmp/autostrike_test2.txt";
-        tokio::fs::write(path1, "content1").await.unwrap();
-        tokio::fs::write(path2, "content2").await.unwrap();
+        let tmp = std::env::temp_dir();
+        let path1 = tmp.join("autostrike_test1.txt");
+        let path2 = tmp.join("autostrike_test2.txt");
+        tokio::fs::write(&path1, "content1").await.unwrap();
+        tokio::fs::write(&path2, "content2").await.unwrap();
 
-        let result = read_output_files(&[path1.to_string(), path2.to_string()]).await;
+        let result = read_output_files(&[
+            path1.to_string_lossy().to_string(),
+            path2.to_string_lossy().to_string(),
+        ])
+        .await;
         assert!(result.is_some());
         let content = result.unwrap();
         assert!(content.contains("content1"));
         assert!(content.contains("content2"));
 
-        tokio::fs::remove_file(path1).await.unwrap();
-        tokio::fs::remove_file(path2).await.unwrap();
+        tokio::fs::remove_file(&path1).await.unwrap();
+        tokio::fs::remove_file(&path2).await.unwrap();
     }
 
     #[tokio::test]
@@ -470,14 +476,16 @@ mod tests {
     #[tokio::test]
     async fn test_enrich_with_file() {
         let test_path = "/tmp/autostrike_enrich_test.txt";
-        tokio::fs::write(test_path, "enriched content here")
+        // Write the file to /tmp/ (this test only runs meaningfully on Unix
+        // where /tmp/ exists; on Windows it will gracefully fall through)
+        if tokio::fs::write(test_path, "enriched content here")
             .await
-            .unwrap();
-
-        let result = enrich_output(&format!("some_cmd >> {}", test_path), "bash", "").await;
-        assert_eq!(result, "enriched content here");
-
-        tokio::fs::remove_file(test_path).await.unwrap();
+            .is_ok()
+        {
+            let result = enrich_output(&format!("some_cmd >> {}", test_path), "bash", "").await;
+            assert_eq!(result, "enriched content here");
+            let _ = tokio::fs::remove_file(test_path).await;
+        }
     }
 
     #[tokio::test]
@@ -505,8 +513,9 @@ mod tests {
         assert_eq!(result, output_50);
     }
 
-    // --- Integration tests ---
+    // --- Integration tests (Unix only — use sh executor and /tmp/) ---
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_integration_real_command_with_redirect() {
         // Execute a real command that redirects to /tmp/
@@ -534,6 +543,7 @@ mod tests {
             .unwrap();
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_integration_append_redirect() {
         let executor = crate::executor::CommandExecutor::new();
@@ -561,6 +571,7 @@ mod tests {
             .unwrap();
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_integration_command_with_stdout_and_redirect() {
         // Command that writes to BOTH stdout and a file
@@ -580,6 +591,7 @@ mod tests {
             .unwrap();
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_integration_ps_redirect_like_t1057() {
         // Simulates T1057 Process Discovery pattern
@@ -603,6 +615,7 @@ mod tests {
             .unwrap();
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn test_integration_uname_redirect_like_t1082() {
         // Simulates T1082 System Info pattern
