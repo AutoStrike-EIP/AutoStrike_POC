@@ -131,8 +131,10 @@ func (o *AttackOrchestrator) getTechnique(ctx context.Context, techID string, sa
 			}
 		}
 		if len(safeExecutors) == 0 {
-			o.logger.Info("Skipping technique: no safe executors available", zap.String("technique_id", techID))
-			return nil
+			// Backward compatibility: if technique is marked safe but no executor has
+			// individual is_safe set (legacy format), use all executors
+			o.logger.Info("Safe technique has no per-executor is_safe flags, using all executors", zap.String("technique_id", techID))
+			return technique
 		}
 		// Return a copy with only safe executors
 		filtered := *technique

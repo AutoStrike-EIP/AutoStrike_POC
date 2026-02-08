@@ -1584,8 +1584,8 @@ describe('Scenarios TechniqueSelection and Executor', () => {
     });
   });
 
-  it('shows executor dropdown with name fallback to type and platform display', async () => {
-    // Techniques with executors that have no name (fallback to type) and mixed platforms
+  it('shows executor dropdown with only named executors (unnamed filtered out)', async () => {
+    // Techniques with executors that have no name and one with a name
     const techniquesWithFallback = [
       {
         id: 'T1082',
@@ -1620,15 +1620,15 @@ describe('Scenarios TechniqueSelection and Executor', () => {
     const checkbox = screen.getByRole('checkbox', { name: /T1082/i });
     fireEvent.click(checkbox);
 
-    // Should show executor dropdown with fallback names
+    // Should show executor dropdown with only named executors
     await waitFor(() => {
       const select = screen.getByLabelText('Executor for T1082');
       expect(select).toBeInTheDocument();
       // Named executor shows name
       expect(screen.getByText('named-exec')).toBeInTheDocument();
-      // Unnamed executors fall back to type with platform
-      expect(screen.getByText('bash (linux)')).toBeInTheDocument();
-      expect(screen.getByText('psh (windows)')).toBeInTheDocument();
+      // Unnamed executors are filtered out (backend can't match by type)
+      expect(screen.queryByText('bash (linux)')).not.toBeInTheDocument();
+      expect(screen.queryByText('psh (windows)')).not.toBeInTheDocument();
     });
   });
 

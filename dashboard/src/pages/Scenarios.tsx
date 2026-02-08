@@ -612,9 +612,9 @@ export default function Scenarios() {
                                     aria-label={`Executor for ${technique.id}`}
                                   >
                                     <option value="">Auto (best match)</option>
-                                    {technique.executors?.map((exec) => (
-                                      <option key={exec.name ?? exec.type} value={exec.name ?? exec.type}>
-                                        {exec.name ?? exec.type}{exec.platform ? ` (${exec.platform})` : ''}
+                                    {technique.executors?.filter((exec) => !!exec.name).map((exec) => (
+                                      <option key={exec.name} value={exec.name}>
+                                        {exec.name}{exec.platform ? ` (${exec.platform})` : ''}
                                       </option>
                                     ))}
                                   </select>
