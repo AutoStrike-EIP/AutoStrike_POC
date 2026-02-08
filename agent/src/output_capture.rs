@@ -14,98 +14,60 @@ const OUTPUT_THRESHOLD: usize = 50;
 /// Maximum total bytes to read from output files (1 MB).
 const MAX_FILE_READ_SIZE: u64 = 1_048_576;
 
+/// Collects unique regex group-1 matches from a command string.
+fn collect_matches(command: &str, patterns: &[&str]) -> Vec<String> {
+    let mut paths = Vec::new();
+    for pattern in patterns {
+        let re = Regex::new(pattern).unwrap();
+        for cap in re.captures_iter(command) {
+            if let Some(m) = cap.get(1) {
+                let path = m.as_str().to_string();
+                if !paths.contains(&path) {
+                    paths.push(path);
+                }
+            }
+        }
+    }
+    paths
+}
+
 /// Extracts output file paths from a command string based on the executor type.
 ///
 /// Only captures redirections to safe directories (`/tmp/` on Unix, `%TEMP%`/`$env:TEMP` on Windows)
 /// to avoid reading arbitrary files.
 pub fn extract_output_paths(command: &str, executor_type: &str) -> Vec<String> {
-    let mut paths = Vec::new();
-
     match executor_type {
-        "sh" | "bash" | "zsh" => {
-            // Unix shell redirections: >> /tmp/... or > /tmp/...
-            // Exclude paths inside quotes
-            let re = Regex::new(r#">{1,2}\s*(/tmp/[^\s;|&"']+)"#).unwrap();
-            for cap in re.captures_iter(command) {
-                if let Some(m) = cap.get(1) {
-                    let path = m.as_str().to_string();
-                    if !paths.contains(&path) {
-                        paths.push(path);
-                    }
-                }
-            }
-        }
-        "cmd" => {
-            // Windows cmd redirections: >> %temp%\... or > %temp%\...
-            let re = Regex::new(r#"(?i)>{1,2}\s*(%temp%\\[^\s;|&"']+|%userprofile%\\[^\s;|&"']+)"#)
-                .unwrap();
-            for cap in re.captures_iter(command) {
-                if let Some(m) = cap.get(1) {
-                    let path = m.as_str().to_string();
-                    if !paths.contains(&path) {
-                        paths.push(path);
-                    }
-                }
-            }
-        }
-        "powershell" | "ps" | "pwsh" | "powershell7" => {
-            // PowerShell redirect: >> $env:TEMP\... or > $env:TEMP\...
-            let re_redirect = Regex::new(
+        "sh" | "bash" | "zsh" => collect_matches(command, &[r#">{1,2}\s*(/tmp/[^\s;|&"']+)"#]),
+        "cmd" => collect_matches(
+            command,
+            &[r#"(?i)>{1,2}\s*(%temp%\\[^\s;|&"']+|%userprofile%\\[^\s;|&"']+)"#],
+        ),
+        "powershell" | "ps" | "pwsh" | "powershell7" => collect_matches(
+            command,
+            &[
                 r#"(?i)>{1,2}\s*(\$env:TEMP\\[^\s;|&"']+|\$env:USERPROFILE\\[^\s;|&"']+)"#,
-            )
-            .unwrap();
-            for cap in re_redirect.captures_iter(command) {
-                if let Some(m) = cap.get(1) {
-                    let path = m.as_str().to_string();
-                    if !paths.contains(&path) {
-                        paths.push(path);
-                    }
-                }
-            }
-
-            // Out-File -FilePath $env:TEMP\...
-            let re_outfile = Regex::new(
                 r#"(?i)Out-File\s+(?:-FilePath\s+)?(\$env:TEMP\\[^\s;|&"']+|\$env:USERPROFILE\\[^\s;|&"']+)"#,
-            )
-            .unwrap();
-            for cap in re_outfile.captures_iter(command) {
-                if let Some(m) = cap.get(1) {
-                    let path = m.as_str().to_string();
-                    if !paths.contains(&path) {
-                        paths.push(path);
-                    }
-                }
-            }
-
-            // Set-Content -Path $env:TEMP\...
-            let re_setcontent = Regex::new(
                 r#"(?i)Set-Content\s+(?:-Path\s+)?(\$env:TEMP\\[^\s;|&"']+|\$env:USERPROFILE\\[^\s;|&"']+)"#,
-            )
-            .unwrap();
-            for cap in re_setcontent.captures_iter(command) {
-                if let Some(m) = cap.get(1) {
-                    let path = m.as_str().to_string();
-                    if !paths.contains(&path) {
-                        paths.push(path);
-                    }
-                }
-            }
-
-            // PowerShell redirect to /tmp/ (cross-platform pwsh on Linux)
-            let re_unix = Regex::new(r#">{1,2}\s*(/tmp/[^\s;|&"']+)"#).unwrap();
-            for cap in re_unix.captures_iter(command) {
-                if let Some(m) = cap.get(1) {
-                    let path = m.as_str().to_string();
-                    if !paths.contains(&path) {
-                        paths.push(path);
-                    }
-                }
-            }
-        }
-        _ => {}
+                r#">{1,2}\s*(/tmp/[^\s;|&"']+)"#,
+            ],
+        ),
+        _ => Vec::new(),
     }
+}
 
-    paths
+/// Looks up the system temp directory from environment variables.
+fn lookup_temp_dir() -> Option<String> {
+    std::env::var("TEMP")
+        .or_else(|_| std::env::var("TMP"))
+        .or_else(|_| std::env::var("TMPDIR"))
+        .ok()
+}
+
+/// Looks up the user home directory from environment variables.
+fn lookup_home_dir() -> Option<String> {
+    std::env::var("USERPROFILE")
+        .or_else(|_| std::env::var("HOME"))
+        .ok()
 }
 
 /// Resolves a raw path string (potentially containing environment variables) to an absolute path.
@@ -115,49 +77,61 @@ pub fn resolve_path(raw_path: &str) -> Option<PathBuf> {
         return Some(PathBuf::from(raw_path));
     }
 
-    // PowerShell $env:TEMP\...
-    let lower = raw_path.to_lowercase();
-    if lower.starts_with("$env:temp\\") || lower.starts_with("$env:temp/") {
-        let suffix = &raw_path[10..]; // skip "$env:TEMP\"
-        if let Ok(temp) = std::env::var("TEMP")
-            .or_else(|_| std::env::var("TMP"))
-            .or_else(|_| std::env::var("TMPDIR"))
-        {
-            return Some(PathBuf::from(temp).join(suffix));
-        }
-        // Fallback to /tmp on Unix-like systems
-        return Some(PathBuf::from("/tmp").join(suffix));
+    // Windows absolute paths (e.g. C:\Users\...)
+    if raw_path.len() >= 3
+        && raw_path.as_bytes()[1] == b':'
+        && raw_path.as_bytes()[0].is_ascii_alphabetic()
+    {
+        return Some(PathBuf::from(raw_path));
     }
 
+    let lower = raw_path.to_lowercase();
+
+    // PowerShell $env:TEMP\...
+    if lower.starts_with("$env:temp\\") || lower.starts_with("$env:temp/") {
+        let suffix = &raw_path[10..];
+        let base = lookup_temp_dir().unwrap_or_else(|| "/tmp".to_string());
+        return Some(PathBuf::from(base).join(suffix));
+    }
+
+    // PowerShell $env:USERPROFILE\...
     if lower.starts_with("$env:userprofile\\") || lower.starts_with("$env:userprofile/") {
-        let suffix = &raw_path[17..]; // skip "$env:USERPROFILE\"
-        if let Ok(home) = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")) {
-            return Some(PathBuf::from(home).join(suffix));
-        }
-        return None;
+        let suffix = &raw_path[17..];
+        return lookup_home_dir().map(|home| PathBuf::from(home).join(suffix));
     }
 
     // Windows cmd %temp%\...
     if lower.starts_with("%temp%\\") || lower.starts_with("%temp%/") {
-        let suffix = &raw_path[7..]; // skip "%temp%\"
-        if let Ok(temp) = std::env::var("TEMP")
-            .or_else(|_| std::env::var("TMP"))
-            .or_else(|_| std::env::var("TMPDIR"))
-        {
-            return Some(PathBuf::from(temp).join(suffix));
-        }
-        return Some(PathBuf::from("/tmp").join(suffix));
+        let suffix = &raw_path[7..];
+        let base = lookup_temp_dir().unwrap_or_else(|| "/tmp".to_string());
+        return Some(PathBuf::from(base).join(suffix));
     }
 
+    // Windows cmd %userprofile%\...
     if lower.starts_with("%userprofile%\\") || lower.starts_with("%userprofile%/") {
-        let suffix = &raw_path[14..]; // skip "%userprofile%\"
-        if let Ok(home) = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")) {
-            return Some(PathBuf::from(home).join(suffix));
-        }
-        return None;
+        let suffix = &raw_path[14..];
+        return lookup_home_dir().map(|home| PathBuf::from(home).join(suffix));
     }
 
     None
+}
+
+/// Reads a single file up to `budget` bytes, returning its content and bytes consumed.
+async fn read_single_file(resolved: &PathBuf, budget: u64) -> Option<(String, u64)> {
+    let metadata = tokio::fs::metadata(resolved).await.ok()?;
+    if !metadata.is_file() {
+        return None;
+    }
+
+    let to_read = metadata.len().min(budget);
+    if to_read == 0 {
+        return None;
+    }
+
+    let bytes = tokio::fs::read(resolved).await.ok()?;
+    let truncated = &bytes[..bytes.len().min(to_read as usize)];
+    let content = String::from_utf8_lossy(truncated).into_owned();
+    Some((content, truncated.len() as u64))
 }
 
 /// Reads output files asynchronously, respecting a total byte budget.
@@ -175,46 +149,22 @@ pub async fn read_output_files(paths: &[String]) -> Option<String> {
             }
         };
 
-        // Check file exists and get metadata
-        let metadata = match tokio::fs::metadata(&resolved).await {
-            Ok(m) => m,
-            Err(e) => {
-                debug!("Cannot stat {}: {}", resolved.display(), e);
-                continue;
-            }
-        };
-
-        if !metadata.is_file() {
-            continue;
-        }
-
-        let file_size = metadata.len();
-        let to_read = file_size.min(budget_remaining);
-
-        if to_read == 0 {
-            break;
-        }
-
-        match tokio::fs::read(&resolved).await {
-            Ok(bytes) => {
-                let truncated = &bytes[..bytes.len().min(to_read as usize)];
-                let content = String::from_utf8_lossy(truncated);
-
+        match read_single_file(&resolved, budget_remaining).await {
+            Some((content, bytes_read)) => {
                 if !combined.is_empty() {
                     combined.push_str("\n--- ");
                     combined.push_str(&resolved.display().to_string());
                     combined.push_str(" ---\n");
                 }
                 combined.push_str(&content);
-
-                budget_remaining = budget_remaining.saturating_sub(truncated.len() as u64);
+                budget_remaining = budget_remaining.saturating_sub(bytes_read);
                 if budget_remaining == 0 {
                     combined.push_str("\n... [file output truncated]");
                     break;
                 }
             }
-            Err(e) => {
-                debug!("Cannot read {}: {}", resolved.display(), e);
+            None => {
+                debug!("Cannot read {}", resolved.display());
             }
         }
     }
@@ -382,8 +332,13 @@ mod tests {
     }
 
     #[test]
+    fn test_resolve_windows_absolute() {
+        let p = resolve_path("C:\\Users\\test\\file.txt");
+        assert_eq!(p, Some(PathBuf::from("C:\\Users\\test\\file.txt")));
+    }
+
+    #[test]
     fn test_resolve_powershell_env_temp() {
-        // This test depends on the environment but should resolve to something
         let p = resolve_path("$env:TEMP\\test.txt");
         assert!(p.is_some());
     }
@@ -518,18 +473,14 @@ mod tests {
     #[cfg(unix)]
     #[tokio::test]
     async fn test_integration_real_command_with_redirect() {
-        // Execute a real command that redirects to /tmp/
         let executor = crate::executor::CommandExecutor::new();
         let command = "echo 'hello from integration test' > /tmp/autostrike_integ_test.txt";
         let result = executor
             .execute("sh", command, std::time::Duration::from_secs(5))
             .await;
         assert!(result.success);
-
-        // stdout should be empty since output went to file
         assert!(result.output.trim().is_empty());
 
-        // enrich_output should read the file
         let enriched = enrich_output(command, "sh", &result.output).await;
         assert!(
             enriched.contains("hello from integration test"),
@@ -537,7 +488,6 @@ mod tests {
             enriched
         );
 
-        // Cleanup
         tokio::fs::remove_file("/tmp/autostrike_integ_test.txt")
             .await
             .unwrap();
@@ -574,7 +524,6 @@ mod tests {
     #[cfg(unix)]
     #[tokio::test]
     async fn test_integration_command_with_stdout_and_redirect() {
-        // Command that writes to BOTH stdout and a file
         let executor = crate::executor::CommandExecutor::new();
         let command = "echo 'This goes to stdout and is over fifty bytes for certain right now'; echo 'file only' > /tmp/autostrike_both_test.txt";
         let result = executor
@@ -582,7 +531,6 @@ mod tests {
             .await;
         assert!(result.success);
 
-        // stdout has enough content — should NOT read file
         let enriched = enrich_output(command, "sh", &result.output).await;
         assert_eq!(enriched, result.output);
 
@@ -594,7 +542,6 @@ mod tests {
     #[cfg(unix)]
     #[tokio::test]
     async fn test_integration_ps_redirect_like_t1057() {
-        // Simulates T1057 Process Discovery pattern
         let executor = crate::executor::CommandExecutor::new();
         let command = "ps >> /tmp/autostrike_ps_test.txt";
         let result = executor
@@ -618,7 +565,6 @@ mod tests {
     #[cfg(unix)]
     #[tokio::test]
     async fn test_integration_uname_redirect_like_t1082() {
-        // Simulates T1082 System Info pattern
         let executor = crate::executor::CommandExecutor::new();
         let command = "uname -a >> /tmp/autostrike_uname_test.txt";
         let result = executor
