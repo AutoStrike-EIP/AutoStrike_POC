@@ -1559,11 +1559,37 @@ func TestClassifyTaskResult_CaseInsensitive(t *testing.T) {
 }
 
 func TestClassifyTaskResult_LongOutputIgnoresPatterns(t *testing.T) {
-	// Long output (>500 bytes) that incidentally contains a failure pattern
+	// Long output (>200 bytes) that incidentally contains a failure pattern
 	// should still be classified as success — it's likely legitimate attack output
-	longOutput := strings.Repeat("credential data line\n", 30) + "access denied for user xyz\n"
+	longOutput := strings.Repeat("credential data line\n", 15) + "access denied for user xyz\n"
 	status := classifyTaskResult(true, 0, longOutput)
 	if status != entity.StatusSuccess {
 		t.Errorf("Expected success for long output with incidental pattern, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_MixedLinesIsSuccess(t *testing.T) {
+	// Short output with both real results and an error line — partially succeeded
+	output := "user1:x:1000:1000::/home/user1:/bin/bash\ncat: /etc/shadow: Permission denied"
+	status := classifyTaskResult(true, 0, output)
+	if status != entity.StatusSuccess {
+		t.Errorf("Expected success for mixed output (real results + error), got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_AllLinesFailure(t *testing.T) {
+	// Short output where every line is an error
+	output := "cat: /etc/shadow: Permission denied\nbash: netstat: command not found"
+	status := classifyTaskResult(true, 0, output)
+	if status != entity.StatusFailed {
+		t.Errorf("Expected failed when all lines are errors, got %s", status)
+	}
+}
+
+func TestClassifyTaskResult_EnumerationOutput(t *testing.T) {
+	// "no such file or directory" should NOT cause failure (removed from patterns)
+	status := classifyTaskResult(true, 0, "ls: /nonexistent: No such file or directory")
+	if status != entity.StatusSuccess {
+		t.Errorf("Expected success for enumeration output, got %s", status)
 	}
 }

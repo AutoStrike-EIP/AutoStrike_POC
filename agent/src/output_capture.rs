@@ -5,7 +5,7 @@
 //! command execution, and returns their content as the task output.
 
 use regex::Regex;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::debug;
 
 /// Threshold in bytes below which we attempt file-based output capture.
@@ -70,11 +70,37 @@ fn lookup_home_dir() -> Option<String> {
         .ok()
 }
 
+/// Normalizes a path by resolving `.` and `..` components logically (no filesystem access).
+/// Prevents path traversal attacks like `/tmp/../../etc/passwd` → `/etc/passwd`.
+fn normalize_path(path: &Path) -> PathBuf {
+    use std::path::Component;
+    let mut components: Vec<Component> = Vec::new();
+    for component in path.components() {
+        match component {
+            Component::ParentDir => {
+                // Only pop Normal components — never pop past RootDir or Prefix
+                if matches!(components.last(), Some(Component::Normal(_))) {
+                    components.pop();
+                }
+            }
+            Component::CurDir => {}
+            c => components.push(c),
+        }
+    }
+    components.iter().collect()
+}
+
 /// Resolves a raw path string (potentially containing environment variables) to an absolute path.
+/// Unix paths are normalized and validated to stay within `/tmp/`.
+/// Environment variable paths are normalized to prevent traversal via `..` in suffixes.
 pub fn resolve_path(raw_path: &str) -> Option<PathBuf> {
-    // Unix absolute paths
+    // Unix absolute paths — normalize and verify /tmp/ containment
     if raw_path.starts_with('/') {
-        return Some(PathBuf::from(raw_path));
+        let normalized = normalize_path(&PathBuf::from(raw_path));
+        if normalized.starts_with("/tmp") {
+            return Some(normalized);
+        }
+        return None;
     }
 
     // Windows absolute paths (e.g. C:\Users\...)
@@ -91,7 +117,12 @@ pub fn resolve_path(raw_path: &str) -> Option<PathBuf> {
     if lower.starts_with("$env:temp\\") || lower.starts_with("$env:temp/") {
         let suffix = &raw_path[10..];
         let base = lookup_temp_dir().unwrap_or_else(|| "/tmp".to_string());
-        return Some(PathBuf::from(base).join(suffix));
+        let resolved = normalize_path(&PathBuf::from(base).join(suffix));
+        let temp = normalize_path(&std::env::temp_dir());
+        if resolved.starts_with(&temp) || resolved.starts_with("/tmp") {
+            return Some(resolved);
+        }
+        return None;
     }
 
     // PowerShell $env:USERPROFILE\...
@@ -104,7 +135,12 @@ pub fn resolve_path(raw_path: &str) -> Option<PathBuf> {
     if lower.starts_with("%temp%\\") || lower.starts_with("%temp%/") {
         let suffix = &raw_path[7..];
         let base = lookup_temp_dir().unwrap_or_else(|| "/tmp".to_string());
-        return Some(PathBuf::from(base).join(suffix));
+        let resolved = normalize_path(&PathBuf::from(base).join(suffix));
+        let temp = normalize_path(&std::env::temp_dir());
+        if resolved.starts_with(&temp) || resolved.starts_with("/tmp") {
+            return Some(resolved);
+        }
+        return None;
     }
 
     // Windows cmd %userprofile%\...
@@ -118,7 +154,7 @@ pub fn resolve_path(raw_path: &str) -> Option<PathBuf> {
 
 /// Checks that a resolved path is inside a safe directory (temp dir) after
 /// canonicalization, preventing path traversal attacks (e.g. `/tmp/../../etc/passwd`).
-fn is_safe_path(resolved: &PathBuf) -> bool {
+fn is_safe_path(resolved: &Path) -> bool {
     let canonical = match std::fs::canonicalize(resolved) {
         Ok(p) => p,
         Err(_) => return false, // file doesn't exist or can't be resolved
@@ -137,7 +173,7 @@ fn is_safe_path(resolved: &PathBuf) -> bool {
 
 /// Reads a single file up to `budget` bytes, returning its content and bytes consumed.
 /// Only reads the needed amount from disk to avoid OOM on large files.
-async fn read_single_file(resolved: &PathBuf, budget: u64) -> Option<(String, u64)> {
+async fn read_single_file(resolved: &Path, budget: u64) -> Option<(String, u64)> {
     use tokio::io::AsyncReadExt;
 
     let metadata = tokio::fs::metadata(resolved).await.ok()?;

@@ -205,16 +205,17 @@ type TaskResultPayload struct {
 
 // failurePatterns are output substrings that indicate the command did not
 // achieve its goal even though it may have exited with code 0.
+// Only specific patterns are kept — overly broad ones like "not permitted"
+// and "no such file or directory" were removed because they commonly appear
+// in legitimate enumeration output.
 var failurePatterns = []string{
 	"permission denied",
 	"access denied",
 	"operation not permitted",
-	"not permitted",
 	"is required to read the password",
 	"askpass helper",
 	"authentication failure",
 	"command not found",
-	"no such file or directory",
 	"command timed out",
 	"unable to open",
 	"cannot open",
@@ -226,7 +227,21 @@ var failurePatterns = []string{
 // check failure patterns. Longer outputs are likely legitimate attack results
 // that may incidentally contain error strings (e.g. a credential dump that
 // includes "access denied" log entries from other users).
-const maxFailureCheckLen = 500
+const maxFailureCheckLen = 200
+
+// lineMatchesFailure checks if a single line contains any failure pattern.
+func lineMatchesFailure(line string) bool {
+	lower := strings.ToLower(strings.TrimSpace(line))
+	if lower == "" {
+		return false
+	}
+	for _, pattern := range failurePatterns {
+		if strings.Contains(lower, pattern) {
+			return true
+		}
+	}
+	return false
+}
 
 // classifyTaskResult determines the actual execution status by looking at
 // the exit code AND the command output. A command that exits 0 but prints
@@ -245,16 +260,30 @@ func classifyTaskResult(agentSuccess bool, exitCode int, output string) entity.R
 		return entity.StatusSuccess
 	}
 
-	// Only check failure patterns on short outputs (error messages).
-	// Long outputs are likely legitimate attack results that may
-	// incidentally contain error-like strings.
-	if len(trimmed) <= maxFailureCheckLen {
-		lower := strings.ToLower(trimmed)
-		for _, pattern := range failurePatterns {
-			if strings.Contains(lower, pattern) {
-				return entity.StatusFailed
-			}
+	// Skip pattern checking on long outputs — they likely contain real
+	// attack results mixed with incidental error strings.
+	if len(trimmed) > maxFailureCheckLen {
+		return entity.StatusSuccess
+	}
+
+	// Check line-by-line: only classify as failed if EVERY non-empty line
+	// matches a failure pattern. If any line contains real results, the
+	// attack at least partially succeeded.
+	lines := strings.Split(trimmed, "\n")
+	failedLines := 0
+	totalLines := 0
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
 		}
+		totalLines++
+		if lineMatchesFailure(line) {
+			failedLines++
+		}
+	}
+
+	if totalLines > 0 && failedLines == totalLines {
+		return entity.StatusFailed
 	}
 
 	return entity.StatusSuccess
